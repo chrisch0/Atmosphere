@@ -5,7 +5,10 @@
 
 using namespace Microsoft::WRL;
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	return App::GetApp()->MsgProc(hwnd, msg, wParam, lParam);
+}
 
 App* App::m_app = nullptr;
 
@@ -85,7 +88,7 @@ bool App::InitMainWindow()
 	m_hAppInst = GetModuleHandle(NULL);
 	WNDCLASS wc;
 	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = WndProc;
+	wc.lpfnWndProc = (WNDPROC)WndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = m_hAppInst;
@@ -308,7 +311,7 @@ void App::CreateSrvRtvAndDsvDescriptorHeaps()
 		rtvHandle.Offset(1, m_rtvDescriptorSize);
 	}
 
-	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc;
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.NumDescriptors = 1;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -625,23 +628,19 @@ void App::WaitForNextFrameResource()
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-LRESULT WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT App::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	App* app = App::GetApp();
-	if (app == nullptr)
-		return true;
-
-	if (ImGui_ImplWin32_WndProcHandler(app->MainWnd(), msg, wParam, lParam))
+	if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
 		return true;
 
 	switch (msg)
 	{
 	case WM_SIZE:
-		if (app->GetDevice() != NULL && wParam != SIZE_MINIMIZED)
+		if (m_d3dDevice != NULL && wParam != SIZE_MINIMIZED)
 		{
-			app->SetHeight(HIWORD(lParam));
-			app->SetWidth(LOWORD(lParam));
-			app->OnResize();
+			m_clientHeight = HIWORD(lParam);
+			m_clientWidth = LOWORD(lParam);
+			OnResize();
 
 			ImGui_ImplDX12_InvalidateDeviceObjects();
 			//CleanupRenderTarget();
@@ -658,7 +657,7 @@ LRESULT WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		::PostQuitMessage(0);
 		return 0;
 	}
-	return ::DefWindowProc(app->MainWnd(), msg, wParam, lParam);
+	return ::DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
 void App::CalculateFrameStats()

@@ -29,7 +29,7 @@ public:
 	int Run();
 
 	virtual bool Initialize();
-	//LRESULT CALLBACK MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	LRESULT CALLBACK MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	virtual void OnResize();
 
