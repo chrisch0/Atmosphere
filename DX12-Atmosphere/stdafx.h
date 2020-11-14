@@ -22,5 +22,6 @@
 #include <string>
 #include <memory>
 #include <tchar.h>
+#include <iostream>
 
 #include "Utils/HelperFuncs.h"

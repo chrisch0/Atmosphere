@@ -54,11 +54,11 @@
     <ClInclude Include="imgui\imgui_impl_win32.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\imgui_impl_dx12.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
     <ClInclude Include="FrameContext\FrameContext.h">
       <Filter>FrameContext</Filter>
+    </ClInclude>
+    <ClInclude Include="App\MultiViewport.h">
+      <Filter>App</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -84,11 +84,11 @@
     <ClCompile Include="imgui\imgui_impl_win32.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui_impl_dx12.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
     <ClCompile Include="FrameContext\FrameContext.cpp">
       <Filter>FrameContext</Filter>
+    </ClCompile>
+    <ClCompile Include="App\MultiViewport.cpp">
+      <Filter>App</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

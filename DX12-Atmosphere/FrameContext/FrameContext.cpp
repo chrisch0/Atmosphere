@@ -2,6 +2,7 @@
 #include "FrameContext.h"
 
 FrameContext::FrameContext(ID3D12Device* device)
+	: m_fenceValue(0)
 {
 	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_commandAllocator.GetAddressOf())));
 }

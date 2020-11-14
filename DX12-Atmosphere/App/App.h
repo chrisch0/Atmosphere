@@ -3,6 +3,10 @@
 #include "Utils/Timer.h"
 #include "FrameContext/FrameContext.h"
 
+struct ImGui_RenderBuffers;
+struct ImGui_FrameContext;
+struct ImGuiViewportDataDx12;
+
 class App
 {
 public:
@@ -47,12 +51,21 @@ protected:
 	void CreateCommandObjects();
 	void CreateSwapChain();
 
-	void FlushCommandQueue();
+	void CreateAppRootSignature();
+	void CreateAppPipelineState();
+	void CreateFontTexture();
+
+	void WaitForLastSubmittedFrame();
 
 	void WaitForNextFrameResource();
 
 	void DrawImGuiDemo();
 	void RenderImGui();
+
+	void RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx);
+	void SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_RenderBuffers* fr);
+
+	void ShutdownWindow();
 
 	ID3D12Resource* CurrentBackBuffer() const {
 		return m_swapChainBuffer[m_currBackBuffer].Get();
@@ -73,6 +86,16 @@ protected:
 	void LogAdapters();
 	void LogAdapterOutputs(IDXGIAdapter* adapter);
 	void LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format);
+
+public:
+	// multi-viewport function
+	void CreateAppSubWindow(ImGuiViewport* viewport);
+	void DestroyAppSubWindow(ImGuiViewport* viewport);
+	void SetAppSubWindowSize(ImGuiViewport* viewport, ImVec2 size);
+	void RenderAppSubWindow(ImGuiViewport* viewport, void*);
+	void SwapAppSubWindowBuffers(ImGuiViewport* viewport, void*);
+private:
+	void FlushSubWindowCommandQueue(ImGuiViewportDataDx12* data);
 
 protected:
 	static App* m_app;
@@ -101,7 +124,7 @@ protected:
 	UINT64 m_currentFence = 0;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCmdListAlloc;
+	//Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCmdListAlloc;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
 	static int const c_swapChainBufferCount = 2;
@@ -137,6 +160,7 @@ protected:
 
 	// Imgui
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_appPipelineState;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_fontResource;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_fontSrvCpuDescHandle = {};
 	D3D12_GPU_DESCRIPTOR_HANDLE m_fontSrvGpuDescHandle = {};
