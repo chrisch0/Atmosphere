@@ -10,8 +10,8 @@ struct ImGuiViewportDataDx12;
 class App
 {
 public:
-	App(const App& rhs);
-	App& operator=(const App& rhs);
+	App(const App& rhs) = delete;
+	App& operator=(const App& rhs) = delete;
 public:
 	static App* GetApp();
 
@@ -159,7 +159,7 @@ protected:
 	int m_clientHeight = 800;
 
 	// Imgui
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_appRootSignature = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_appPipelineState;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_fontResource;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_fontSrvCpuDescHandle = {};

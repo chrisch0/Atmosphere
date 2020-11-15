@@ -20,6 +20,12 @@
     <Filter Include="FrameContext">
       <UniqueIdentifier>{da5a668e-a268-409d-ac3d-6b8eab6b4c45}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Testes">
+      <UniqueIdentifier>{d429e3d4-eba3-4166-8c6f-56048260d168}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Testes\Test Demo Shaders">
+      <UniqueIdentifier>{91990d47-68f6-4cbe-bf5b-9fd53dcacd57}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -60,6 +66,9 @@
     <ClInclude Include="App\MultiViewport.h">
       <Filter>App</Filter>
     </ClInclude>
+    <ClInclude Include="Testes\FullScreenQuad.h">
+      <Filter>Testes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -90,6 +99,9 @@
     <ClCompile Include="App\MultiViewport.cpp">
       <Filter>App</Filter>
     </ClCompile>
+    <ClCompile Include="Testes\FullScreenQuad.cpp">
+      <Filter>Testes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
@@ -97,6 +109,12 @@
     </FxCompile>
     <FxCompile Include="imgui\imgui_pixel.hlsl">
       <Filter>imgui\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Testes\Shaders\FullScreenQuad_VS.hlsl">
+      <Filter>Testes\Test Demo Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Testes\Shaders\FullScreenQuad_PS.hlsl">
+      <Filter>Testes\Test Demo Shaders</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

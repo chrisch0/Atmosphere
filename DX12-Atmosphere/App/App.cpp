@@ -269,6 +269,7 @@ void App::InitFrameContext()
 	{
 		m_frameContexts.push_back(std::make_unique<FrameContext>(m_d3dDevice.Get()));
 	}
+	m_currFrameContext = m_frameContexts[m_currFrameContextIndex].get();
 }
 
 void App::InitImgui()
@@ -379,7 +380,7 @@ void App::CreateAppRootSignature()
 		ID3DBlob* blob = NULL;
 		ThrowIfFailed(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL));
 
-		ThrowIfFailed(m_d3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(m_rootSignature.ReleaseAndGetAddressOf())));
+		ThrowIfFailed(m_d3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(m_appRootSignature.ReleaseAndGetAddressOf())));
 		blob->Release();
 	}
 }
@@ -390,7 +391,7 @@ void App::CreateAppPipelineState()
 	memset(&psoDesc, 0, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	psoDesc.NodeMask = 1;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.pRootSignature = m_rootSignature.Get();
+	psoDesc.pRootSignature = m_appRootSignature.Get();
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.NumRenderTargets = 1;
 	psoDesc.RTVFormats[0] = m_backBufferFormat;
@@ -618,18 +619,12 @@ int App::Run()
 
 	m_timer.Reset();
 
-	static int count = 0;
-
-	std::cout << "i" << count++ << std::endl;
-
 	while (msg.message != WM_QUIT)
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-			std::cout << "b" << count++ << std::endl;
-
 		}
 		else
 		{
@@ -642,6 +637,7 @@ int App::Run()
 			Update(m_timer);
 			Draw(m_timer);
 
+			DrawUI();
 			DrawImGuiDemo();
 			RenderImGui();
 		}
@@ -983,7 +979,7 @@ void App::SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx
 	ctx->IASetIndexBuffer(&ibv);
 	ctx->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	ctx->SetPipelineState(m_appPipelineState.Get());
-	ctx->SetGraphicsRootSignature(m_rootSignature.Get());
+	ctx->SetGraphicsRootSignature(m_appRootSignature.Get());
 	ctx->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
 	// Setup blend factor
@@ -996,10 +992,10 @@ void App::WaitForLastSubmittedFrame()
 	FrameContext* frameContext = m_frameContexts[m_currFrameContextIndex].get();
 	
 	UINT64 fenceValue = frameContext->GetFenceValue();
-	if (frameContext->GetFenceValue() == 0)
-		return;
+	//if (frameContext->GetFenceValue() == 0)
+		//return;
 
-	frameContext->SetFenceValue(0);
+	//frameContext->SetFenceValue(0);
 
 	if (m_fence->GetCompletedValue() < fenceValue)
 	{
@@ -1018,9 +1014,9 @@ void App::WaitForNextFrameResource()
 
 	m_currFrameContext = m_frameContexts[m_currFrameContextIndex].get();
 	UINT64 fenceValue = m_currFrameContext->GetFenceValue();
-	if (fenceValue != 0)
+	//if (fenceValue != 0)
 	{
-		m_currFrameContext->SetFenceValue(0);
+		//m_currFrameContext->SetFenceValue(0);
 		m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent);
 		waitableObjects[1] = m_fenceEvent;
 		numWaitableObjects = 2;
@@ -1056,11 +1052,9 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 LRESULT App::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static int count = 0;
-	std::cout << "c" << count++;
 	if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
 		return true;
-	std::cout << "a" << count++;
+
 	switch (msg)
 	{
 	case WM_SIZE:
