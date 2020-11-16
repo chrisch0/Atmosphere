@@ -119,7 +119,7 @@ void FullScreenQuad::CreatePipelineStates()
 	pso.DSVFormat = m_depthStencilBufferFormat;
 
 
-	m_vertexBufferGPU = CreateDefaultBuffer(
+	m_vertexBufferGPU = D3DUtils::CreateDefaultBuffer(
 		m_d3dDevice.Get(),
 		m_commandList.Get(),
 		quad_verts,
@@ -127,7 +127,7 @@ void FullScreenQuad::CreatePipelineStates()
 		m_vertexBufferUploader
 	);
 
-	m_indexBufferGPU = CreateDefaultBuffer(
+	m_indexBufferGPU = D3DUtils::CreateDefaultBuffer(
 		m_d3dDevice.Get(),
 		m_commandList.Get(),
 		quad_indices,

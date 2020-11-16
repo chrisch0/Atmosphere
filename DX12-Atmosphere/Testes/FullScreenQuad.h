@@ -27,5 +27,5 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUploader = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferGPU = nullptr;
 
-	bool 
+	bool m_useUVAsColor = false;
 };

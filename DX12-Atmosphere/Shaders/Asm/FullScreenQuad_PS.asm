@@ -27,7 +27,7 @@ dcl_output o0.xyzw
 //   v1.x <- pixel.color.x; v1.y <- pixel.color.y; v1.z <- pixel.color.z; v1.w <- pixel.color.w; 
 //   o0.x <- <main return value>.x; o0.y <- <main return value>.y; o0.z <- <main return value>.z; o0.w <- <main return value>.w
 //
-#line 9 "D:\Code\DX12-Atmosphere\DX12-Atmosphere\Testes\Shaders\FullScreenQuad_PS.hlsl"
+#line 9 "D:\Code\Atmosphere\DX12-Atmosphere\Testes\Shaders\FullScreenQuad_PS.hlsl"
 mov o0.xyzw, v1.xyzw
 ret 
 // Approximately 2 instruction slots used

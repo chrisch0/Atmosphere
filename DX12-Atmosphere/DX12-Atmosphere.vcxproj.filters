@@ -102,6 +102,9 @@
     <ClCompile Include="Testes\FullScreenQuad.cpp">
       <Filter>Testes</Filter>
     </ClCompile>
+    <ClCompile Include="Utils\HelperFuncs.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
