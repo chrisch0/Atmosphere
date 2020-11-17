@@ -20,6 +20,7 @@ private:
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pso;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUploader = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferGPU = nullptr;
@@ -28,4 +29,12 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferGPU = nullptr;
 
 	bool m_useUVAsColor = false;
+	DirectX::XMFLOAT3 m_backgroundColor{0.0, 0.0, 0.5};
+
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_constantUploadBuffers;
+	BYTE* m_constantMappedData[c_swapChainBufferCount];
+	D3D12_GPU_VIRTUAL_ADDRESS m_cbGPUAddress[c_swapChainBufferCount];
+
+	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 };
