@@ -191,7 +191,7 @@ void App::CreateCommandObjects()
 		nullptr,
 		IID_PPV_ARGS(m_commandList.GetAddressOf())));
 
-	m_commandList->Close();
+	//m_commandList->Close();
 }
 
 void App::CreateSrvRtvAndDsvDescriptorHeaps()
@@ -221,7 +221,7 @@ void App::CreateSrvRtvAndDsvDescriptorHeaps()
 
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	srvHeapDesc.NumDescriptors = 1;
+	srvHeapDesc.NumDescriptors = 10;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(
 		&srvHeapDesc, IID_PPV_ARGS(m_srvHeap.GetAddressOf())));
@@ -260,6 +260,15 @@ void App::CreateSwapChain()
 			m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, m_swapChainRTVDespcriptorHandle[i]);
 		}
 	}
+
+	m_screenViewport.TopLeftX = 0.0;
+	m_screenViewport.TopLeftY = 0.0;
+	m_screenViewport.Width = static_cast<float>(m_clientWidth);
+	m_screenViewport.Height = static_cast<float>(m_clientHeight);
+	m_screenViewport.MinDepth = 0.0f;
+	m_screenViewport.MaxDepth = 1.0f;
+
+	m_scissorRect = { 0, 0, m_clientWidth, m_clientHeight };
 
 }
 
@@ -634,12 +643,16 @@ int App::Run()
 			ImGui::NewFrame();
 
 			CalculateFrameStats();
+			
+			DrawUI();
+			DrawImGuiDemo();
+
 			Update(m_timer);
 			Draw(m_timer);
 
-			DrawUI();
-			DrawImGuiDemo();
 			RenderImGui();
+
+			SwapBackBuffer();
 		}
 	}
 
@@ -707,7 +720,21 @@ void App::Update(const Timer& t)
 
 void App::Draw(const Timer& t)
 {
+	WaitForNextFrameResource();
+	m_currFrameContext->GetCmdAllocator()->Reset();
 
+	//m_commandList->Reset(m_currFrameContext->GetCmdAllocator(), m_pso.Get());
+	m_commandList->Reset(m_currFrameContext->GetCmdAllocator(), NULL);
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	m_commandList->ClearRenderTargetView(CurrentBackBufferView(), (float*)&m_clearColor, 0, NULL);
+	m_commandList->OMSetRenderTargets(1, &CurrentBackBufferView(), FALSE, NULL);
+
+	m_commandList->RSSetViewports(1, &m_screenViewport);
+	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+	ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvHeap.Get() };
+	m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 }
 
 void App::DrawUI()
@@ -759,31 +786,15 @@ void App::DrawImGuiDemo()
 
 void App::RenderImGui()
 {
-	// Rendering
-	WaitForNextFrameResource();
-	UINT backBufferIdx = m_swapChain->GetCurrentBackBufferIndex();
-	m_currFrameContext->GetCmdAllocator()->Reset();
-
-	D3D12_RESOURCE_BARRIER barrier = {};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	barrier.Transition.pResource = m_swapChainBuffer[backBufferIdx].Get();
-	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-	m_commandList->Reset(m_currFrameContext->GetCmdAllocator(), NULL);
-	m_commandList->ResourceBarrier(1, &barrier);
-	m_commandList->ClearRenderTargetView(m_swapChainRTVDespcriptorHandle[backBufferIdx], (float*)&m_clearColor, 0, NULL);
-	m_commandList->OMSetRenderTargets(1, &m_swapChainRTVDespcriptorHandle[backBufferIdx], FALSE, NULL);
-	m_commandList->SetDescriptorHeaps(1, m_srvHeap.GetAddressOf());
 	ImGui::Render();
 	RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-	m_commandList->ResourceBarrier(1, &barrier);
-	m_commandList->Close();
+	// Indicate a state transition on the resource usage.
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+	// Done recording commands.
+	ThrowIfFailed(m_commandList->Close());
 
 	ID3D12CommandList* cmdLists[] = { m_commandList.Get() };
 	m_commandQueue->ExecuteCommandLists(_countof(cmdLists), cmdLists);
@@ -795,9 +806,13 @@ void App::RenderImGui()
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault(NULL, (void*)m_commandList.Get());
 	}
+}
 
-	m_swapChain->Present(1, 0); // Present with vsync
-	//g_pSwapChain->Present(0, 0); // Present without vsync
+void App::SwapBackBuffer()
+{
+	//m_swapChain->Present(1, 0); // Present with vsync
+	m_swapChain->Present(0, 0); // Present without vsync
+	m_currBackBuffer = (m_currBackBuffer + 1) % c_swapChainBufferCount;
 
 	UINT64 fenceValue = m_currentFence + 1;
 	m_commandQueue->Signal(m_fence.Get(), fenceValue);
@@ -813,7 +828,7 @@ void App::RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx)
 
 	ImGuiViewportDataDx12* render_data = (ImGuiViewportDataDx12*)draw_data->OwnerViewport->RendererUserData;
 	render_data->FrameIndex++;
-	ImGui_RenderBuffers* fr = &render_data->FrameRenderBuffers[render_data->FrameIndex % c_swapChainBufferCount];
+	ImGui_RenderBuffers* fr = &render_data->FrameRenderBuffers[render_data->FrameIndex % m_numFrameContexts];
 
 	// Create and grow vertex/index buffers if needed
 	if (fr->VertexBuffer == NULL || fr->VertexBufferSize < draw_data->TotalVtxCount)
@@ -1032,7 +1047,7 @@ void App::ShutdownWindow()
 	if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)main_viewport->RendererUserData)
 	{
 		// We could just call ImGui_ImplDX12_DestroyWindow(main_viewport) as a convenience but that would be misleading since we only use data->Resources[]
-		for (UINT i = 0; i < c_swapChainBufferCount; i++)
+		for (UINT i = 0; i < m_numFrameContexts; i++)
 		{
 			SafeRelease(data->FrameRenderBuffers[i].IndexBuffer);
 			SafeRelease(data->FrameRenderBuffers[i].VertexBuffer);
@@ -1195,7 +1210,7 @@ void App::CreateAppSubWindow(ImGuiViewport* viewport)
 
 	ThrowIfFailed(m_d3dDevice->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&data->CommandQueue)));
 
-	for (int i = 0; i < c_swapChainBufferCount; ++i)
+	for (int i = 0; i < m_numFrameContexts; ++i)
 	{
 		ThrowIfFailed(m_d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&data->FrameCtx[i].CommandAllocator)));
 	}

@@ -51,7 +51,7 @@ dcl_temps 2
 //   o1.x <- <main return value>.color.x; o1.y <- <main return value>.color.y; o1.z <- <main return value>.color.z; o1.w <- <main return value>.color.w; 
 //   o0.x <- <main return value>.pos.x; o0.y <- <main return value>.pos.y; o0.z <- <main return value>.pos.z; o0.w <- <main return value>.pos.w
 //
-#line 22 "D:\Code\Atmosphere\DX12-Atmosphere\Testes\Shaders\FullScreenQuad_VS.hlsl"
+#line 22 "D:\Code\DX12-Atmosphere\DX12-Atmosphere\Testes\Shaders\FullScreenQuad_VS.hlsl"
 mov r0.xyz, v0.xyzx  // r0.x <- vsout.pos.x; r0.y <- vsout.pos.y; r0.z <- vsout.pos.z
 mov r0.w, l(1.000000)  // r0.w <- vsout.pos.w
 
@@ -60,15 +60,15 @@ ine r1.x, l(0, 0, 0, 0), cb0[0].w
 if_nz r1.x
 
 #line 25
-  mov r1.xyz, cb0[0].xyzx  // r1.x <- vsout.color.x; r1.y <- vsout.color.y; r1.z <- vsout.color.z
-  mov r1.w, l(1.000000)  // r1.w <- vsout.color.w
+  mov r1.xy, v1.xyxx  // r1.x <- vsout.color.x; r1.y <- vsout.color.y
+  mov r1.zw, l(0,0,0,1.000000)  // r1.z <- vsout.color.z; r1.w <- vsout.color.w
 
 #line 26
 else 
 
 #line 29
-  mov r1.xy, v1.xyxx  // r1.x <- vsout.color.x; r1.y <- vsout.color.y
-  mov r1.zw, l(0,0,0,1.000000)  // r1.z <- vsout.color.z; r1.w <- vsout.color.w
+  mov r1.xyz, cb0[0].xyzx  // r1.x <- vsout.color.x; r1.y <- vsout.color.y; r1.z <- vsout.color.z
+  mov r1.w, l(1.000000)  // r1.w <- vsout.color.w
 
 #line 30
 endif 

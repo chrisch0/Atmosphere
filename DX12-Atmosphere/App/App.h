@@ -62,6 +62,8 @@ protected:
 	void DrawImGuiDemo();
 	void RenderImGui();
 
+	void SwapBackBuffer();
+
 	void RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx);
 	void SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_RenderBuffers* fr);
 
@@ -127,7 +129,7 @@ protected:
 	//Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCmdListAlloc;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
-	static int const c_swapChainBufferCount = 2;
+	static int const c_swapChainBufferCount = 3;
 	int m_currBackBuffer = 0;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_swapChainRTVDespcriptorHandle[c_swapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_swapChainBuffer[c_swapChainBufferCount];
@@ -138,7 +140,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
 	std::vector<std::unique_ptr<FrameContext>> m_frameContexts;
-	const int m_numFrameContexts = 3;
+	static const int m_numFrameContexts = 3;
 	FrameContext* m_currFrameContext = nullptr;
 	int m_currFrameContextIndex = 0;
 

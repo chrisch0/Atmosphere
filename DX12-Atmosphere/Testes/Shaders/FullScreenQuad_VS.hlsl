@@ -22,11 +22,11 @@ VertexOut main(VertexIn vertex)
 	vsout.pos = float4(vertex.pos, 1.0);
 	if (gUVAsColor)
 	{
-		vsout.color = float4(gColor, 1.0);
+		vsout.color = float4(vertex.uv, 0.0, 1.0);
 	}
 	else
 	{
-		vsout.color = float4(vertex.uv, 0.0, 1.0);
+		vsout.color = float4(gColor, 1.0);
 	}
 
 	return vsout;

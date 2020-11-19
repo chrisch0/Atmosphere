@@ -19,7 +19,10 @@ FullScreenQuad::FullScreenQuad()
 
 FullScreenQuad::~FullScreenQuad()
 {
-
+	for (int i = 0; i < m_numFrameContexts; ++i)
+	{
+		m_constantUploadBuffers[i]->Release();
+	}
 }
 
 bool FullScreenQuad::Initialize()
@@ -42,6 +45,7 @@ bool FullScreenQuad::Initialize()
 		WaitForSingleObject(m_fenceEvent, INFINITE);
 	}
 
+	return true;
 }
 
 void FullScreenQuad::CreateRootSignature()
@@ -77,7 +81,7 @@ void FullScreenQuad::CreatePipelineStates()
 	m_inputLayout =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TEXCOORD0", 0, DXGI_FORMAT_R32_UINT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 	};
 
 	float quad_verts[] = 
@@ -114,9 +118,10 @@ void FullScreenQuad::CreatePipelineStates()
 	};
 	pso.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	pso.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	CD3DX12_DEPTH_STENCIL_DESC depth_always = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	depth_always.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	pso.DepthStencilState = depth_always;
+	CD3DX12_DEPTH_STENCIL_DESC depth_stencil_disable = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	depth_stencil_disable.DepthEnable = false;
+	depth_stencil_disable.StencilEnable = false;
+	pso.DepthStencilState = depth_stencil_disable;
 	pso.SampleMask = UINT_MAX;
 	pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	pso.NumRenderTargets = 1;
@@ -142,27 +147,36 @@ void FullScreenQuad::CreatePipelineStates()
 		indexBufferSize,
 		m_indexBufferUploader
 	);
+
+	m_vertexBufferView.BufferLocation = m_vertexBufferGPU->GetGPUVirtualAddress();
+	m_vertexBufferView.StrideInBytes = sizeof(float) * 5;
+	m_vertexBufferView.SizeInBytes = sizeof(quad_verts);
+
+	m_indexBufferView.BufferLocation = m_indexBufferGPU->GetGPUVirtualAddress();
+	m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+	m_indexBufferView.SizeInBytes = sizeof(quad_indices);
 }
 
 void FullScreenQuad::CreateConstantBufferView()
 {
 	UINT cbByteSize = sizeof(ConstantBuffer);
 
-	for (int frameIndex = 0; frameIndex < c_swapChainBufferCount; ++frameIndex)
+	for (int frameIndex = 0; frameIndex < m_numFrameContexts; ++frameIndex)
 	{
-		ComPtr<ID3D12Resource> uploadBuffer;
+		m_constantUploadBuffers[frameIndex] = NULL;
+
 		ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(cbByteSize),
+			&CD3DX12_RESOURCE_DESC::Buffer(256),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&uploadBuffer)
+			IID_PPV_ARGS(&m_constantUploadBuffers[frameIndex])
 		));
 
-		ThrowIfFailed(uploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_constantMappedData[frameIndex])));
+		ThrowIfFailed(m_constantUploadBuffers[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&m_constantMappedData[frameIndex])));
 
-		D3D12_GPU_VIRTUAL_ADDRESS cbGpuAddress = uploadBuffer->GetGPUVirtualAddress();
+		D3D12_GPU_VIRTUAL_ADDRESS cbGpuAddress = m_constantUploadBuffers[frameIndex]->GetGPUVirtualAddress();
 
 		int heapIndex = 1 + frameIndex;
 		auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
@@ -170,7 +184,7 @@ void FullScreenQuad::CreateConstantBufferView()
 
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
 		cbvDesc.BufferLocation = cbGpuAddress;
-		cbvDesc.SizeInBytes = cbByteSize;
+		cbvDesc.SizeInBytes = 256;
 
 		m_d3dDevice->CreateConstantBufferView(&cbvDesc, handle);
 	}
@@ -187,20 +201,20 @@ void FullScreenQuad::Update(const Timer& timer)
 
 void FullScreenQuad::Draw(const Timer& timer)
 {
-	auto cmdListAlloc = m_currFrameContext->GetCmdAllocator();
+	// Rendering
+	{
+		WaitForNextFrameResource();
+		m_currFrameContext->GetCmdAllocator()->Reset();
 
-	ThrowIfFailed(cmdListAlloc->Reset());
-	ThrowIfFailed(m_commandList->Reset(cmdListAlloc, m_pso.Get()));
-	m_commandList->RSSetViewports(1, &m_screenViewport);
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+		m_commandList->Reset(m_currFrameContext->GetCmdAllocator(), m_pso.Get());
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+		m_commandList->ClearRenderTargetView(CurrentBackBufferView(), (float*)&m_clearColor, 0, NULL);
+		m_commandList->OMSetRenderTargets(1, &CurrentBackBufferView(), FALSE, NULL);
 
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-	// Clear the back buffer and depth buffer.
-	m_commandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-	m_commandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-	m_commandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		m_commandList->RSSetViewports(1, &m_screenViewport);
+		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+	}
 
 	ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
@@ -210,11 +224,12 @@ void FullScreenQuad::Draw(const Timer& timer)
 	int passCbvIndex = 1 + m_currFrameContextIndex;
 	auto passCbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 	passCbvHandle.Offset(passCbvIndex, m_cbvSrvUavDescriptorSize);
-	m_commandList->SetGraphicsRootDescriptorTable(1, passCbvHandle);
+	m_commandList->SetGraphicsRootDescriptorTable(0, passCbvHandle);
 
-	m_commandList->IASetVertexBuffers(0, 1, &ri->Geo->VertexBufferView());
-	m_commandList->IASetIndexBuffer(&ri->Geo->IndexBufferView());
-	m_commandList->IASetPrimitiveTopology(ri->PrimitiveType);
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+	m_commandList->IASetIndexBuffer(&m_indexBufferView);
+	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
 
 void FullScreenQuad::DrawUI()

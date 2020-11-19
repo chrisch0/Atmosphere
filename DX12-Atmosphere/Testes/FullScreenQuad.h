@@ -31,9 +31,9 @@ private:
 	bool m_useUVAsColor = false;
 	DirectX::XMFLOAT3 m_backgroundColor{0.0, 0.0, 0.5};
 
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_constantUploadBuffers;
-	BYTE* m_constantMappedData[c_swapChainBufferCount];
-	D3D12_GPU_VIRTUAL_ADDRESS m_cbGPUAddress[c_swapChainBufferCount];
+	ID3D12Resource* m_constantUploadBuffers[m_numFrameContexts];
+	BYTE* m_constantMappedData[m_numFrameContexts];
+	D3D12_GPU_VIRTUAL_ADDRESS m_cbGPUAddress[m_numFrameContexts];
 
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
