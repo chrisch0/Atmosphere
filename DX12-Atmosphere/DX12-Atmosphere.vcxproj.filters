@@ -26,6 +26,12 @@
     <Filter Include="Testes\Test Demo Shaders">
       <UniqueIdentifier>{91990d47-68f6-4cbe-bf5b-9fd53dcacd57}</UniqueIdentifier>
     </Filter>
+    <Filter Include="D3D12">
+      <UniqueIdentifier>{384f01df-d8d7-4d30-8f02-734384bcb069}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Math">
+      <UniqueIdentifier>{75b4b700-6aca-4680-ac13-2b898995003d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -69,6 +75,51 @@
     <ClInclude Include="Testes\FullScreenQuad.h">
       <Filter>Testes</Filter>
     </ClInclude>
+    <ClInclude Include="Testes\ComputeShader.h">
+      <Filter>Testes</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\BoundingPlane.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\BoundingSphere.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Common.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Frustum.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Matrix3.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Matrix4.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Quaternion.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Random.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Scalar.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Transform.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\Vector.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\VectorMath.h">
+      <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\GpuBuffer.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\GpuResource.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -105,6 +156,18 @@
     <ClCompile Include="Utils\HelperFuncs.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+    <ClCompile Include="Testes\ComputeShader.cpp">
+      <Filter>Testes</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Frustum.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\Random.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\GpuBuffer.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
@@ -119,5 +182,10 @@
     <FxCompile Include="Testes\Shaders\FullScreenQuad_PS.hlsl">
       <Filter>Testes\Test Demo Shaders</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Math\Functions.inl">
+      <Filter>Math</Filter>
+    </None>
   </ItemGroup>
 </Project>

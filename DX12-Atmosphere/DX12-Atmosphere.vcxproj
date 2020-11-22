@@ -136,6 +136,8 @@
   <ItemGroup>
     <ClInclude Include="App\App.h" />
     <ClInclude Include="App\MultiViewport.h" />
+    <ClInclude Include="D3D12\GpuBuffer.h" />
+    <ClInclude Include="D3D12\GpuResource.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="FrameContext\FrameContext.h" />
     <ClInclude Include="imgui\imconfig.h" />
@@ -145,7 +147,20 @@
     <ClInclude Include="imgui\imstb_rectpack.h" />
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
+    <ClInclude Include="Math\BoundingPlane.h" />
+    <ClInclude Include="Math\BoundingSphere.h" />
+    <ClInclude Include="Math\Common.h" />
+    <ClInclude Include="Math\Frustum.h" />
+    <ClInclude Include="Math\Matrix3.h" />
+    <ClInclude Include="Math\Matrix4.h" />
+    <ClInclude Include="Math\Quaternion.h" />
+    <ClInclude Include="Math\Random.h" />
+    <ClInclude Include="Math\Scalar.h" />
+    <ClInclude Include="Math\Transform.h" />
+    <ClInclude Include="Math\Vector.h" />
+    <ClInclude Include="Math\VectorMath.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Testes\ComputeShader.h" />
     <ClInclude Include="Testes\FullScreenQuad.h" />
     <ClInclude Include="Utils\HelperFuncs.h" />
     <ClInclude Include="Utils\Timer.h" />
@@ -153,6 +168,7 @@
   <ItemGroup>
     <ClCompile Include="App\App.cpp" />
     <ClCompile Include="App\MultiViewport.cpp" />
+    <ClCompile Include="D3D12\GpuBuffer.cpp" />
     <ClCompile Include="FrameContext\FrameContext.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
@@ -160,6 +176,9 @@
     <ClCompile Include="imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Math\Frustum.cpp" />
+    <ClCompile Include="Math\Random.cpp" />
+    <ClCompile Include="Testes\ComputeShader.cpp" />
     <ClCompile Include="Testes\FullScreenQuad.cpp" />
     <ClCompile Include="Utils\HelperFuncs.cpp" />
     <ClCompile Include="Utils\Timer.cpp" />
@@ -237,6 +256,9 @@
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\Asm\%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Math\Functions.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
