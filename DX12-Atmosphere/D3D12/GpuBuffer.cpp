@@ -33,7 +33,7 @@ void GpuBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 		subResourceData.RowPitch = m_bufferSize;
 		subResourceData.SlicePitch = subResourceData.RowPitch;
 
-		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition()
+		//cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition()
 	}
 
 }

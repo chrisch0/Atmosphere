@@ -120,6 +120,18 @@
     <ClInclude Include="D3D12\GpuResource.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\CommandContext.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\GraphicsCore.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\CommandListManager.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\CommandAllocatorPool.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -166,6 +178,18 @@
       <Filter>Math</Filter>
     </ClCompile>
     <ClCompile Include="D3D12\GpuBuffer.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\CommandContext.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\GraphicsCore.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\CommandListManager.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\CommandAllocatorPool.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>
