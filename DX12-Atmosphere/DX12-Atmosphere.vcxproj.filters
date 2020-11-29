@@ -132,6 +132,12 @@
     <ClInclude Include="D3D12\CommandAllocatorPool.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\DescriptorHeap.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\LinearAllocator.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -190,6 +196,12 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="D3D12\CommandAllocatorPool.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\DescriptorHeap.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\LinearAllocator.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>

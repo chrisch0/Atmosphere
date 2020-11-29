@@ -7,10 +7,10 @@ class GpuBuffer : public GpuResource
 public:
 	~GpuBuffer() { Destroy(); }
 
-	void Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
+	void Create(const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 
-	void CreatePlaced(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& name, ID3D12Heap* pBackingHeap, uint32_t heapOffset, uint32_t numElements, uint32_t elementSize,
-		const void* initialData = nullptr);
+	//void CreatePlaced(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& name, ID3D12Heap* pBackingHeap, uint32_t heapOffset, uint32_t numElements, uint32_t elementSize,
+		//const void* initialData = nullptr);
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() const { return m_SRV; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV() const { return m_UAV; }

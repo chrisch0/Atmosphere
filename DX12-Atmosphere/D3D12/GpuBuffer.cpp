@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "GpuBuffer.h"
+#include "CommandContext.h"
 
-void GpuBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData /* = nullptr */)
+void GpuBuffer::Create(const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData /* = nullptr */)
 {
 	Destroy();
 
@@ -21,7 +22,7 @@ void GpuBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 	heapProps.VisibleNodeMask = 1;
 
 	ThrowIfFailed(
-		device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, 
+		g_Device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, 
 			&resourceDesc, m_usageState, nullptr, IID_PPV_ARGS(&m_pResource)));
 
 	m_gpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
@@ -33,7 +34,8 @@ void GpuBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 		subResourceData.RowPitch = m_bufferSize;
 		subResourceData.SlicePitch = subResourceData.RowPitch;
 
-		//cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition()
+		CommandContext& initContext = CommandContext::Begin();
+
 	}
 
 }
