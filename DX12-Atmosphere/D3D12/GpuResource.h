@@ -3,6 +3,7 @@
 
 class GpuResource
 {
+	friend class CommandContext;
 public:
 	GpuResource() :
 		m_usageState(D3D12_RESOURCE_STATE_COMMON),

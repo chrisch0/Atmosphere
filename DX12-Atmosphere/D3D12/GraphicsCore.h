@@ -1,9 +1,9 @@
 #pragma once
 #include "stdafx.h"
+#include "DescriptorHeap.h"
 
 class ContextManager;
 class CommandListManager;
-class DescriptorAllocator;
 
 
 extern ID3D12Device* g_Device;

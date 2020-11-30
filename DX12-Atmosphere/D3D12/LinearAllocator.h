@@ -106,7 +106,7 @@ public:
 		m_pageSize = (type == kGpuExclusive ? kGpuAllocatorPageSize : kCpuAllocatorPageSize);
 	}
 
-	DynAlloc Allocate(size_t sizeInBytes, size_t alignment = DEFAULT_ALIGN, const std::wstring& name = L"");
+	DynAlloc Allocate(size_t sizeInBytes, const std::wstring& name = L"", size_t alignment = DEFAULT_ALIGN);
 
 	void CleanupUsedPages(uint64_t fenceID);
 

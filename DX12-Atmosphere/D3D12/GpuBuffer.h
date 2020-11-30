@@ -9,8 +9,8 @@ public:
 
 	void Create(const std::wstring& name, uint32_t numElements, uint32_t elementSize, const void* initialData = nullptr);
 
-	//void CreatePlaced(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::wstring& name, ID3D12Heap* pBackingHeap, uint32_t heapOffset, uint32_t numElements, uint32_t elementSize,
-		//const void* initialData = nullptr);
+	void CreatePlaced(const std::wstring& name, ID3D12Heap* pBackingHeap, uint32_t heapOffset, uint32_t numElements, uint32_t elementSize,
+		const void* initialData = nullptr);
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() const { return m_SRV; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV() const { return m_UAV; }
@@ -56,4 +56,48 @@ protected:
 	uint32_t m_elementCount;
 	uint32_t m_elementSize;
 	D3D12_RESOURCE_FLAGS m_resourceFlags;
+};
+
+inline D3D12_VERTEX_BUFFER_VIEW GpuBuffer::VertexBufferView(size_t offset, uint32_t size, uint32_t stride) const
+{
+	D3D12_VERTEX_BUFFER_VIEW vbv;
+	vbv.BufferLocation = m_gpuVirtualAddress + offset;
+	vbv.SizeInBytes = size;
+	vbv.StrideInBytes = stride;
+	return vbv;
+}
+
+inline D3D12_INDEX_BUFFER_VIEW GpuBuffer::IndexBufferView(size_t offset, uint32_t size, bool b32Bit /* = false */) const
+{
+	D3D12_INDEX_BUFFER_VIEW ibv;
+	ibv.BufferLocation = m_gpuVirtualAddress + offset;
+	ibv.Format = b32Bit ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+	ibv.SizeInBytes = size;
+	return ibv;
+}
+
+class ByteAddressBuffer : public GpuBuffer
+{
+public:
+	virtual void CreateDerivedViews() override;
+};
+
+class StructuredBuffer : public GpuBuffer
+{
+public:
+	virtual void Destroy() override
+	{
+		m_counterBuffer.Destroy();
+		GpuBuffer::Destroy();
+	}
+
+	virtual void CreateDerivedViews() override;
+
+	ByteAddressBuffer& GetCounterBuffer() { return m_counterBuffer; }
+
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCounterSRV(CommandContext& context);
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCounterUAV(CommandContext& context);
+
+private:
+	ByteAddressBuffer m_counterBuffer;
 };

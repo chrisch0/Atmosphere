@@ -168,7 +168,7 @@ void CommandContext::BindDescriptorHeaps()
 		m_commandList->SetDescriptorHeaps(nonNullHeaps, heapsToBind);
 }
 
-void CommandContext::InitializeBuffer(GpuResource& dest, const void* bufferData, size_t numBytes, size_t offset)
+void CommandContext::InitializeBuffer(GpuResource& dest, const void* bufferData, size_t numBytes, size_t offset, const std::wstring& name /* = L""*/)
 {
 	CommandContext& initContext = CommandContext::Begin();
 
@@ -179,6 +179,57 @@ void CommandContext::InitializeBuffer(GpuResource& dest, const void* bufferData,
 	memcpy(uploadBuffer.dataPtr, bufferData, numBytes);
 
 	// Copy data from upload buffer to default buffer
+	initContext.TransitionResource(dest, D3D12_RESOURCE_STATE_COPY_DEST, true);
+	initContext.m_commandList->CopyBufferRegion(dest.GetResource(), offset, uploadBuffer.buffer.GetResource(), 0, numBytes);
+	initContext.TransitionResource(dest, D3D12_RESOURCE_STATE_GENERIC_READ, true);
+
+	initContext.Flush(true);
+}
+
+void CommandContext::TransitionResource(GpuResource& resource, D3D12_RESOURCE_STATES newState, bool flushImmediate /* = false */)
+{
+	D3D12_RESOURCE_STATES oldState = resource.m_usageState;
+
+	if (m_type == D3D12_COMMAND_LIST_TYPE_COMPUTE)
+	{
+		assert((oldState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == oldState);
+		assert((newState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == newState);
+	}
+
+	if (oldState != newState)
+	{
+		assert(m_numBarriersToFlush < 16, "Exceeded arbitrary limit on buffered barriers");
+		auto& barrierDesc = m_resourceBarrierBuffer[m_numBarriersToFlush++];
+
+		barrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(resource.GetResource(), oldState, newState);
+
+		// Check to see if we already started the transition
+		if (newState == resource.m_transitioningState)
+		{
+			barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
+			resource.m_transitioningState = (D3D12_RESOURCE_STATES)-1;
+		}
+		else
+			barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+		resource.m_usageState = newState;
+	}
+	else if (newState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		InsertUAVBarrier(resource, flushImmediate);
+
+	if (flushImmediate || m_numBarriersToFlush == 16)
+		FlushResourceBarriers();
+}
+
+void CommandContext::InsertUAVBarrier(GpuResource& resource, bool flushImmediate /* = false */)
+{
+	assert(m_numBarriersToFlush < 16, "Exceeded arbitrary limit on buffered barriers");
+	auto& barrierDesc = m_resourceBarrierBuffer[m_numBarriersToFlush++];
+
+	barrierDesc = CD3DX12_RESOURCE_BARRIER::UAV(resource.GetResource());
+
+	if (flushImmediate)
+		FlushResourceBarriers();
 }
 
 inline void CommandContext::FlushResourceBarriers()

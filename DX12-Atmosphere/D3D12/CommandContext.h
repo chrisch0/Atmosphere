@@ -6,6 +6,12 @@ class CommandContext;
 class CommandListManager;
 class GpuResource;
 
+#define VALID_COMPUTE_QUEUE_RESOURCE_STATES \
+    ( D3D12_RESOURCE_STATE_UNORDERED_ACCESS \
+    | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE \
+    | D3D12_RESOURCE_STATE_COPY_DEST \
+    | D3D12_RESOURCE_STATE_COPY_SOURCE )
+
 class ContextManager
 {
 public: 
@@ -47,18 +53,21 @@ public:
 
 	// Flush existing commands and release the current context
 	uint64_t CommandContext::Finish(bool waitForCompletion = false);
-
 	// Flush existing commands to the GPU but keep the context alive
 	uint64_t Flush(bool waitForCompletion = false);
 
-	inline void FlushResourceBarriers();
 
-	DynAlloc AllocateUploadBuffer(size_t sizeInBytes)
+	DynAlloc AllocateUploadBuffer(size_t sizeInBytes, const std::wstring& name = L"")
 	{
-		return m_cpuLinearAllocator.Allocate(sizeInBytes);
+		return m_cpuLinearAllocator.Allocate(sizeInBytes, name);
 	}
 
-	static void InitializeBuffer(GpuResource& dest, const void* bufferData, size_t numBytes, size_t offset);
+	static void InitializeBuffer(GpuResource& dest, const void* bufferData, size_t numBytes, size_t offset = 0, const std::wstring& name = L"");
+
+	void TransitionResource(GpuResource& resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
+	void InsertUAVBarrier(GpuResource& resource, bool flushImmediate = false);
+	inline void FlushResourceBarriers();
+
 
 protected:
 	void BindDescriptorHeaps();
