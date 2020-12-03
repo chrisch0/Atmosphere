@@ -92,7 +92,7 @@ void FullScreenQuad::CreatePipelineStates()
 		 1.0f,-1.0f, 1.0f, 1.0f, 1.0f
 	};
 
-	size_t vertexBufferSize = sizeof(quad_verts) * sizeof(float);
+	m_vertexBuffer.Create(L"QuadVertexBuffer", 4, sizeof(float) * 5, quad_verts);
 
 	uint16_t quad_indices[] = 
 	{
@@ -100,7 +100,7 @@ void FullScreenQuad::CreatePipelineStates()
 		2, 1, 3
 	};
 
-	size_t indexBufferSize = sizeof(quad_indices) * sizeof(uint16_t);
+	m_indexBuffer.Create(L"QuadIndexBuffer", 6, sizeof(uint16_t), quad_indices);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pso;
 	ZeroMemory(&pso, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
@@ -131,30 +131,6 @@ void FullScreenQuad::CreatePipelineStates()
 	pso.DSVFormat = m_depthStencilBufferFormat;
 
 	ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(m_pso.GetAddressOf())));
-
-	m_vertexBufferGPU = D3DUtils::CreateDefaultBuffer(
-		m_d3dDevice.Get(),
-		m_commandList.Get(),
-		quad_verts,
-		vertexBufferSize,
-		m_vertexBufferUploader
-	);
-
-	m_indexBufferGPU = D3DUtils::CreateDefaultBuffer(
-		m_d3dDevice.Get(),
-		m_commandList.Get(),
-		quad_indices,
-		indexBufferSize,
-		m_indexBufferUploader
-	);
-
-	m_vertexBufferView.BufferLocation = m_vertexBufferGPU->GetGPUVirtualAddress();
-	m_vertexBufferView.StrideInBytes = sizeof(float) * 5;
-	m_vertexBufferView.SizeInBytes = sizeof(quad_verts);
-
-	m_indexBufferView.BufferLocation = m_indexBufferGPU->GetGPUVirtualAddress();
-	m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-	m_indexBufferView.SizeInBytes = sizeof(quad_indices);
 }
 
 void FullScreenQuad::CreateConstantBufferView()
@@ -226,8 +202,8 @@ void FullScreenQuad::Draw(const Timer& timer)
 	passCbvHandle.Offset(passCbvIndex, m_cbvSrvUavDescriptorSize);
 	m_commandList->SetGraphicsRootDescriptorTable(0, passCbvHandle);
 
-	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-	m_commandList->IASetIndexBuffer(&m_indexBufferView);
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBuffer.VertexBufferView());
+	m_commandList->IASetIndexBuffer(&m_indexBuffer.IndexBufferView());
 	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }

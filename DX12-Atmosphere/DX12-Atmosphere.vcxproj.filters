@@ -138,6 +138,15 @@
     <ClInclude Include="D3D12\LinearAllocator.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\PixelBuffer.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\Color.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\ColorBuffer.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -202,6 +211,12 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="D3D12\LinearAllocator.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\PixelBuffer.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\ColorBuffer.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>

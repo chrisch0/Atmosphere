@@ -1,6 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "App/App.h"
+#include "D3D12/GpuBuffer.h"
 
 class FullScreenQuad : public App
 {
@@ -22,11 +23,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pso;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUploader = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferGPU = nullptr;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUploader = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferGPU = nullptr;
+	StructuredBuffer m_vertexBuffer;
+	ByteAddressBuffer m_indexBuffer;
 
 	bool m_useUVAsColor = false;
 	DirectX::XMFLOAT3 m_backgroundColor{0.0, 0.0, 0.5};
@@ -34,7 +33,4 @@ private:
 	ID3D12Resource* m_constantUploadBuffers[m_numFrameContexts];
 	BYTE* m_constantMappedData[m_numFrameContexts];
 	D3D12_GPU_VIRTUAL_ADDRESS m_cbGPUAddress[m_numFrameContexts];
-
-	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 };

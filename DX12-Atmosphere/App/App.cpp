@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "App.h"
 #include "MultiViewport.h"
+#include "D3D12/CommandListManager.h"
 #include "imgui/imgui_impl_win32.h"
 #include "CompiledShaders/imgui_vert.h"
 #include "CompiledShaders/imgui_pixel.h"
@@ -141,6 +142,9 @@ bool App::InitDirect3D()
 			ThrowIfFailed(D3D12CreateDevice(pWarpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(m_d3dDevice.GetAddressOf())));
 		}
 	}
+
+	g_Device = m_d3dDevice.Get();
+	g_CommandManager.Create(g_Device);
 
 	// Create fence
 	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_fence.GetAddressOf())));
