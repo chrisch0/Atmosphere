@@ -171,7 +171,7 @@ bool App::InitDirect3D()
 	LogAdapters();
 #endif
 
-	CreateCommandObjects();
+	//CreateCommandObjects();
 	CreateSrvRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 
@@ -180,22 +180,22 @@ bool App::InitDirect3D()
 
 void App::CreateCommandObjects()
 {
-	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.NodeMask = 1;
-	ThrowIfFailed(m_d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_commandQueue.GetAddressOf())));
+	//D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+	//queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	//queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	//queueDesc.NodeMask = 1;
+	//ThrowIfFailed(m_d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_commandQueue.GetAddressOf())));
 
-	InitFrameContext();
+	//InitFrameContext();
 
-	ThrowIfFailed(m_d3dDevice->CreateCommandList(
-		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		m_frameContexts[0]->GetCmdAllocator(),
-		nullptr,
-		IID_PPV_ARGS(m_commandList.GetAddressOf())));
+	//ThrowIfFailed(m_d3dDevice->CreateCommandList(
+	//	0,
+	//	D3D12_COMMAND_LIST_TYPE_DIRECT,
+	//	m_frameContexts[0]->GetCmdAllocator(),
+	//	nullptr,
+	//	IID_PPV_ARGS(m_commandList.GetAddressOf())));
 
-	//m_commandList->Close();
+	////m_commandList->Close();
 }
 
 void App::CreateSrvRtvAndDsvDescriptorHeaps()
@@ -233,6 +233,8 @@ void App::CreateSrvRtvAndDsvDescriptorHeaps()
 
 void App::CreateSwapChain()
 {
+	auto cmdQueue = g_CommandManager.GetCommandQueue();
+
 	DXGI_SWAP_CHAIN_DESC1 sd;
 	{
 		ZeroMemory(&sd, sizeof(DXGI_SWAP_CHAIN_DESC1));
@@ -250,7 +252,7 @@ void App::CreateSwapChain()
 		sd.Stereo = FALSE;
 	}
 	IDXGISwapChain1* swapChain1 = NULL;
-	ThrowIfFailed(m_dxgiFactory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hMainWnd, &sd, NULL, NULL, &swapChain1));
+	ThrowIfFailed(m_dxgiFactory->CreateSwapChainForHwnd(cmdQueue, m_hMainWnd, &sd, NULL, NULL, &swapChain1));
 	ThrowIfFailed(swapChain1->QueryInterface(IID_PPV_ARGS(m_swapChain.GetAddressOf())));
 	swapChain1->Release();
 	m_swapChain->SetMaximumFrameLatency(c_swapChainBufferCount);
@@ -261,7 +263,8 @@ void App::CreateSwapChain()
 		for (int i = 0; i < c_swapChainBufferCount; ++i)
 		{
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(m_swapChainBuffer[i].GetAddressOf())));
-			m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, m_swapChainRTVDespcriptorHandle[i]);
+			//m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, m_swapChainRTVDespcriptorHandle[i]);
+			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", m_swapChainBuffer[i].Detach());
 		}
 	}
 
@@ -687,7 +690,7 @@ void App::OnResize()
 	CloseHandle(m_swapChainWaitableOject);
 
 	IDXGISwapChain1* swapChain1 = NULL;
-	m_dxgiFactory->CreateSwapChainForHwnd(m_commandQueue.Get(), m_hMainWnd, &sd, NULL, NULL, &swapChain1);
+	m_dxgiFactory->CreateSwapChainForHwnd(g_CommandManager.GetCommandQueue(), m_hMainWnd, &sd, NULL, NULL, &swapChain1);
 	swapChain1->QueryInterface(IID_PPV_ARGS(m_swapChain.GetAddressOf()));
 	swapChain1->Release();
 	
@@ -702,8 +705,9 @@ void App::OnResize()
 	for (int i = 0; i < c_swapChainBufferCount; ++i)
 	{
 		ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_swapChainBuffer[i])));
-		m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, m_swapChainRTVDespcriptorHandle[i]);
+		//m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, m_swapChainRTVDespcriptorHandle[i]);
 		//rtvHeapHandle.Offset(1, m_rtvDescriptorSize);
+		m_displayBuffer->CreateFromSwapChain(L"Primary SwapChain Buffer", m_swapChainBuffer[i].Detach());
 	}
 
 	m_screenViewport.TopLeftX = 0.0;
@@ -729,10 +733,11 @@ void App::Draw(const Timer& t)
 
 	//m_commandList->Reset(m_currFrameContext->GetCmdAllocator(), m_pso.Get());
 	m_commandList->Reset(m_currFrameContext->GetCmdAllocator(), NULL);
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_displayBuffer[m_currBackBuffer].GetResource(),
 		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-	m_commandList->ClearRenderTargetView(CurrentBackBufferView(), (float*)&m_clearColor, 0, NULL);
-	m_commandList->OMSetRenderTargets(1, &CurrentBackBufferView(), FALSE, NULL);
+	//m_commandList->ClearRenderTargetView(CurrentBackBufferView(), (float*)&m_clearColor, 0, NULL);
+	m_commandList->ClearRenderTargetView(m_displayBuffer[m_currBackBuffer].GetRTV(), (float*)&m_clearColor, 0, NULL);
+	m_commandList->OMSetRenderTargets(1, &m_displayBuffer[m_currBackBuffer].GetRTV(), FALSE, NULL);
 
 	m_commandList->RSSetViewports(1, &m_screenViewport);
 	m_commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -794,7 +799,7 @@ void App::RenderImGui()
 	RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
 
 	// Indicate a state transition on the resource usage.
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_displayBuffer[m_currBackBuffer].GetResource(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 	// Done recording commands.

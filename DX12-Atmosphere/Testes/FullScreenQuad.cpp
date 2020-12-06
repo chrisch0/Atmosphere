@@ -183,10 +183,10 @@ void FullScreenQuad::Draw(const Timer& timer)
 		m_currFrameContext->GetCmdAllocator()->Reset();
 
 		m_commandList->Reset(m_currFrameContext->GetCmdAllocator(), m_pso.Get());
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_displayBuffer[m_currBackBuffer].GetResource(),
 			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		m_commandList->ClearRenderTargetView(CurrentBackBufferView(), (float*)&m_clearColor, 0, NULL);
-		m_commandList->OMSetRenderTargets(1, &CurrentBackBufferView(), FALSE, NULL);
+		m_commandList->ClearRenderTargetView(m_displayBuffer[m_currBackBuffer].GetRTV(), (float*)&m_clearColor, 0, NULL);
+		m_commandList->OMSetRenderTargets(1, &m_displayBuffer[m_currBackBuffer].GetRTV(), FALSE, NULL);
 
 		m_commandList->RSSetViewports(1, &m_screenViewport);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);

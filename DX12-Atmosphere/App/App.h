@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "Utils/Timer.h"
 #include "FrameContext/FrameContext.h"
+#include "D3D12/ColorBuffer.h"
 
 struct ImGui_RenderBuffers;
 struct ImGui_FrameContext;
@@ -125,15 +126,17 @@ protected:
 	HANDLE m_fenceEvent = NULL;
 	UINT64 m_currentFence = 0;
 
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
+	//Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 	//Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCmdListAlloc;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
+	//Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
 	static int const c_swapChainBufferCount = 3;
 	int m_currBackBuffer = 0;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE m_swapChainRTVDespcriptorHandle[c_swapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_swapChainBuffer[c_swapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_depthStencilBuffer;
+
+	ColorBuffer m_displayBuffer[c_swapChainBufferCount];
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvHeap;

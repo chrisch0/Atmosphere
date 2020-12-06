@@ -5,6 +5,8 @@
 class CommandContext;
 class CommandListManager;
 class GpuResource;
+class GraphicsContext;
+class ComputeContext;
 
 #define VALID_COMPUTE_QUEUE_RESOURCE_STATES \
     ( D3D12_RESOURCE_STATE_UNORDERED_ACCESS \
@@ -49,13 +51,29 @@ public:
 
 	static CommandContext& Begin(const std::wstring& ID = L"");
 
-	void Initialize();
-
-	// Flush existing commands and release the current context
-	uint64_t CommandContext::Finish(bool waitForCompletion = false);
 	// Flush existing commands to the GPU but keep the context alive
 	uint64_t Flush(bool waitForCompletion = false);
 
+	// Flush existing commands and release the current context
+	uint64_t CommandContext::Finish(bool waitForCompletion = false);
+
+	void Initialize();
+
+	GraphicsContext& GetGraphicsContext()
+	{
+		assert(m_type != D3D12_COMMAND_LIST_TYPE_COMPUTE);
+		return reinterpret_cast<GraphicsContext&>(*this);
+	}
+
+	ComputeContext& GetComputeContext()
+	{
+		return reinterpret_cast<ComputeContext&>(*this);
+	}
+
+	ID3D12GraphicsCommandList* GetCommandList()
+	{
+		return m_commandList;
+	}
 
 	DynAlloc AllocateUploadBuffer(size_t sizeInBytes, const std::wstring& name = L"")
 	{
@@ -91,4 +109,17 @@ protected:
 	std::wstring m_ID;
 	void SetID(const std::wstring& ID) { m_ID = ID; }
 	D3D12_COMMAND_LIST_TYPE m_type;
+};
+
+class GraphicsContext : public CommandContext
+{
+public:
+	static GraphicsContext& Begin(const std::wstring& ID = L"")
+	{
+		return CommandContext::Begin(ID).GetGraphicsContext();
+	}
+
+
+
+
 };
