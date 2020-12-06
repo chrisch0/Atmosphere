@@ -5,18 +5,21 @@
 class PixelBuffer : public GpuResource
 {
 public:
-	PixelBuffer() : m_width(0), m_height(0), m_arraySize(0), m_format(DXGI_FORMAT_UNKNOWN)
+	PixelBuffer() : m_width(0), m_height(0), m_depth(0), m_arraySize(0), m_format(DXGI_FORMAT_UNKNOWN)
 	{
 	}
 
 	uint32_t GetWidth() const { return m_width; }
 	uint32_t GetHeight() const { return m_height; }
-	uint32_t GetDepth() const { return m_arraySize; }
+	uint32_t GetDepth() const { return m_depth; }
+	uint32_t GetArraySize() const { return m_arraySize; }
 	const DXGI_FORMAT& GetFormat() const{ return m_format; }
 
 	// void ExportToFile()
 protected:
 	D3D12_RESOURCE_DESC DescribeTex2D(uint32_t width, uint32_t height, uint32_t depthOrArraySize, uint32_t numMips, DXGI_FORMAT format, UINT flags);
+
+	D3D12_RESOURCE_DESC DescribeTex3D(uint32_t width, uint32_t height, uint32_t depth, uint32_t numMips, DXGI_FORMAT format, UINT flags);
 
 	void AssociateWithResource(ID3D12Device* device, const std::wstring& name, ID3D12Resource* resource, D3D12_RESOURCE_STATES currentState);
 
@@ -32,6 +35,7 @@ protected:
 
 	uint32_t m_width;
 	uint32_t m_height;
+	uint32_t m_depth;
 	uint32_t m_arraySize;
 	DXGI_FORMAT m_format;
 };
