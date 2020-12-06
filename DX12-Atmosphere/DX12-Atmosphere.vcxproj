@@ -142,11 +142,13 @@
     <ClInclude Include="D3D12\CommandContext.h" />
     <ClInclude Include="D3D12\CommandListManager.h" />
     <ClInclude Include="D3D12\DescriptorHeap.h" />
+    <ClInclude Include="D3D12\DynamicDescriptorHeap.h" />
     <ClInclude Include="D3D12\GpuBuffer.h" />
     <ClInclude Include="D3D12\GpuResource.h" />
     <ClInclude Include="D3D12\GraphicsCore.h" />
     <ClInclude Include="D3D12\LinearAllocator.h" />
     <ClInclude Include="D3D12\PixelBuffer.h" />
+    <ClInclude Include="D3D12\RootSignature.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="FrameContext\FrameContext.h" />
     <ClInclude Include="imgui\imconfig.h" />
@@ -182,10 +184,12 @@
     <ClCompile Include="D3D12\CommandContext.cpp" />
     <ClCompile Include="D3D12\CommandListManager.cpp" />
     <ClCompile Include="D3D12\DescriptorHeap.cpp" />
+    <ClCompile Include="D3D12\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="D3D12\GpuBuffer.cpp" />
     <ClCompile Include="D3D12\GraphicsCore.cpp" />
     <ClCompile Include="D3D12\LinearAllocator.cpp" />
     <ClCompile Include="D3D12\PixelBuffer.cpp" />
+    <ClCompile Include="D3D12\RootSignature.cpp" />
     <ClCompile Include="FrameContext\FrameContext.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />

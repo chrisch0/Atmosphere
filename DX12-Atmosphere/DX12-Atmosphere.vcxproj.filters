@@ -147,6 +147,12 @@
     <ClInclude Include="D3D12\ColorBuffer.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\RootSignature.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\DynamicDescriptorHeap.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -217,6 +223,12 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="D3D12\ColorBuffer.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\RootSignature.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\DynamicDescriptorHeap.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>
