@@ -156,6 +156,12 @@
     <ClInclude Include="D3D12\PipelineState.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\Texture.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\TextureManager.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -235,6 +241,12 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="D3D12\PipelineState.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\Texture.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\TextureManager.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>

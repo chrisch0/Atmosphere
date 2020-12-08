@@ -345,13 +345,30 @@ void App::InitImgui()
 
 void App::CreateAppRootSignature()
 {
+	D3D12_STATIC_SAMPLER_DESC staticSampler = {};
+	staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSampler.MipLODBias = 0.f;
+	staticSampler.MaxAnisotropy = 0;
+	staticSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	staticSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+	staticSampler.MinLOD = 0.f;
+	staticSampler.MaxLOD = 0.f;
+	staticSampler.ShaderRegister = 0;
+	staticSampler.RegisterSpace = 0;
+	staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
 	m_displayRootSignature.Reset(2, 1);
 	m_displayRootSignature[0].InitAsConstants(16, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_displayRootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_displayRootSignature.InitStaticSampler(0, staticSampler);
+	m_displayRootSignature.Finalize(L"Display");
 
 	// Create the root signature
 	{
-		D3D12_DESCRIPTOR_RANGE descRange = {};
+		/*D3D12_DESCRIPTOR_RANGE descRange = {};
 		descRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		descRange.NumDescriptors = 1;
 		descRange.BaseShaderRegister = 0;
@@ -371,20 +388,7 @@ void App::CreateAppRootSignature()
 		param[1].DescriptorTable.pDescriptorRanges = &descRange;
 		param[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		D3D12_STATIC_SAMPLER_DESC staticSampler = {};
-		staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		staticSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		staticSampler.MipLODBias = 0.f;
-		staticSampler.MaxAnisotropy = 0;
-		staticSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		staticSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		staticSampler.MinLOD = 0.f;
-		staticSampler.MaxLOD = 0.f;
-		staticSampler.ShaderRegister = 0;
-		staticSampler.RegisterSpace = 0;
-		staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
 
 		D3D12_ROOT_SIGNATURE_DESC desc = {};
 		desc.NumParameters = _countof(param);
@@ -401,85 +405,130 @@ void App::CreateAppRootSignature()
 		ThrowIfFailed(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, NULL));
 
 		ThrowIfFailed(m_d3dDevice->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(m_appRootSignature.ReleaseAndGetAddressOf())));
-		blob->Release();
+		blob->Release();*/
 	}
 }
 
 void App::CreateAppPipelineState()
 {
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
-	memset(&psoDesc, 0, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	psoDesc.NodeMask = 1;
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.pRootSignature = m_appRootSignature.Get();
-	psoDesc.SampleMask = UINT_MAX;
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = m_backBufferFormat;
-	psoDesc.SampleDesc.Count = 1;
-	psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-	// Create the vertex shader
+	static D3D12_INPUT_ELEMENT_DESC local_layout[] =
 	{
-		psoDesc.VS = { g_pimgui_vert, sizeof(g_pimgui_vert) };
+		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
 
-		// Create the input layout
-		static D3D12_INPUT_ELEMENT_DESC local_layout[] =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		};
-		psoDesc.InputLayout = { local_layout, 3 };
-	}
+	D3D12_BLEND_DESC blendDesc;
+	ZeroMemory(&blendDesc, sizeof(blendDesc));
+	blendDesc.AlphaToCoverageEnable = false;
+	blendDesc.RenderTarget[0].BlendEnable = true;
+	blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-	// Create the pixel shader
-	{
-		psoDesc.PS = { g_pimgui_pixel, sizeof(g_pimgui_pixel) };
-	}
+	CD3DX12_RASTERIZER_DESC rasterDesc(D3D12_DEFAULT);
+	rasterDesc.CullMode = D3D12_CULL_MODE_NONE;
 
-	// Create the blending setup
-	{
-		D3D12_BLEND_DESC& desc = psoDesc.BlendState;
-		desc.AlphaToCoverageEnable = false;
-		desc.RenderTarget[0].BlendEnable = true;
-		desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-		desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-		desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-		desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-		desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-		desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-		desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-	}
+	D3D12_DEPTH_STENCIL_DESC depthDesc;
+	ZeroMemory(&depthDesc, sizeof(depthDesc));
+	desc.DepthEnable = false;
+	desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	desc.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	desc.StencilEnable = false;
+	desc.FrontFace.StencilFailOp = desc.FrontFace.StencilDepthFailOp = desc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	desc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	desc.BackFace = desc.FrontFace;
 
-	// Create the rasterizer state
-	{
-		D3D12_RASTERIZER_DESC& desc = psoDesc.RasterizerState;
-		desc.FillMode = D3D12_FILL_MODE_SOLID;
-		desc.CullMode = D3D12_CULL_MODE_NONE;
-		desc.FrontCounterClockwise = FALSE;
-		desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
-		desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-		desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-		desc.DepthClipEnable = true;
-		desc.MultisampleEnable = FALSE;
-		desc.AntialiasedLineEnable = FALSE;
-		desc.ForcedSampleCount = 0;
-		desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-	}
+	m_displayPSO.SetRootSignature(m_displayRootSignature);
+	m_displayPSO.SetSampleMask(UINT_MAX);
+	m_displayPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	m_displayPSO.SetRenderTargetFormat(m_backBufferFormat, DXGI_FORMAT_UNKNOWN);
+	m_displayPSO.SetVertexShader(g_pimgui_vert, sizeof(g_pimgui_vert));
+	m_displayPSO.SetPixelShader(g_pimgui_pixel, sizeof(g_pimgui_pixel));
+	m_displayPSO.SetInputLayout(_countof(local_layout), local_layout);
+	m_displayPSO.SetBlendState(blendDesc);
+	m_displayPSO.SetRasterizerState(rasterDesc);
+	m_displayPSO.SetDepthStencilState(depthDesc);
+	m_displayPSO.Finalize();
 
-	// Create depth-stencil State
-	{
-		D3D12_DEPTH_STENCIL_DESC& desc = psoDesc.DepthStencilState;
-		desc.DepthEnable = false;
-		desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		desc.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		desc.StencilEnable = false;
-		desc.FrontFace.StencilFailOp = desc.FrontFace.StencilDepthFailOp = desc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		desc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		desc.BackFace = desc.FrontFace;
-	}
+	//D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
+	//memset(&psoDesc, 0, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	//psoDesc.NodeMask = 1;
+	//psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	//psoDesc.pRootSignature = m_appRootSignature.Get();
+	//psoDesc.SampleMask = UINT_MAX;
+	//psoDesc.NumRenderTargets = 1;
+	//psoDesc.RTVFormats[0] = m_backBufferFormat;
+	//psoDesc.SampleDesc.Count = 1;
+	//psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-	ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(m_appPipelineState.GetAddressOf())));
+	//// Create the vertex shader
+	//{
+	//	psoDesc.VS = { g_pimgui_vert, sizeof(g_pimgui_vert) };
+
+	//	// Create the input layout
+	//	static D3D12_INPUT_ELEMENT_DESC local_layout[] =
+	//	{
+	//		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//		{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	//	};
+	//	psoDesc.InputLayout = { local_layout, 3 };
+	//}
+
+	//// Create the pixel shader
+	//{
+	//	psoDesc.PS = { g_pimgui_pixel, sizeof(g_pimgui_pixel) };
+	//}
+
+	//// Create the blending setup
+	//{
+	//	D3D12_BLEND_DESC& desc = psoDesc.BlendState;
+	//	desc.AlphaToCoverageEnable = false;
+	//	desc.RenderTarget[0].BlendEnable = true;
+	//	desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	//	desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	//	desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	//	desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+	//	desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	//	desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	//	desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	//}
+
+
+	//// Create the rasterizer state
+	//{
+	//	D3D12_RASTERIZER_DESC& desc = psoDesc.RasterizerState;
+	//	desc.FillMode = D3D12_FILL_MODE_SOLID;
+	//	desc.CullMode = D3D12_CULL_MODE_NONE;
+	//	desc.FrontCounterClockwise = FALSE;
+	//	desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+	//	desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+	//	desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+	//	desc.DepthClipEnable = true;
+	//	desc.MultisampleEnable = FALSE;
+	//	desc.AntialiasedLineEnable = FALSE;
+	//	desc.ForcedSampleCount = 0;
+	//	desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+	//}
+
+	//// Create depth-stencil State
+	//{
+	//	D3D12_DEPTH_STENCIL_DESC& desc = psoDesc.DepthStencilState;
+	//	desc.DepthEnable = false;
+	//	desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	//	desc.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	//	desc.StencilEnable = false;
+	//	desc.FrontFace.StencilFailOp = desc.FrontFace.StencilDepthFailOp = desc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	//	desc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	//	desc.BackFace = desc.FrontFace;
+	//}
+
+	//ThrowIfFailed(m_d3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(m_appPipelineState.GetAddressOf())));
 }
 
 void App::CreateFontTexture()
