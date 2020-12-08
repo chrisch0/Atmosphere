@@ -172,7 +172,7 @@ bool App::InitDirect3D()
 #endif
 
 	//CreateCommandObjects();
-	CreateSrvRtvAndDsvDescriptorHeaps();
+	//CreateSrvRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 
 	return true;
@@ -200,7 +200,7 @@ void App::CreateCommandObjects()
 
 void App::CreateSrvRtvAndDsvDescriptorHeaps()
 {
-	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
+	/*D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
 	rtvHeapDesc.NumDescriptors = c_swapChainBufferCount;
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
@@ -228,7 +228,7 @@ void App::CreateSrvRtvAndDsvDescriptorHeaps()
 	srvHeapDesc.NumDescriptors = 10;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(
-		&srvHeapDesc, IID_PPV_ARGS(m_srvHeap.GetAddressOf())));
+		&srvHeapDesc, IID_PPV_ARGS(m_srvHeap.GetAddressOf())));*/
 }
 
 void App::CreateSwapChain()
@@ -345,6 +345,10 @@ void App::InitImgui()
 
 void App::CreateAppRootSignature()
 {
+	m_displayRootSignature.Reset(2, 1);
+	m_displayRootSignature[0].InitAsConstants(16, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+	m_displayRootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+
 	// Create the root signature
 	{
 		D3D12_DESCRIPTOR_RANGE descRange = {};

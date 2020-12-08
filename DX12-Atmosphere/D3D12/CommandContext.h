@@ -1,12 +1,16 @@
 #pragma once
 #include "stdafx.h"
 #include "LinearAllocator.h"
+#include "DynamicDescriptorHeap.h"
+#include "GpuBuffer.h"
+#include "ColorBuffer.h"
 
 class CommandContext;
 class CommandListManager;
 class GpuResource;
 class GraphicsContext;
 class ComputeContext;
+class PipelineState;
 
 #define VALID_COMPUTE_QUEUE_RESOURCE_STATES \
     ( D3D12_RESOURCE_STATE_UNORDERED_ACCESS \
@@ -87,6 +91,10 @@ public:
 	inline void FlushResourceBarriers();
 
 
+	inline void SetPipelineState(const PipelineState& pso);
+	inline void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12DescriptorHeap* heapPtr);
+	inline void SetDescriptorHeaps(uint32_t heapCount, D3D12_DESCRIPTOR_HEAP_TYPE type[], ID3D12DescriptorHeap* heapPtrs[]);
+
 protected:
 	void BindDescriptorHeaps();
 
@@ -97,6 +105,11 @@ protected:
 	ID3D12RootSignature* m_curGraphicsRootSignature;
 	ID3D12PipelineState* m_curPipelineState;
 	ID3D12RootSignature* m_curComputeRootSignature;
+
+	// HEAP_TYPE_CBV_SRV_UAV
+	DynamicDescriptorHeap m_dynamicViewDescriptorHeap;
+	// HEAP_TYPE_SAMPLER
+	DynamicDescriptorHeap m_dynamicSamplerDescriptorHeap;
 
 	ID3D12DescriptorHeap* m_curDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
@@ -119,7 +132,40 @@ public:
 		return CommandContext::Begin(ID).GetGraphicsContext();
 	}
 
+	void ClearUAV(GpuBuffer& target);
+	void ClearUAV(ColorBuffer& target);
+	void ClearColor(ColorBuffer& target);
+	//void ClearDepth(DepthBuffer& target);
+	//void ClearStencil(DepthBuffer& target);
+	//void ClearDepthAndStencil(DepthBuffer& target);
 
+	inline void SetRootSignature(const RootSignature& rootSig);
 
+	void SetRenderTargets(UINT numRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE rtvs[]);
+	void SetRenderTargets(UINT numRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE rtvs[], D3D12_CPU_DESCRIPTOR_HANDLE dsv);
+	void SetRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE rtv) { SetRenderTargets(1, &rtv); }
+	void SetRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE rtv, D3D12_CPU_DESCRIPTOR_HANDLE dsv) { SetRenderTargets(1, &rtv, dsv); }
+	void SetDepthStencilTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsv) { SetRenderTargets(0, nullptr, dsv); }
 
+	void SetViewportAndScissor(const D3D12_VIEWPORT& vp, const D3D12_RECT& rect);
+
+	void SetDynamicDescriptor(UINT rootIndex, UINT offset, D3D12_CPU_DESCRIPTOR_HANDLE handle);
+	void SetDynamicDescriptors(UINT rootIndex, UINT offset, UINT count, const D3D12_CPU_DESCRIPTOR_HANDLE handles[]);
+	void SetDynamicSampler(UINT rootIndex, UINT offset, D3D12_CPU_DESCRIPTOR_HANDLE handle);
+	void SetDynamicSamplers(UINT rootIndex, UINT offset, UINT count, const D3D12_CPU_DESCRIPTOR_HANDLE handles[]);
+
+	void SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& ibView);
+	void SetVertexBuffer(UINT slot, const D3D12_VERTEX_BUFFER_VIEW& vbView);
+	void SetVertexBuffers(UINT startSlot, UINT count, const D3D12_VERTEX_BUFFER_VIEW vbViews[]);
+	void SetDynamicVB(UINT slot, size_t numVertices, size_t vertexStride, const void* vbData);
+	void SetDynamicIB(size_t indexCount, const uint16_t* ibData);
+	//void SetDynamicSRV(UINT rootIndex, size_t bufferSize, const void* bufferData);
+
+	void Draw(UINT vertexCount, UINT vertexStartOffset = 0);
+	void DrawIndexed(UINT indexCount, UINT startIndexLocation = 0, INT baseVertexLocation = 0);
+	void DrawInstanced(UINT vertexCountPerInstance, UINT instanceCount,
+		UINT startVertexLocation = 0, UINT startInstanceLocation = 0);
+	void DrawIndexedInstanced(UINT indexCountPerInstance, UINT instanceCount, UINT startIndexLocation,
+		INT baseVertexLocation, UINT startInstanceLocation);
+	//void DrawIndirect(GpuBuffer& ArgumentBuffer, uint64_t argumentBufferOffset = 0);
 };

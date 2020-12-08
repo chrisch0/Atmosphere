@@ -153,6 +153,9 @@
     <ClInclude Include="D3D12\DynamicDescriptorHeap.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\PipelineState.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -229,6 +232,9 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="D3D12\DynamicDescriptorHeap.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\PipelineState.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>

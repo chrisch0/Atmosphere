@@ -17,6 +17,8 @@ public:
 		s_descriptorHeapPool[1].clear();
 	}
 
+	void CleanupUsedHeaps(uint64_t fenceValue);
+
 	// Deduce cache layout needed to support the descriptor tables needed by the root signature.
 	void ParseGraphicsRootSignature(const RootSignature& rootSig)
 	{
@@ -39,6 +41,7 @@ public:
 		m_computeHandleCache.StageDescriptorHandles(rootIdx, offset, numHandles, handles);
 	}
 
+	// Upload any new descriptors in the cache to the shader-visible heap.
 	inline void CommitGraphicsRootDescriptorTables(ID3D12GraphicsCommandList* cmdList)
 	{
 		if (m_graphicsHandleCache.m_staleRootParamsBitMap != 0)
@@ -50,6 +53,9 @@ public:
 		if (m_computeHandleCache.m_staleRootParamsBitMap != 0)
 			CopyAndBindStagedTables(m_computeHandleCache, cmdList, &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable);
 	}
+
+	// Bypass the cache and upload directly to the shader-visible heap
+	D3D12_GPU_DESCRIPTOR_HANDLE UploadDirect(D3D12_CPU_DESCRIPTOR_HANDLE handles);
 
 private:
 	static const uint32_t kNumDescriptorsPerHeap = 1024;
@@ -67,7 +73,7 @@ private:
 	const D3D12_DESCRIPTOR_HEAP_TYPE m_descriptorType;
 	uint32_t m_descriptorSize;
 	uint32_t m_curOffset;
-	DescriptorHandle m_firsetDescriptor;
+	DescriptorHandle m_firstDescriptor;
 	std::vector<ID3D12DescriptorHeap*> m_retiredHeaps;
 
 	struct DescriptorTableCache
@@ -126,7 +132,7 @@ private:
 
 	DescriptorHandle Allocate(uint32_t count)
 	{
-		DescriptorHandle ret = m_firsetDescriptor + m_curOffset * m_descriptorSize;
+		DescriptorHandle ret = m_firstDescriptor + m_curOffset * m_descriptorSize;
 		m_curOffset += count;
 		return ret;
 	}

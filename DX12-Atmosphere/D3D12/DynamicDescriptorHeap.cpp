@@ -61,6 +61,17 @@ DynamicDescriptorHeap::~DynamicDescriptorHeap()
 
 }
 
+inline ID3D12DescriptorHeap* DynamicDescriptorHeap::GetHeapPointer()
+{
+	if (m_curHeapPtr == nullptr)
+	{
+		assert(m_curOffset == 0);
+		m_curHeapPtr = RequestDescriptorHeap(m_descriptorType);
+		m_firstDescriptor = DescriptorHandle(m_curHeapPtr->GetCPUDescriptorHandleForHeapStart(), m_curHeapPtr->GetGPUDescriptorHandleForHeapStart());
+	}
+	return m_curHeapPtr;
+}
+
 void DynamicDescriptorHeap::RetireCurrentHeap()
 {
 	if (m_curOffset == 0)
@@ -80,6 +91,20 @@ void DynamicDescriptorHeap::UnbindAllValid()
 	m_computeHandleCache.UnbindAllValid();
 }
 
+void DynamicDescriptorHeap::RetireUsedHeaps(uint64_t fenceValue)
+{
+	DiscardDescriptorHeaps(m_descriptorType, fenceValue, m_retiredHeaps);
+	m_retiredHeaps.clear();
+}
+
+void DynamicDescriptorHeap::CleanupUsedHeaps(uint64_t fenceValue)
+{
+	RetireCurrentHeap();
+	RetireUsedHeaps(fenceValue);
+	m_graphicsHandleCache.ClearCache();
+	m_computeHandleCache.ClearCache();
+}
+
 void DynamicDescriptorHeap::CopyAndBindStagedTables(DescriptorHandleCache& handleCache, ID3D12GraphicsCommandList* cmdList, void (ID3D12GraphicsCommandList::*SetFunc)(uint32_t, D3D12_GPU_DESCRIPTOR_HANDLE))
 {
 	uint32_t neededSize = handleCache.ComputeStagedSize();
@@ -92,6 +117,24 @@ void DynamicDescriptorHeap::CopyAndBindStagedTables(DescriptorHandleCache& handl
 
 	m_owningContext.SetDescriptorHeap(m_descriptorType, GetHeapPointer());
 	handleCache.CopyAndBindStaleTables(m_descriptorType, m_descriptorSize, Allocate(neededSize), cmdList, SetFunc);
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE DynamicDescriptorHeap::UploadDirect(D3D12_CPU_DESCRIPTOR_HANDLE handles)
+{
+	if (!HasSpace(1))
+	{
+		RetireCurrentHeap();
+		UnbindAllValid();
+	}
+
+	m_owningContext.SetDescriptorHeap(m_descriptorType, GetHeapPointer());
+
+	DescriptorHandle destHandle = m_firstDescriptor + m_curOffset * m_descriptorSize;
+	m_curOffset += 1;
+
+	g_Device->CopyDescriptorsSimple(1, destHandle.GetCpuHandle(), handles, m_descriptorType);
+
+	return destHandle.GetGpuHandle();
 }
 
 void DynamicDescriptorHeap::DescriptorHandleCache::ParseRootSignature(D3D12_DESCRIPTOR_HEAP_TYPE type, const RootSignature& rootSig)
@@ -233,14 +276,48 @@ void DynamicDescriptorHeap::DescriptorHandleCache::CopyAndBindStaleTables(
 		unsigned long skipCount;
 		while (_BitScanForward64(&skipCount, setHandles))
 		{
-			// skip over set descriptor handles
+			// skip over unset descriptor handles (the lower 0 bit)
 			setHandles >>= skipCount;
 			srcHandles += skipCount;
 			curDest.ptr += skipCount * descriptorSize;
 
+			// calculate set descriptor count (the lower 1 bit count)
 			unsigned long descriptorCount;
 			_BitScanForward64(&descriptorCount, ~setHandles);
 			setHandles >>= descriptorCount;
+
+			// if we run out of temp room, copy what we've got so far
+			if (numSrcDescriptorRanges + descriptorCount > kMaxDescriptorPerCopy)
+			{
+				g_Device->CopyDescriptors(
+					numDestDescriptorRanges, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes,
+					numSrcDescriptorRanges, pSrcDescriptorRangeStarts, pSrcDescriptorRangeSizes,
+					type);
+				numDestDescriptorRanges = 0;
+				numSrcDescriptorRanges = 0;
+			}
+
+			// record copy destination range start address and contiguous descriptor handle count for each location
+			pDestDescriptorRangeStarts[numDestDescriptorRanges] = curDest;
+			pDestDescriptorRangeSizes[numDestDescriptorRanges] = descriptorCount;
+			++numDestDescriptorRanges;
+
+			// Setup source ranges (one descriptor each because we don't assume they are contiguous)
+			for (uint32_t j = 0; j < descriptorCount; ++j)
+			{
+				pSrcDescriptorRangeStarts[numSrcDescriptorRanges] = srcHandles[j];
+				pSrcDescriptorRangeSizes[numSrcDescriptorRanges] = 1;
+				++numSrcDescriptorRanges;
+			}
+
+			// Move the destination pointer forward by the number of descriptors we will copy
+			srcHandles += descriptorCount;
+			curDest.ptr += descriptorCount * descriptorSize;
 		}
 	}
+
+	g_Device->CopyDescriptors(
+		numDestDescriptorRanges, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes,
+		numSrcDescriptorRanges, pSrcDescriptorRangeStarts, pSrcDescriptorRangeSizes,
+		type);
 }

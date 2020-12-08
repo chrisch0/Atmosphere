@@ -147,6 +147,7 @@
     <ClInclude Include="D3D12\GpuResource.h" />
     <ClInclude Include="D3D12\GraphicsCore.h" />
     <ClInclude Include="D3D12\LinearAllocator.h" />
+    <ClInclude Include="D3D12\PipelineState.h" />
     <ClInclude Include="D3D12\PixelBuffer.h" />
     <ClInclude Include="D3D12\RootSignature.h" />
     <ClInclude Include="d3dx12.h" />
@@ -188,6 +189,7 @@
     <ClCompile Include="D3D12\GpuBuffer.cpp" />
     <ClCompile Include="D3D12\GraphicsCore.cpp" />
     <ClCompile Include="D3D12\LinearAllocator.cpp" />
+    <ClCompile Include="D3D12\PipelineState.cpp" />
     <ClCompile Include="D3D12\PixelBuffer.cpp" />
     <ClCompile Include="D3D12\RootSignature.cpp" />
     <ClCompile Include="FrameContext\FrameContext.cpp" />

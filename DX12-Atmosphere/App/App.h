@@ -3,6 +3,8 @@
 #include "Utils/Timer.h"
 #include "FrameContext/FrameContext.h"
 #include "D3D12/ColorBuffer.h"
+#include "D3D12/RootSignature.h"
+#include "D3D12/PipelineState.h"
 
 struct ImGui_RenderBuffers;
 struct ImGui_FrameContext;
@@ -74,15 +76,15 @@ protected:
 		return m_swapChainBuffer[m_currBackBuffer].Get();
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const
+	/*D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const
 	{
 		return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_currBackBuffer, m_rtvDescriptorSize);
-	}
+	}*/
 
-	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const
+	/*D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const
 	{
 		return m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
-	}
+	}*/
 
 	void CalculateFrameStats();
 
@@ -132,15 +134,15 @@ protected:
 
 	static int const c_swapChainBufferCount = 3;
 	int m_currBackBuffer = 0;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE m_swapChainRTVDespcriptorHandle[c_swapChainBufferCount];
+	//CD3DX12_CPU_DESCRIPTOR_HANDLE m_swapChainRTVDespcriptorHandle[c_swapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_swapChainBuffer[c_swapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
 	ColorBuffer m_displayBuffer[c_swapChainBufferCount];
 
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
+	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
 	std::vector<std::unique_ptr<FrameContext>> m_frameContexts;
 	static const int m_numFrameContexts = 3;
@@ -164,11 +166,16 @@ protected:
 	int m_clientHeight = 800;
 
 	// Imgui
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_appRootSignature = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_appPipelineState;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_fontResource;
-	D3D12_CPU_DESCRIPTOR_HANDLE m_fontSrvCpuDescHandle = {};
-	D3D12_GPU_DESCRIPTOR_HANDLE m_fontSrvGpuDescHandle = {};
+	//Microsoft::WRL::ComPtr<ID3D12RootSignature> m_appRootSignature = nullptr;
+	//Microsoft::WRL::ComPtr<ID3D12PipelineState> m_appPipelineState;
+	RootSignature m_displayRootSignature;
+	GraphicsPSO m_displayPSO;
+
+	//Microsoft::WRL::ComPtr<ID3D12Resource> m_fontResource;
+	//D3D12_CPU_DESCRIPTOR_HANDLE m_fontSrvCpuDescHandle = {};
+	//D3D12_GPU_DESCRIPTOR_HANDLE m_fontSrvGpuDescHandle = {};
+
+	ColorBuffer m_fontColorBuffer;
 
 	bool m_showDemoWindow = true;
 	bool m_showAnotherDemoWindow = false;
