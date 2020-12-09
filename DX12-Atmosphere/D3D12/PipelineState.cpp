@@ -76,6 +76,7 @@ void GraphicsPSO::SetInputLayout(UINT numElements, const D3D12_INPUT_ELEMENT_DES
 
 void GraphicsPSO::Finalize()
 {
+	m_psoDesc.InputLayout.pInputElementDescs = m_inputLayouts.get();
 	m_psoDesc.pRootSignature = m_rootSignature->GetSignature();
 	assert(m_psoDesc.pRootSignature != nullptr);
 
