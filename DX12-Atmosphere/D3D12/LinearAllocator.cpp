@@ -49,14 +49,14 @@ LinearAllocationPage* LinearAllocatorPageManager::CreateNewPage(size_t pageSize 
 	if (m_allocationType == kGpuExclusive)
 	{
 		heapType = D3D12_HEAP_TYPE_DEFAULT;
-		bufferWidth = pageSize == 0 ? kGpuAllocatorPageSize : pageSize;
+		bufferWidth = (int)(pageSize == 0 ? kGpuAllocatorPageSize : pageSize);
 		flag = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		defaultUsage = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 	}
 	else
 	{
 		heapType = D3D12_HEAP_TYPE_UPLOAD;
-		bufferWidth = pageSize == 0 ? kCpuAllocatorPageSize : pageSize;
+		bufferWidth = (int)(pageSize == 0 ? kCpuAllocatorPageSize : pageSize);
 		flag = D3D12_RESOURCE_FLAG_NONE;
 		defaultUsage = D3D12_RESOURCE_STATE_GENERIC_READ;
 

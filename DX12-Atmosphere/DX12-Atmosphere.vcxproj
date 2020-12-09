@@ -141,6 +141,7 @@
     <ClInclude Include="D3D12\CommandAllocatorPool.h" />
     <ClInclude Include="D3D12\CommandContext.h" />
     <ClInclude Include="D3D12\CommandListManager.h" />
+    <ClInclude Include="D3D12\DDSTextureLoader.h" />
     <ClInclude Include="D3D12\DescriptorHeap.h" />
     <ClInclude Include="D3D12\DynamicDescriptorHeap.h" />
     <ClInclude Include="D3D12\GpuBuffer.h" />
@@ -186,6 +187,7 @@
     <ClCompile Include="D3D12\CommandAllocatorPool.cpp" />
     <ClCompile Include="D3D12\CommandContext.cpp" />
     <ClCompile Include="D3D12\CommandListManager.cpp" />
+    <ClCompile Include="D3D12\DDSTextureLoader.cpp" />
     <ClCompile Include="D3D12\DescriptorHeap.cpp" />
     <ClCompile Include="D3D12\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="D3D12\GpuBuffer.cpp" />

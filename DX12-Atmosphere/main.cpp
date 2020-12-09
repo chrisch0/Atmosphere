@@ -5,7 +5,7 @@
 
 int main(int argc, char** argv)
 {
-	FullScreenQuad app;
+	App app;
 	app.Initialize();
 	return app.Run();
 

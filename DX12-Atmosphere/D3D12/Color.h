@@ -9,6 +9,7 @@ public:
 	Color(const DirectX::XMVECTORF32& vec);
 	Color(float r, float g, float b, float a = 1.0f);
 	Color(uint16_t r, uint16_t g, uint16_t b, uint16_t a = 255, uint16_t bitDepth = 8);
+	Color(const ImVec4& color);
 	explicit Color(uint32_t rgbaLittleEndian);
 
 	float R() const { return DirectX::XMVectorGetX(m_value); }
@@ -80,6 +81,11 @@ inline Color::Color(uint32_t u32)
 	float b = (float)((u32 >> 16) & 0xFF);
 	float a = (float)((u32 >> 24) & 0xFF);
 	m_value.v = DirectX::XMVectorScale(DirectX::XMVectorSet(r, g, b, a), 1.0f / 255.0f);
+}
+
+inline Color::Color(const ImVec4& color)
+{
+	m_value.v = DirectX::XMVectorSet(color.x, color.y, color.z, color.w);
 }
 
 inline Color Color::ToSRGB(void) const

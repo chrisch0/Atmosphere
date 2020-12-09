@@ -40,6 +40,7 @@
 #include <cassert>
 #include <stdint.h>
 #include <cmath>
+#include <map>
 
 #include "Utils/HelperFuncs.h"
 #include "Math/Common.h"

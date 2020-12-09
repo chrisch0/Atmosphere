@@ -162,6 +162,9 @@
     <ClInclude Include="D3D12\TextureManager.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\DDSTextureLoader.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -247,6 +250,9 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="D3D12\TextureManager.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\DDSTextureLoader.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>

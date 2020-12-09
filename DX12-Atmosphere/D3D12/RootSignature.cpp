@@ -38,7 +38,7 @@ void RootSignature::InitStaticSampler(uint32_t shaderRegister, const D3D12_SAMPL
 	}
 }
 
-void RootSignature::InitStaticSampler(uint32_t shaderRegister, const D3D12_STATIC_SAMPLER_DESC& staticSamplerDesc, D3D12_SHADER_VISIBILITY visibility /* = D3D12_SHADER_VISIBILITY_ALL */)
+void RootSignature::InitStaticSampler(uint32_t shaderRegister, const D3D12_STATIC_SAMPLER_DESC& staticSamplerDesc)
 {
 	assert(m_numInitializedStaticSamplers < m_numSamplers);
 	D3D12_STATIC_SAMPLER_DESC& desc = m_samplerArray[m_numInitializedStaticSamplers++];

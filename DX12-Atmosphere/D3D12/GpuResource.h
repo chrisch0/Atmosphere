@@ -4,6 +4,8 @@
 class GpuResource
 {
 	friend class CommandContext;
+	friend class GraphicsContext;
+	friend class ComputeContext;
 public:
 	GpuResource() :
 		m_usageState(D3D12_RESOURCE_STATE_COMMON),

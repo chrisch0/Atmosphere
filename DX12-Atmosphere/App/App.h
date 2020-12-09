@@ -5,10 +5,16 @@
 #include "D3D12/ColorBuffer.h"
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
+#include "D3D12/Texture.h"
 
 struct ImGui_RenderBuffers;
 struct ImGui_FrameContext;
 struct ImGuiViewportDataDx12;
+
+struct VERTEX_CONSTANT_BUFFER
+{
+	float   mvp[4][4];
+};
 
 class App
 {
@@ -63,12 +69,12 @@ protected:
 	void WaitForNextFrameResource();
 
 	void DrawImGuiDemo();
-	void RenderImGui();
+	void Display();
 
 	void SwapBackBuffer();
 
 	void RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx);
-	void SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_RenderBuffers* fr);
+	//void SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_RenderBuffers* fr);
 
 	void ShutdownWindow();
 
@@ -144,10 +150,10 @@ protected:
 	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 
-	std::vector<std::unique_ptr<FrameContext>> m_frameContexts;
-	static const int m_numFrameContexts = 3;
-	FrameContext* m_currFrameContext = nullptr;
-	int m_currFrameContextIndex = 0;
+	//std::vector<std::unique_ptr<FrameContext>> m_frameContexts;
+	//static const int m_numFrameContexts = 3;
+	//FrameContext* m_currFrameContext = nullptr;
+	//int m_currFrameContextIndex = 0;
 
 	int m_frameIndex = 0;
 
@@ -175,7 +181,12 @@ protected:
 	//D3D12_CPU_DESCRIPTOR_HANDLE m_fontSrvCpuDescHandle = {};
 	//D3D12_GPU_DESCRIPTOR_HANDLE m_fontSrvGpuDescHandle = {};
 
-	ColorBuffer m_fontColorBuffer;
+	const Texture2D* m_fontColorBuffer;
+
+	std::unique_ptr<ImDrawVert[]> m_uiVerts;
+	size_t m_uiVertsCount = 0;
+	std::unique_ptr<ImDrawIdx[]> m_uiIndices;
+	size_t m_uiIndicesCount = 0;
 
 	bool m_showDemoWindow = true;
 	bool m_showAnotherDemoWindow = false;

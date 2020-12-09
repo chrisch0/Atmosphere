@@ -5,8 +5,8 @@
 
 std::mutex DynamicDescriptorHeap::s_mutex;
 std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> DynamicDescriptorHeap::s_descriptorHeapPool[2];
-std::queue<std::pair<uint64_t, ID3D12DescriptorHeap*>> s_retiredDescriptorHeaps[2];
-std::queue<ID3D12DescriptorHeap*> s_availableDescriptorHeaps[2];
+std::queue<std::pair<uint64_t, ID3D12DescriptorHeap*>> DynamicDescriptorHeap::s_retiredDescriptorHeaps[2];
+std::queue<ID3D12DescriptorHeap*> DynamicDescriptorHeap::s_availableDescriptorHeaps[2];
 
 ID3D12DescriptorHeap* DynamicDescriptorHeap::RequestDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType)
 {
@@ -195,7 +195,7 @@ uint32_t DynamicDescriptorHeap::DescriptorHandleCache::ComputeStagedSize()
 		staleParams ^= (1 << rootIndex);
 		uint32_t maxSetHandle;
 		// return true if any bit set to 1, and the highest bit which is non-zero decides the max space requires
-		assert(true == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
+		assert(TRUE == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
 		neededSpace += maxSetHandle + 1;
 	}
 	// return the max needed handle space of the whole root signature
@@ -237,7 +237,7 @@ void DynamicDescriptorHeap::DescriptorHandleCache::CopyAndBindStaleTables(
 		staleParams ^= (1 << rootIndex);
 
 		uint32_t maxSetHandle;
-		assert(true == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
+		assert(TRUE == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
 
 		// record the max needed space of the descriptor table
 		neededSpace += maxSetHandle + 1;
