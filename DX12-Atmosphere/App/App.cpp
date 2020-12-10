@@ -27,11 +27,15 @@ App::App()
 App::~App()
 {
 	// Wait for the GPU is done processing the command queue before release the resource
-	if (m_d3dDevice != nullptr)
-		WaitForLastSubmittedFrame();
+	g_CommandManager.IdleGPU();
+
 	ShutdownWindow();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+
+	CommandContext::DestroyAllContexts();
+	g_CommandManager.Shutdown();
+	DescriptorAllocator::DestroyAll();
 }
 
 App* App::GetApp()
@@ -149,17 +153,6 @@ bool App::InitDirect3D()
 	g_Device = m_d3dDevice.Get();
 	g_CommandManager.Create(g_Device);
 
-	// Create fence
-	ThrowIfFailed(m_d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_fence.GetAddressOf())));
-
-	m_fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (m_fenceEvent == NULL)
-		return false;
-
-	m_rtvDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	m_dsvDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	m_cbvSrvUavDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
 	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
 	msQualityLevels.Format = m_backBufferFormat;
 	msQualityLevels.SampleCount = 4;
@@ -174,21 +167,9 @@ bool App::InitDirect3D()
 	LogAdapters();
 #endif
 
-	//CreateCommandObjects();
-	//CreateSrvRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 
 	return true;
-}
-
-void App::CreateCommandObjects()
-{
-	
-}
-
-void App::CreateSrvRtvAndDsvDescriptorHeaps()
-{
-	
 }
 
 void App::CreateSwapChain()
@@ -202,7 +183,7 @@ void App::CreateSwapChain()
 		sd.Width = m_clientWidth;
 		sd.Height = m_clientHeight;
 		sd.Format = m_backBufferFormat;
-		sd.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+		sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		sd.SampleDesc.Count = m_4xMSAAState ? 4 : 1;
 		sd.SampleDesc.Quality = m_4xMSAAState ? (m_4xMSAAQuality - 1) : 0;
@@ -215,16 +196,14 @@ void App::CreateSwapChain()
 	ThrowIfFailed(m_dxgiFactory->CreateSwapChainForHwnd(cmdQueue, m_hMainWnd, &sd, NULL, NULL, &swapChain1));
 	ThrowIfFailed(swapChain1->QueryInterface(IID_PPV_ARGS(m_swapChain.GetAddressOf())));
 	swapChain1->Release();
-	m_swapChain->SetMaximumFrameLatency(c_swapChainBufferCount);
-	m_swapChainWaitableOject = m_swapChain->GetFrameLatencyWaitableObject();
 
 	// Create Render Target
 	{
 		for (int i = 0; i < c_swapChainBufferCount; ++i)
 		{
-			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(m_swapChainBuffer[i].GetAddressOf())));
-			//m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, m_swapChainRTVDespcriptorHandle[i]);
-			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", m_swapChainBuffer[i].Detach());
+			ComPtr<ID3D12Resource> displayPlaneBuffer;
+			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(displayPlaneBuffer.GetAddressOf())));
+			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
 		}
 	}
 
@@ -237,11 +216,6 @@ void App::CreateSwapChain()
 
 	m_scissorRect = { 0, 0, m_clientWidth, m_clientHeight };
 
-}
-
-void App::InitFrameContext()
-{
-	
 }
 
 void App::InitImgui()
@@ -380,7 +354,6 @@ void App::CreateFontTexture()
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
 	m_fontColorBuffer = TextureManager::CreateTexture2D(L"FontTexture2D", width, height, DXGI_FORMAT_R8G8B8A8_UNORM, pixels);
-	
 }
 
 int App::Run()
@@ -405,8 +378,8 @@ int App::Run()
 
 			CalculateFrameStats();
 			
-			DrawUI();
-			DrawImGuiDemo();
+			UpdateUI();
+			UpdateImGuiDemo();
 
 			Update(m_timer);
 			Draw(m_timer);
@@ -422,43 +395,23 @@ int App::Run()
 
 void App::OnResize()
 {
-	WaitForLastSubmittedFrame();
-
-	//ThrowIfFailed(m_commandList->Reset(m_directCmdListAlloc.Get(), nullptr));
+	g_CommandManager.IdleGPU();
 
 	for (int i = 0; i < c_swapChainBufferCount; ++i)
 	{
-		m_swapChainBuffer[i].Reset();
+		m_displayBuffer[i].Destroy();
 	}
 	m_depthStencilBuffer.Reset();
 
-	DXGI_SWAP_CHAIN_DESC1 sd;
-	m_swapChain->GetDesc1(&sd);
-	sd.Width = m_clientWidth;
-	sd.Height = m_clientHeight;
-
-	m_swapChain->Release();
-	CloseHandle(m_swapChainWaitableOject);
-
-	IDXGISwapChain1* swapChain1 = NULL;
-	m_dxgiFactory->CreateSwapChainForHwnd(g_CommandManager.GetCommandQueue(), m_hMainWnd, &sd, NULL, NULL, &swapChain1);
-	swapChain1->QueryInterface(IID_PPV_ARGS(m_swapChain.GetAddressOf()));
-	swapChain1->Release();
-	
-	m_swapChain->SetMaximumFrameLatency(c_swapChainBufferCount);
-
-	m_swapChainWaitableOject = m_swapChain->GetFrameLatencyWaitableObject();
-	assert(m_swapChainWaitableOject != NULL);
+	ThrowIfFailed(m_swapChain->ResizeBuffers(c_swapChainBufferCount, m_clientWidth, m_clientHeight, m_backBufferFormat, 0));
 
 	m_currBackBuffer = 0;
 
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 	for (int i = 0; i < c_swapChainBufferCount; ++i)
 	{
-		ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_swapChainBuffer[i])));
-		//m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, m_swapChainRTVDespcriptorHandle[i]);
-		//rtvHeapHandle.Offset(1, m_rtvDescriptorSize);
-		m_displayBuffer->CreateFromSwapChain(L"Primary SwapChain Buffer", m_swapChainBuffer[i].Detach());
+		ComPtr<ID3D12Resource> displayPlaneBuffer;
+		ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&displayPlaneBuffer)));
+		m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
 	}
 
 	m_screenViewport.TopLeftX = 0.0;
@@ -482,12 +435,12 @@ void App::Draw(const Timer& t)
 	
 }
 
-void App::DrawUI()
+void App::UpdateUI()
 {
 
 }
 
-void App::DrawImGuiDemo()
+void App::UpdateImGuiDemo()
 {
 	m_clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -532,9 +485,9 @@ void App::DrawImGuiDemo()
 void App::Display()
 {
 	GraphicsContext& context = GraphicsContext::Begin(L"Display");
-	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET);
-	m_displayBuffer->SetClearColor(m_clearColor);
-	context.ClearColor(m_displayBuffer[m_currBackBuffer]);
+	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	//m_displayBuffer[m_currBackBuffer].SetClearColor(m_clearColor);
+	//context.ClearColor(m_displayBuffer[m_currBackBuffer]);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvs[] =
 	{
@@ -543,47 +496,69 @@ void App::Display()
 	context.SetRenderTargets(_countof(rtvs), rtvs); // or context.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
 
 	ImGui::Render();
-	auto draw_data = ImGui::GetDrawData();
+	auto drawData = ImGui::GetDrawData();
 
+	RenderUI(context, drawData);
+
+	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_PRESENT);
+	context.Finish();
+
+	ImGuiIO& io = ImGui::GetIO();
+	// Update and Render additional Platform Windows
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault(NULL, NULL);
+	}
+}
+
+void App::SwapBackBuffer()
+{
+	//m_swapChain->Present(1, 0); // Present with vsync
+	m_swapChain->Present(0, 0); // Present without vsync
+	m_currBackBuffer = (m_currBackBuffer + 1) % c_swapChainBufferCount;
+	g_CommandManager.IdleGPU();
+}
+
+void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
+{
 	// Avoid rendering when minimized
-	if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
+	if (drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
 		return;
 
-	ImGuiViewportDataDx12* render_data = (ImGuiViewportDataDx12*)draw_data->OwnerViewport->RendererUserData;
-	render_data->FrameIndex++;
-
+	ImGuiViewportDataDx12* render_data = (ImGuiViewportDataDx12*)drawData->OwnerViewport->RendererUserData;
 
 	// Set dynamic vertex buffer and dynamic index buffer
-	if (!m_uiVerts || draw_data->TotalVtxCount > m_uiVertsCount + 5000)
+	if (!render_data->VertexBuffer || drawData->TotalVtxCount > render_data->VertexCount + 5000)
 	{
-		m_uiVertsCount = draw_data->TotalVtxCount;
-		m_uiVerts.reset(new ImDrawVert[m_uiVertsCount + 5000]);
+		render_data->VertexBuffer.reset(new ImDrawVert[render_data->VertexCount + 5000]);
 	}
-	if (!m_uiIndices || draw_data->TotalIdxCount > m_uiIndicesCount + 10000)
+	if (!render_data->IndexBuffer || drawData->TotalIdxCount > render_data->IndexCount + 10000)
 	{
-		m_uiIndicesCount = draw_data->TotalIdxCount;
-		m_uiIndices.reset(new ImDrawIdx[m_uiIndicesCount + 10000]);
+		render_data->IndexBuffer.reset(new ImDrawIdx[render_data->IndexCount + 10000]);
 	}
+	render_data->VertexCount = drawData->TotalVtxCount;
+	render_data->IndexCount = drawData->TotalIdxCount;
 	size_t vertexStride = sizeof(ImDrawVert);
 
-	auto* vtx_dst = m_uiVerts.get();
-	auto* idx_dst = m_uiIndices.get();
-	for (int n = 0; n < draw_data->CmdListsCount; n++)
+	auto* vtx_dst = render_data->VertexBuffer.get();
+	auto* idx_dst = render_data->IndexBuffer.get();
+	for (int n = 0; n < drawData->CmdListsCount; n++)
 	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
+		const ImDrawList* cmd_list = drawData->CmdLists[n];
 		memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
 		memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
 		vtx_dst += cmd_list->VtxBuffer.Size;
 		idx_dst += cmd_list->IdxBuffer.Size;
 	}
-	context.SetDynamicVB(0, m_uiVertsCount, sizeof(ImDrawVert), m_uiVerts.get());
-	context.SetDynamicIB(m_uiIndicesCount, m_uiIndices.get());
+	context.SetDynamicVB(0, render_data->VertexCount, sizeof(ImDrawVert), render_data->VertexBuffer.get());
+	context.SetDynamicIB(render_data->IndexCount, render_data->IndexBuffer.get());
 
 	// Setup viewport
 	D3D12_VIEWPORT vp;
 	memset(&vp, 0, sizeof(D3D12_VIEWPORT));
-	vp.Width = draw_data->DisplaySize.x;
-	vp.Height = draw_data->DisplaySize.y;
+	vp.Width = drawData->DisplaySize.x;
+	vp.Height = drawData->DisplaySize.y;
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	vp.TopLeftX = vp.TopLeftY = 0.0f;
@@ -591,27 +566,23 @@ void App::Display()
 
 	// Setup orthographic projection matrix into our constant buffer
 	// Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
-	VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
-	{
 
-		float L = draw_data->DisplayPos.x;
-		float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
-		float T = draw_data->DisplayPos.y;
-		float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-		float mvp[4][4] =
-		{
-			{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-			{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
-			{ 0.0f,         0.0f,           0.5f,       0.0f },
-			{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
-		};
-		memcpy(&vertex_constant_buffer.mvp, mvp, sizeof(mvp));
-	}
+	float L = drawData->DisplayPos.x;
+	float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
+	float T = drawData->DisplayPos.y;
+	float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
+	float mvp[16] =
+	{
+		2.0f / (R - L),   0.0f,           0.0f,       0.0f ,
+		0.0f,         2.0f / (T - B),     0.0f,       0.0f ,
+		0.0f,         0.0f,           0.5f,       0.0f ,
+		(R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f ,
+	};
 
 	context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context.SetPipelineState(m_displayPSO);
 	context.SetRootSignature(m_displayRootSignature);
-	context.SetConstantArray(0, 16, &vertex_constant_buffer);
+	context.SetConstantArray(0, 16, mvp);
 	context.SetDynamicDescriptor(1, 0, m_fontColorBuffer->GetSRV());
 	context.SetBlendFactor({ 0.0f, 0.0f, 0.0f, 0.0f });
 
@@ -619,10 +590,10 @@ void App::Display()
 	// (Because we merged all buffers into a single one, we maintain our own offset into them)
 	int global_vtx_offset = 0;
 	int global_idx_offset = 0;
-	ImVec2 clip_off = draw_data->DisplayPos;
-	for (int n = 0; n < draw_data->CmdListsCount; n++)
+	ImVec2 clip_off = drawData->DisplayPos;
+	for (int n = 0; n < drawData->CmdListsCount; n++)
 	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
+		const ImDrawList* cmd_list = drawData->CmdLists[n];
 		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
 		{
 			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
@@ -654,40 +625,6 @@ void App::Display()
 		global_idx_offset += cmd_list->IdxBuffer.Size;
 		global_vtx_offset += cmd_list->VtxBuffer.Size;
 	}
-
-	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_PRESENT);
-	context.Finish();
-
-	ImGuiIO& io = ImGui::GetIO();
-	// Update and Render additional Platform Windows
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-	{
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault(NULL, NULL);
-	}
-}
-
-void App::SwapBackBuffer()
-{
-	//m_swapChain->Present(1, 0); // Present with vsync
-	m_swapChain->Present(0, 0); // Present without vsync
-	m_currBackBuffer = (m_currBackBuffer + 1) % c_swapChainBufferCount;
-
-}
-
-void App::RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx)
-{
-	
-}
-
-void App::WaitForLastSubmittedFrame()
-{
-	
-}
-
-void App::WaitForNextFrameResource()
-{
-	
 }
 
 void App::ShutdownWindow()
@@ -837,7 +774,6 @@ void App::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 	}
 }
 
-
 void App::CreateAppSubWindow(ImGuiViewport* viewport)
 {
 	ImGuiViewportDataDx12* data = IM_NEW(ImGuiViewportDataDx12)();
@@ -847,8 +783,6 @@ void App::CreateAppSubWindow(ImGuiViewport* viewport)
 	// Some backends will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the HWND.
 	HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
 	IM_ASSERT(hwnd != 0);
-
-	data->FrameIndex = UINT_MAX;
 
 	auto cmdQueue = g_CommandManager.GetCommandQueue();
 
@@ -890,11 +824,13 @@ void App::CreateAppSubWindow(ImGuiViewport* viewport)
 
 void App::DestroyAppSubWindow(ImGuiViewport* viewport)
 {
+	g_CommandManager.IdleGPU();
 	// The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
 	if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData)
 	{
-		FlushSubWindowCommandQueue(data);
-		SafeRelease(data->SwapChain);
+		if (data->SwapChain)
+			data->SwapChain->Release();
+		data->SwapChain = NULL;
 
 		for (UINT i = 0; i < c_swapChainBufferCount; i++)
 		{
@@ -905,14 +841,15 @@ void App::DestroyAppSubWindow(ImGuiViewport* viewport)
 	viewport->RendererUserData = NULL;
 }
 
-void App::FlushSubWindowCommandQueue(ImGuiViewportDataDx12* data)
-{
-
-}
-
 void App::SetAppSubWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
 	ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
+
+	g_CommandManager.IdleGPU();
+	for (uint32_t i = 0; i < c_swapChainBufferCount; ++i)
+	{
+		data->RenderTargetBuffer[i].Destroy();
+	}
 
 	if (data->SwapChain)
 	{
@@ -938,7 +875,7 @@ void App::RenderAppSubWindow(ImGuiViewport* viewport, void*)
 
 	GraphicsContext& context = GraphicsContext::Begin(L"Sub-window Display");
 
-	context.TransitionResource(current_render_target, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	context.TransitionResource(current_render_target, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
 	{
 		current_render_target.SetClearColor(clear_color);
@@ -946,121 +883,11 @@ void App::RenderAppSubWindow(ImGuiViewport* viewport, void*)
 	}
 	context.SetRenderTarget(current_render_target.GetRTV());
 
-
-	auto draw_data = viewport->DrawData;
-	// Avoid rendering when minimized
-	if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
-		return;
-
-	ImGuiViewportDataDx12* render_data = (ImGuiViewportDataDx12*)draw_data->OwnerViewport->RendererUserData;
-	render_data->FrameIndex++;
-
-
-	// Set dynamic vertex buffer and dynamic index buffer
-	if (!render_data->VertexBuffer || draw_data->TotalVtxCount > render_data->VertexCount + 5000)
-	{
-		render_data->VertexCount = draw_data->TotalVtxCount;
-		render_data->VertexBuffer.reset(new ImDrawVert[render_data->VertexCount + 5000]);
-	}
-	if (!render_data->IndexBuffer || draw_data->TotalIdxCount > render_data->IndexCount + 10000)
-	{
-		render_data->IndexCount = draw_data->TotalIdxCount;
-		render_data->IndexBuffer.reset(new ImDrawIdx[render_data->IndexCount + 10000]);
-	}
-	size_t vertexStride = sizeof(ImDrawVert);
-
-	auto* vtx_dst = render_data->VertexBuffer.get();
-	auto* idx_dst = render_data->IndexBuffer.get();
-	for (int n = 0; n < draw_data->CmdListsCount; n++)
-	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
-		memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-		memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-		vtx_dst += cmd_list->VtxBuffer.Size;
-		idx_dst += cmd_list->IdxBuffer.Size;
-	}
-	context.SetDynamicVB(0, m_uiVertsCount, sizeof(ImDrawVert), render_data->VertexBuffer.get());
-	context.SetDynamicIB(m_uiIndicesCount, render_data->IndexBuffer.get());
-
-	// Setup viewport
-	D3D12_VIEWPORT vp;
-	memset(&vp, 0, sizeof(D3D12_VIEWPORT));
-	vp.Width = draw_data->DisplaySize.x;
-	vp.Height = draw_data->DisplaySize.y;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	vp.TopLeftX = vp.TopLeftY = 0.0f;
-	context.SetViewport(vp);
-
-	// Setup orthographic projection matrix into our constant buffer
-	// Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
-	VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
-	{
-
-		float L = draw_data->DisplayPos.x;
-		float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
-		float T = draw_data->DisplayPos.y;
-		float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
-		float mvp[4][4] =
-		{
-			{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-			{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
-			{ 0.0f,         0.0f,           0.5f,       0.0f },
-			{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
-		};
-		memcpy(&vertex_constant_buffer.mvp, mvp, sizeof(mvp));
-	}
-
-	context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context.SetPipelineState(m_displayPSO);
-	context.SetRootSignature(m_displayRootSignature);
-	context.SetConstantArray(0, 16, &vertex_constant_buffer);
-	context.SetDynamicDescriptor(1, 0, m_fontColorBuffer->GetSRV());
-	context.SetBlendFactor({ 0.0f, 0.0f, 0.0f, 0.0f });
-
-	// Render command lists
-	// (Because we merged all buffers into a single one, we maintain our own offset into them)
-	int global_vtx_offset = 0;
-	int global_idx_offset = 0;
-	ImVec2 clip_off = draw_data->DisplayPos;
-	for (int n = 0; n < draw_data->CmdListsCount; n++)
-	{
-		const ImDrawList* cmd_list = draw_data->CmdLists[n];
-		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-		{
-			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-			if (pcmd->UserCallback != NULL)
-			{
-				// User callback, registered via ImDrawList::AddCallback()
-				// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-				if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-				{
-					//SetupRenderState(draw_data, ctx, fr);
-				}
-				else
-				{
-					pcmd->UserCallback(cmd_list, pcmd);
-				}
-			}
-			else
-			{
-				// Apply Scissor, Bind texture, Draw
-				const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
-				if (r.right > r.left && r.bottom > r.top)
-				{
-					//ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
-					context.SetScissor(r);
-					context.DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
-				}
-			}
-		}
-		global_idx_offset += cmd_list->IdxBuffer.Size;
-		global_vtx_offset += cmd_list->VtxBuffer.Size;
-	}
+	auto drawData = viewport->DrawData;	
+	RenderUI(context, drawData);
 
 	context.TransitionResource(current_render_target, D3D12_RESOURCE_STATE_PRESENT);
 	context.Finish();
-
 }
 
 void App::SwapAppSubWindowBuffers(ImGuiViewport* viewport, void*)
@@ -1068,4 +895,5 @@ void App::SwapAppSubWindowBuffers(ImGuiViewport* viewport, void*)
 	ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
 
 	data->SwapChain->Present(0, 0);
+	g_CommandManager.IdleGPU();
 }

@@ -147,6 +147,8 @@ uint64_t CommandContext::Finish(bool waitForCompletion /* = false */)
 
 	m_cpuLinearAllocator.CleanupUsedPages(fenceValue);
 	m_gpuLinearAllocator.CleanupUsedPages(fenceValue);
+	m_dynamicViewDescriptorHeap.CleanupUsedHeaps(fenceValue);
+	m_dynamicSamplerDescriptorHeap.CleanupUsedHeaps(fenceValue);
 
 	if (waitForCompletion)
 		g_CommandManager.WaitForFence(fenceValue);
@@ -404,7 +406,7 @@ void GraphicsContext::SetConstantBuffer(uint32_t rootIndex, D3D12_GPU_VIRTUAL_AD
 
 void GraphicsContext::SetDynamicConstantBufferView(uint32_t rootIndex, size_t bufferSize, const void* bufferData)
 {
-	assert(bufferData != nullptr && Math::IsAligned(bufferData, 16));
+	assert(bufferData != nullptr);
 	DynAlloc cb = m_cpuLinearAllocator.Allocate(bufferSize);
 	//SIMDMemCopy(cb.DataPtr, BufferData, Math::AlignUp(BufferSize, 16) >> 4);
 	memcpy(cb.dataPtr, bufferData, bufferSize);

@@ -165,6 +165,12 @@
     <ClInclude Include="D3D12\DDSTextureLoader.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="Testes\CameraDemo.h">
+      <Filter>Testes</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\Camera.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -254,6 +260,12 @@
     </ClCompile>
     <ClCompile Include="D3D12\DDSTextureLoader.cpp">
       <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="Testes\CameraDemo.cpp">
+      <Filter>Testes</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\Camera.cpp">
+      <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

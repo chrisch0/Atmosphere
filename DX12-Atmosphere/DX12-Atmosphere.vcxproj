@@ -175,8 +175,10 @@
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\VectorMath.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Testes\CameraDemo.h" />
     <ClInclude Include="Testes\ComputeShader.h" />
     <ClInclude Include="Testes\FullScreenQuad.h" />
+    <ClInclude Include="Utils\Camera.h" />
     <ClInclude Include="Utils\HelperFuncs.h" />
     <ClInclude Include="Utils\Timer.h" />
   </ItemGroup>
@@ -207,8 +209,10 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
+    <ClCompile Include="Testes\CameraDemo.cpp" />
     <ClCompile Include="Testes\ComputeShader.cpp" />
     <ClCompile Include="Testes\FullScreenQuad.cpp" />
+    <ClCompile Include="Utils\Camera.cpp" />
     <ClCompile Include="Utils\HelperFuncs.cpp" />
     <ClCompile Include="Utils\Timer.cpp" />
   </ItemGroup>

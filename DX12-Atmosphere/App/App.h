@@ -10,11 +10,7 @@
 struct ImGui_RenderBuffers;
 struct ImGui_FrameContext;
 struct ImGuiViewportDataDx12;
-
-struct VERTEX_CONSTANT_BUFFER
-{
-	float   mvp[4][4];
-};
+class GraphicsContext;
 
 class App
 {
@@ -47,50 +43,29 @@ public:
 	virtual void OnResize();
 
 protected:
-	virtual void CreateSrvRtvAndDsvDescriptorHeaps();
 	virtual void Update(const Timer& t);
 	virtual void Draw(const Timer& t);
-	virtual void DrawUI();
+	virtual void UpdateUI();
 
 protected:
 	bool InitMainWindow();
 	bool InitDirect3D();
-	void InitFrameContext();
 	void InitImgui();
-	void CreateCommandObjects();
 	void CreateSwapChain();
 
 	void CreateAppRootSignature();
 	void CreateAppPipelineState();
 	void CreateFontTexture();
 
-	void WaitForLastSubmittedFrame();
-
-	void WaitForNextFrameResource();
-
-	void DrawImGuiDemo();
+	void UpdateImGuiDemo();
 	void Display();
 
 	void SwapBackBuffer();
 
-	void RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx);
+	void RenderUI(GraphicsContext& context, ImDrawData* drawData);
 	//void SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ImGui_RenderBuffers* fr);
 
 	void ShutdownWindow();
-
-	ID3D12Resource* CurrentBackBuffer() const {
-		return m_swapChainBuffer[m_currBackBuffer].Get();
-	}
-
-	/*D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const
-	{
-		return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_currBackBuffer, m_rtvDescriptorSize);
-	}*/
-
-	/*D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const
-	{
-		return m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
-	}*/
 
 	void CalculateFrameStats();
 
@@ -105,8 +80,6 @@ public:
 	void SetAppSubWindowSize(ImGuiViewport* viewport, ImVec2 size);
 	void RenderAppSubWindow(ImGuiViewport* viewport, void*);
 	void SwapAppSubWindowBuffers(ImGuiViewport* viewport, void*);
-private:
-	void FlushSubWindowCommandQueue(ImGuiViewportDataDx12* data);
 
 protected:
 	static App* m_app;
@@ -125,44 +98,19 @@ protected:
 	Timer m_timer;
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> m_dxgiFactory;
-	//Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-	HANDLE m_swapChainWaitableOject = NULL;
 	Microsoft::WRL::ComPtr<ID3D12Device> m_d3dDevice;
-
-	Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
-	HANDLE m_fenceEvent = NULL;
-	UINT64 m_currentFence = 0;
-
-	//Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
-	//Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCmdListAlloc;
-	//Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
 	static int const c_swapChainBufferCount = 3;
 	int m_currBackBuffer = 0;
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE m_swapChainRTVDespcriptorHandle[c_swapChainBufferCount];
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_swapChainBuffer[c_swapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
 	ColorBuffer m_displayBuffer[c_swapChainBufferCount];
-
-	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
-	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
-
-	//std::vector<std::unique_ptr<FrameContext>> m_frameContexts;
-	//static const int m_numFrameContexts = 3;
-	//FrameContext* m_currFrameContext = nullptr;
-	//int m_currFrameContextIndex = 0;
 
 	int m_frameIndex = 0;
 
 	D3D12_VIEWPORT m_screenViewport;
 	D3D12_RECT m_scissorRect;
-
-	UINT m_rtvDescriptorSize = 0;
-	UINT m_dsvDescriptorSize = 0;
-	UINT m_cbvSrvUavDescriptorSize = 0;
 
 	std::wstring m_mainWndCaption = L"Atmosphere";
 	D3D_DRIVER_TYPE m_d3dDriverType = D3D_DRIVER_TYPE_HARDWARE;
@@ -172,21 +120,10 @@ protected:
 	int m_clientHeight = 800;
 
 	// Imgui
-	//Microsoft::WRL::ComPtr<ID3D12RootSignature> m_appRootSignature = nullptr;
-	//Microsoft::WRL::ComPtr<ID3D12PipelineState> m_appPipelineState;
 	RootSignature m_displayRootSignature;
 	GraphicsPSO m_displayPSO;
 
-	//Microsoft::WRL::ComPtr<ID3D12Resource> m_fontResource;
-	//D3D12_CPU_DESCRIPTOR_HANDLE m_fontSrvCpuDescHandle = {};
-	//D3D12_GPU_DESCRIPTOR_HANDLE m_fontSrvGpuDescHandle = {};
-
 	const Texture2D* m_fontColorBuffer;
-
-	std::unique_ptr<ImDrawVert[]> m_uiVerts;
-	size_t m_uiVertsCount = 0;
-	std::unique_ptr<ImDrawIdx[]> m_uiIndices;
-	size_t m_uiIndicesCount = 0;
 
 	bool m_showDemoWindow = true;
 	bool m_showAnotherDemoWindow = false;
