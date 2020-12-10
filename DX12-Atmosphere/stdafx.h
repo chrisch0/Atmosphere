@@ -49,3 +49,5 @@
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
 #include "D3D12/GraphicsCore.h"
+
+using namespace Math;
