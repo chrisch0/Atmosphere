@@ -1117,9 +1117,29 @@ enum ImGuiKey_
     ImGuiKey_Escape,
     ImGuiKey_KeyPadEnter,
     ImGuiKey_A,                 // for text edit CTRL+A: select all
+	ImGuiKey_B,
     ImGuiKey_C,                 // for text edit CTRL+C: copy
-    ImGuiKey_V,                 // for text edit CTRL+V: paste
-    ImGuiKey_X,                 // for text edit CTRL+X: cut
+	ImGuiKey_D,
+	ImGuiKey_E,
+	ImGuiKey_F,
+	ImGuiKey_G,
+	ImGuiKey_H,
+	ImGuiKey_I,
+	ImGuiKey_J,
+	ImGuiKey_K,
+	ImGuiKey_L,
+	ImGuiKey_M,
+	ImGuiKey_N,
+	ImGuiKey_O,
+	ImGuiKey_P,
+	ImGuiKey_Q,
+	ImGuiKey_R,
+	ImGuiKey_S,
+	ImGuiKey_T,
+	ImGuiKey_U,
+	ImGuiKey_V,                 // for text edit CTRL+V: paste
+	ImGuiKey_W,
+	ImGuiKey_X,                 // for text edit CTRL+X: cut
     ImGuiKey_Y,                 // for text edit CTRL+Y: redo
     ImGuiKey_Z,                 // for text edit CTRL+Z: undo
     ImGuiKey_COUNT

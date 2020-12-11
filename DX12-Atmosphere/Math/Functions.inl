@@ -55,8 +55,9 @@ namespace Math
     INLINE BoolVector operator>  ( TYPE lhs, TYPE rhs ) { return XMVectorGreater(lhs, rhs); } \
     INLINE BoolVector operator>= ( TYPE lhs, TYPE rhs ) { return XMVectorGreaterOrEqual(lhs, rhs); } \
     INLINE BoolVector operator== ( TYPE lhs, TYPE rhs ) { return XMVectorEqual(lhs, rhs); } \
-    INLINE TYPE Select( TYPE lhs, TYPE rhs, BoolVector mask ) { return TYPE(XMVectorSelect(lhs, rhs, mask)); }
-
+    INLINE TYPE Select( TYPE lhs, TYPE rhs, BoolVector mask ) { return TYPE(XMVectorSelect(lhs, rhs, mask)); } \
+	INLINE TYPE ToRadian(TYPE v) { return v * 0.0174532925f; } \
+	INLINE TYPE ToDegree(TYPE v) { return v * 57.295779513f; }
 
     CREATE_SIMD_FUNCTIONS(Scalar)
     CREATE_SIMD_FUNCTIONS(Vector3)
@@ -85,6 +86,8 @@ namespace Math
     INLINE float Max( float a, float b ) { return a > b ? a : b; }
     INLINE float Min( float a, float b ) { return a < b ? a : b; }
     INLINE float Clamp( float v, float a, float b ) { return Min(Max(v, a), b); }
+	INLINE float ToRadian(float v) { return v * 0.0174532925f; }
+	INLINE float ToDegree(float v) { return v * 57.295779513f; }
 
     INLINE Scalar Length( Vector3 v ) { return Scalar(XMVector3Length(v)); }
     INLINE Scalar LengthSquare( Vector3 v ) { return Scalar(XMVector3LengthSq(v)); }
