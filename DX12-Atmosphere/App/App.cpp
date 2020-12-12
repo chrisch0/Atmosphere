@@ -529,20 +529,27 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 	ImGuiViewportDataDx12* render_data = (ImGuiViewportDataDx12*)drawData->OwnerViewport->RendererUserData;
 
 	// Set dynamic vertex buffer and dynamic index buffer
-	if (!render_data->VertexBuffer || drawData->TotalVtxCount > render_data->VertexCount + 5000)
+	size_t vertexStride = sizeof(ImDrawVert);
+	int vtxCount = drawData->TotalVtxCount == 0 ? 100 : drawData->TotalVtxCount;
+	int idxCount = drawData->TotalIdxCount == 0 ? 100 : drawData->TotalIdxCount;
+	DynMem vertexBuffer = context.AllocateMemory(vtxCount * vertexStride);
+	DynMem indexBuffer = context.AllocateMemory(idxCount * sizeof(ImDrawIdx));
+
+	/*if (!render_data->VertexBuffer || drawData->TotalVtxCount > render_data->VertexCount + 5000)
 	{
 		render_data->VertexBuffer.reset(new ImDrawVert[render_data->VertexCount + 5000]);
 	}
 	if (!render_data->IndexBuffer || drawData->TotalIdxCount > render_data->IndexCount + 10000)
 	{
 		render_data->IndexBuffer.reset(new ImDrawIdx[render_data->IndexCount + 10000]);
-	}
-	render_data->VertexCount = drawData->TotalVtxCount;
-	render_data->IndexCount = drawData->TotalIdxCount;
-	size_t vertexStride = sizeof(ImDrawVert);
+	}*/
+	//render_data->VertexCount = drawData->TotalVtxCount;
+	//render_data->IndexCount = drawData->TotalIdxCount;
 
-	auto* vtx_dst = render_data->VertexBuffer.get();
-	auto* idx_dst = render_data->IndexBuffer.get();
+	/*auto* vtx_dst = render_data->VertexBuffer.get();
+	auto* idx_dst = render_data->IndexBuffer.get();*/
+	ImDrawVert* vtx_dst = (ImDrawVert*)vertexBuffer.dataPtr;
+	ImDrawIdx* idx_dst = (ImDrawIdx*)indexBuffer.dataPtr;
 	for (int n = 0; n < drawData->CmdListsCount; n++)
 	{
 		const ImDrawList* cmd_list = drawData->CmdLists[n];
@@ -551,8 +558,10 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 		vtx_dst += cmd_list->VtxBuffer.Size;
 		idx_dst += cmd_list->IdxBuffer.Size;
 	}
-	context.SetDynamicVB(0, render_data->VertexCount, sizeof(ImDrawVert), render_data->VertexBuffer.get());
-	context.SetDynamicIB(render_data->IndexCount, render_data->IndexBuffer.get());
+	//context.SetDynamicVB(0, render_data->VertexCount, sizeof(ImDrawVert), render_data->VertexBuffer.get());
+	//context.SetDynamicIB(render_data->IndexCount, render_data->IndexBuffer.get());	
+	context.SetDynamicVB(0, vtxCount, sizeof(ImDrawVert), vertexBuffer.dataPtr);
+	context.SetDynamicIB(idxCount, (uint16_t*)indexBuffer.dataPtr);
 
 	// Setup viewport
 	D3D12_VIEWPORT vp;

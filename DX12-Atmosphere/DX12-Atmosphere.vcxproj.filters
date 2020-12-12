@@ -168,6 +168,12 @@
     <ClInclude Include="Utils\CameraController.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\DepthBuffer.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\DynamicAllocator.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -263,6 +269,12 @@
     </ClCompile>
     <ClCompile Include="Utils\CameraController.cpp">
       <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\DepthBuffer.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\DynamicAllocator.cpp">
+      <Filter>D3D12</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

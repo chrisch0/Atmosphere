@@ -37,9 +37,9 @@ struct ImGuiViewportDataDx12
 {
 	IDXGISwapChain3*                SwapChain;
 	ColorBuffer RenderTargetBuffer[s_numFrameContexts];
-	std::unique_ptr<ImDrawVert[]> VertexBuffer;
+	//std::unique_ptr<ImDrawVert[]> VertexBuffer;
 	size_t VertexCount = 0;
-	std::unique_ptr<ImDrawIdx[]> IndexBuffer;
+	//std::unique_ptr<ImDrawIdx[]> IndexBuffer;
 	size_t IndexCount = 0;
 
 	ImGuiViewportDataDx12()

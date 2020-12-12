@@ -49,7 +49,8 @@ CommandContext::CommandContext(D3D12_COMMAND_LIST_TYPE type) :
 	m_dynamicViewDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
 	m_dynamicSamplerDescriptorHeap(*this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER),
 	m_cpuLinearAllocator(kCpuWritable),
-	m_gpuLinearAllocator(kGpuExclusive)
+	m_gpuLinearAllocator(kGpuExclusive),
+	m_dynamicMemoryAllocator()
 {
 	m_owningManager = nullptr;
 	m_commandList = nullptr;
@@ -96,6 +97,9 @@ CommandContext& CommandContext::Begin(const std::wstring& ID /* = L"" */)
 
 void CommandContext::DestroyAllContexts()
 {
+	LinearAllocator::DestroyAll();
+	DynamicDescriptorHeap::DestoryAll();
+	DynamicAllocator::Destroy();
 	g_ContextManager.DestroyAllContexts();
 }
 
@@ -147,6 +151,7 @@ uint64_t CommandContext::Finish(bool waitForCompletion /* = false */)
 
 	m_cpuLinearAllocator.CleanupUsedPages(fenceValue);
 	m_gpuLinearAllocator.CleanupUsedPages(fenceValue);
+	m_dynamicMemoryAllocator.CleanupUsedPages(fenceValue);
 	m_dynamicViewDescriptorHeap.CleanupUsedHeaps(fenceValue);
 	m_dynamicSamplerDescriptorHeap.CleanupUsedHeaps(fenceValue);
 

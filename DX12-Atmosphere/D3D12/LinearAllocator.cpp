@@ -131,10 +131,10 @@ DynAlloc LinearAllocator::AllocateLargePage(size_t sizeInBytes, const std::wstri
 
 DynAlloc LinearAllocator::Allocate(size_t sizeInBytes, const std::wstring& name /* = L"" */, size_t alignment /* = DEFAULT_ALIGN */)
 {
-	const size_t aligmentMask = alignment - 1;
-	assert((aligmentMask & alignment) == 0);
+	const size_t alignmentMask = alignment - 1;
+	assert((alignmentMask & alignment) == 0);
 
-	const size_t alignedSize = Math::AlignUpWithMask(sizeInBytes, aligmentMask);
+	const size_t alignedSize = Math::AlignUpWithMask(sizeInBytes, alignmentMask);
 
 	if (alignedSize > m_pageSize)
 		return AllocateLargePage(alignedSize);

@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "LinearAllocator.h"
 #include "DynamicDescriptorHeap.h"
+#include "DynamicAllocator.h"
 #include "GpuBuffer.h"
 #include "ColorBuffer.h"
 
@@ -102,6 +103,11 @@ public:
 		return m_cpuLinearAllocator.Allocate(sizeInBytes, name);
 	}
 
+	DynMem AllocateMemory(size_t sizeInBytes)
+	{
+		return m_dynamicMemoryAllocator.Allocate(sizeInBytes);
+	}
+
 	static void InitializeBuffer(GpuResource& dest, const void* bufferData, size_t numBytes, size_t offset = 0, const std::wstring& name = L"");
 	static void InitializeTexture(GpuResource& dest, uint32_t numSubresources, D3D12_SUBRESOURCE_DATA subData[]);
 
@@ -136,6 +142,8 @@ protected:
 
 	LinearAllocator m_cpuLinearAllocator;
 	LinearAllocator m_gpuLinearAllocator;
+
+	DynamicAllocator m_dynamicMemoryAllocator;
 
 	std::wstring m_ID;
 	void SetID(const std::wstring& ID) { m_ID = ID; }
