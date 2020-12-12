@@ -74,11 +74,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(SolutionDir)$(ProjectName);$(SolutionDir)$(ProjectName)\bin;$(IncludePath)</IncludePath>
-    <OutDir>$(SolutionDir)$(ProjectName)\bin</OutDir>
+    <OutDir>$(SolutionDir)$(ProjectName)\bin\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(SolutionDir)$(ProjectName);$(SolutionDir)$(ProjectName)\bin;$(IncludePath)</IncludePath>
-    <OutDir>$(SolutionDir)$(ProjectName)\bin</OutDir>
+    <OutDir>$(SolutionDir)$(ProjectName)\bin\</OutDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -178,6 +178,7 @@
     <ClInclude Include="Testes\ComputeShader.h" />
     <ClInclude Include="Testes\FullScreenQuad.h" />
     <ClInclude Include="Utils\Camera.h" />
+    <ClInclude Include="Utils\CameraController.h" />
     <ClInclude Include="Utils\HelperFuncs.h" />
     <ClInclude Include="Utils\Timer.h" />
   </ItemGroup>
@@ -211,6 +212,7 @@
     <ClCompile Include="Testes\ComputeShader.cpp" />
     <ClCompile Include="Testes\FullScreenQuad.cpp" />
     <ClCompile Include="Utils\Camera.cpp" />
+    <ClCompile Include="Utils\CameraController.cpp" />
     <ClCompile Include="Utils\HelperFuncs.cpp" />
     <ClCompile Include="Utils\Timer.cpp" />
   </ItemGroup>

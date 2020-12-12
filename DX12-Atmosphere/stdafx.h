@@ -34,6 +34,8 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <map>
+#include <unordered_map>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -41,6 +43,7 @@
 #include <stdint.h>
 #include <cmath>
 #include <map>
+#include <type_traits>
 
 #include "Utils/HelperFuncs.h"
 #include "Math/Common.h"
@@ -49,3 +52,5 @@
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
 #include "D3D12/GraphicsCore.h"
+
+using namespace Math;

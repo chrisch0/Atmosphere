@@ -62,6 +62,7 @@ namespace Math
 
     // A AffineTransform is a 3x4 matrix with an implicit 4th row = [0,0,0,1].  This is used to perform a change of
     // basis on 3D points.  An affine transformation does not have to have orthonormal basis vectors.
+	// Rotate, move, scale
     __declspec(align(64)) class AffineTransform
     {
     public:

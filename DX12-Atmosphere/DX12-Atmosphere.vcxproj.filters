@@ -165,6 +165,9 @@
     <ClInclude Include="Utils\Camera.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Utils\CameraController.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -256,6 +259,9 @@
       <Filter>Testes</Filter>
     </ClCompile>
     <ClCompile Include="Utils\Camera.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\CameraController.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
