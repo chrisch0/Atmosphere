@@ -1,7 +1,6 @@
 #pragma once
 #include "stdafx.h"
 #include "Utils/Timer.h"
-#include "FrameContext/FrameContext.h"
 #include "D3D12/ColorBuffer.h"
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
@@ -114,7 +113,7 @@ protected:
 
 	std::wstring m_mainWndCaption = L"Atmosphere";
 	D3D_DRIVER_TYPE m_d3dDriverType = D3D_DRIVER_TYPE_HARDWARE;
-	DXGI_FORMAT m_backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT m_backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
 	DXGI_FORMAT m_depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	int m_clientWidth = 1280;
 	int m_clientHeight = 800;

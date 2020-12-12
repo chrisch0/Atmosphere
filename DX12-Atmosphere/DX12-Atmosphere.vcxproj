@@ -154,7 +154,6 @@
     <ClInclude Include="D3D12\Texture.h" />
     <ClInclude Include="D3D12\TextureManager.h" />
     <ClInclude Include="d3dx12.h" />
-    <ClInclude Include="FrameContext\FrameContext.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_impl_win32.h" />
@@ -200,7 +199,6 @@
     <ClCompile Include="D3D12\RootSignature.cpp" />
     <ClCompile Include="D3D12\Texture.cpp" />
     <ClCompile Include="D3D12\TextureManager.cpp" />
-    <ClCompile Include="FrameContext\FrameContext.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
     <ClCompile Include="imgui\imgui_draw.cpp" />

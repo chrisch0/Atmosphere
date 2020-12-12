@@ -17,9 +17,6 @@
     <Filter Include="imgui\Shaders">
       <UniqueIdentifier>{f65229c6-ae8d-4f8b-b9c0-14a70a51a6bd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="FrameContext">
-      <UniqueIdentifier>{da5a668e-a268-409d-ac3d-6b8eab6b4c45}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Testes">
       <UniqueIdentifier>{d429e3d4-eba3-4166-8c6f-56048260d168}</UniqueIdentifier>
     </Filter>
@@ -65,9 +62,6 @@
     </ClInclude>
     <ClInclude Include="imgui\imgui_impl_win32.h">
       <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="FrameContext\FrameContext.h">
-      <Filter>FrameContext</Filter>
     </ClInclude>
     <ClInclude Include="App\MultiViewport.h">
       <Filter>App</Filter>
@@ -194,9 +188,6 @@
     </ClCompile>
     <ClCompile Include="imgui\imgui_impl_win32.cpp">
       <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="FrameContext\FrameContext.cpp">
-      <Filter>FrameContext</Filter>
     </ClCompile>
     <ClCompile Include="App\MultiViewport.cpp">
       <Filter>App</Filter>
