@@ -290,6 +290,12 @@
     <FxCompile Include="Testes\Shaders\FullScreenQuad_PS.hlsl">
       <Filter>Testes\Test Demo Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Testes\Shaders\CameraDemo_PS.hlsl">
+      <Filter>Testes\Test Demo Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Testes\Shaders\CameraDemo_VS.hlsl">
+      <Filter>Testes\Test Demo Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

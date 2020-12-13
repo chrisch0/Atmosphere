@@ -7,12 +7,12 @@
 class Camera
 {
 	friend class CameraController;
-protected:
+public:
 	Camera(const std::string& name);
-
 	virtual void Update(float deltaTime);
 	void UpdateMatrixAndFrustum();
 
+public:
 	void SetLookAt(const Vector3& eye, const Vector3& lookAt, const Vector3& up);
 	void SetLookDirection(const Vector3& forward, const Vector3& up);
 	void SetRotation(const Quaternion& basisRotation);
@@ -47,6 +47,7 @@ protected:
 
 	const std::string& GetName() const { return m_name; }
 
+protected:
 	void UpdateProjMatrix();
 
 	void SetProjMatrix(const Matrix4& projMat) { m_projMatrix = projMat; }
@@ -104,7 +105,7 @@ protected:
 class SceneCamera : public Camera
 {
 	friend class CameraController;
-protected:
+public:
 	SceneCamera(const std::string& name)
 		: Camera(name)
 	{

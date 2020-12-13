@@ -10,7 +10,7 @@ void Camera::UpdateUI()
 {
 	if (ImGui::CollapsingHeader(m_name.c_str()))
 	{
-		ImGui::PushItemWidth(80);
+		ImGui::PushItemWidth(120);
 		// position
 		Vector3 pos = GetPosition();
 		float x = pos.GetX(), y = pos.GetY(), z = pos.GetZ();
@@ -27,6 +27,7 @@ void Camera::UpdateUI()
 		m_currentPitch = std::fmod(m_currentPitch, 360.0f);
 		m_currentHeading = std::fmod(m_currentHeading, 360.0f);
 		m_currentRoll = std::fmod(m_currentRoll, 360.0f);
+		pos = Vector3(x, y, z);
 
 		// Update camera parameter
 		Matrix3 orientation = Matrix3(s_worldEast, s_worldUp, -s_worldNorth) *

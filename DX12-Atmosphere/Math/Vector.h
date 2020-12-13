@@ -30,6 +30,7 @@ namespace Math
         INLINE Vector3( const XMFLOAT3& v ) { m_vec = XMLoadFloat3(&v); }
         INLINE Vector3( const Vector3& v ) { m_vec = v; }
         INLINE Vector3( Scalar s ) { m_vec = s; }
+		INLINE Vector3( float v[3] ) { m_vec = XMVectorSet(v[0], v[1], v[2], v[2]); }
         INLINE explicit Vector3( Vector4 v );
         INLINE explicit Vector3( FXMVECTOR vec ) { m_vec = vec; }
         INLINE explicit Vector3( EZeroTag ) { m_vec = SplatZero(); }
@@ -77,6 +78,7 @@ namespace Math
     public:
         INLINE Vector4() {}
         INLINE Vector4( float x, float y, float z, float w ) { m_vec = XMVectorSet(x, y, z, w); }
+		INLINE Vector4( float v[4] ) { m_vec = XMVectorSet(v[0], v[1], v[2], v[3]); }
         INLINE Vector4( Vector3 xyz, float w ) { m_vec = XMVectorSetW(xyz, w); }
         INLINE Vector4( const Vector4& v ) { m_vec = v; }
         INLINE Vector4( const Scalar& s ) { m_vec = s; }

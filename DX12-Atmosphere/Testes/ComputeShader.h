@@ -11,7 +11,7 @@ public:
 	bool Initialize() override;
 	void Draw(const Timer& timer) override;
 	void Update(const Timer& timer) override;
-	void DrawUI() override;
+	void UpdateUI() override;
 
 private:
 

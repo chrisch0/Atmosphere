@@ -23,8 +23,10 @@ void CameraController::Destroy()
 
 void CameraController::UpdateUI()
 {
-	if (!ImGui::Begin("Camera Controller", &m_showCameraUI))
+	if (m_showCameraUI)
 	{
+		ImGui::Begin("Camera Controller", &m_showCameraUI);
+
 		int i = 0;
 		for (auto& pair : s_cameras)
 		{
