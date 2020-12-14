@@ -83,6 +83,12 @@ void GraphicsPSO::Finalize()
 	ThrowIfFailed(g_Device->CreateGraphicsPipelineState(&m_psoDesc, IID_PPV_ARGS(&m_pso)));
 }
 
+ComputePSO::ComputePSO()
+{
+	ZeroMemory(&m_psoDesc, sizeof(m_psoDesc));
+	m_psoDesc.NodeMask = 1;
+}
+
 void ComputePSO::Finalize()
 {
 	m_psoDesc.pRootSignature = m_rootSignature->GetSignature();

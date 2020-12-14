@@ -529,3 +529,33 @@ void GraphicsContext::DrawIndexedInstanced(uint32_t indexCountPerInstance, uint3
 	m_dynamicSamplerDescriptorHeap.CommitGraphicsRootDescriptorTables(m_commandList);
 	m_commandList->DrawIndexedInstanced(indexCountPerInstance, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
+
+ComputeContext& ComputeContext::Begin(const std::wstring& ID /* = L"" */, bool async /* = false */)
+{
+	ComputeContext& newContext = g_ContextManager.AllocateContext(
+		async ? D3D12_COMMAND_LIST_TYPE_COMPUTE : D3D12_COMMAND_LIST_TYPE_DIRECT)->GetComputeContext();
+	newContext.SetID(ID);
+	//if (ID.length() > 0)
+
+	return newContext;
+}
+
+void ComputeContext::ClearUAV(GpuBuffer& target)
+{
+	// After binding a UAV, we can get a GPU handle that is required to clear it as a UAV (because it essentially runs
+	// a shader to set all of the values).
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuVisibleHandle = m_dynamicViewDescriptorHeap.UploadDirect(target.GetUAV());
+	const uint32_t clearColor[4] = {};
+	m_commandList->ClearUnorderedAccessViewUint(gpuVisibleHandle, target.GetUAV(), target.GetResource(), clearColor, 0, nullptr);
+}
+
+void ComputeContext::ClearUAV(ColorBuffer& target)
+{
+	// After binding a UAV, we can get a GPU handle that is required to clear it as a UAV (because it essentially runs
+	// a shader to set all of the values).
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuVisibleHandle = m_dynamicViewDescriptorHeap.UploadDirect(target.GetUAV());
+	CD3DX12_RECT clearRect(0, 0, (LONG)target.GetWidth(), (LONG)target.GetHeight());
+
+	const float* clearColor = target.GetClearColor().GetPtr();
+	m_commandList->ClearUnorderedAccessViewFloat(gpuVisibleHandle, target.GetUAV(), target.GetResource(), clearColor, 1, &clearRect);
+}
