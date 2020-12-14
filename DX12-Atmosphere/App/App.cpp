@@ -449,6 +449,7 @@ void App::UpdateImGuiDemo()
 		ImGui::ShowDemoWindow(&m_showDemoWindow);
 
 	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+	if (m_showHelloWindow)
 	{
 		static float f = 0.0f;
 		static int counter = 0;

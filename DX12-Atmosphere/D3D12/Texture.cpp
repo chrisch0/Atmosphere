@@ -14,7 +14,7 @@ void Texture2D::Create(size_t pitch, size_t width, size_t height, DXGI_FORMAT fo
 	m_height = (uint32_t)height;
 	m_usageState = D3D12_RESOURCE_STATE_COPY_DEST;
 
-	D3D12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1);
+	D3D12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(format, width, (UINT)height, 1, 1);
 
 	D3D12_HEAP_PROPERTIES heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 

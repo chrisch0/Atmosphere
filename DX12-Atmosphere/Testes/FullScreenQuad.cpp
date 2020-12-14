@@ -54,10 +54,10 @@ void FullScreenQuad::CreatePipelineStates()
 
 	float quad_verts[] = 
 	{
-		-1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-		 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
-		-1.0f,-1.0f, 1.0f, 0.0f, 1.0f,
-		 1.0f,-1.0f, 1.0f, 1.0f, 1.0f
+		-1.0f, 1.0f, 0.1f, 0.0f, 0.0f,
+		 1.0f, 1.0f, 0.1f, 1.0f, 0.0f,
+		-1.0f,-1.0f, 0.1f, 0.0f, 1.0f,
+		 1.0f,-1.0f, 0.1f, 1.0f, 1.0f
 	};
 
 	m_vertexBuffer.Create(L"QuadVertexBuffer", 4, sizeof(float) * 5, quad_verts);

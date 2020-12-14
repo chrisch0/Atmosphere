@@ -28,7 +28,7 @@ private:
 template <typename T>
 std::shared_ptr<T> CameraController::CreateCamera(const std::string& name)
 {
-	//static_assert(std::is_base_of_v<Camera, T>);
+	static_assert(std::is_base_of_v<Camera, T>);
 	auto iter = s_cameras.find(name);
 	std::string n = name;
 	if (iter != s_cameras.end())

@@ -62,18 +62,18 @@ void Camera::UpdateUI()
 		
 		// movement speed
 		ImGui::SliderFloat("Movement Speed", &m_moveSpeed, 1, 2000, "%.2f");
-		ImGui::SliderFloat("Horizontal Sensitivity", &m_horizontalSensitivity, 1.0f, 5.0f);
-		ImGui::SliderFloat("Vertical Sensitivity", &m_verticalSensitivity, 1.0f, 5.0f);
+		ImGui::SliderFloat("Horizontal Sensitivity", &m_horizontalSensitivity, 1.0f, 30.0f);
+		ImGui::SliderFloat("Vertical Sensitivity", &m_verticalSensitivity, 1.0f, 30.0f);
 	}
 }
 
 Camera::Camera(const std::string& name)
 	: m_name(name), m_cameraToWorld(kIdentity), m_basis(kIdentity), m_isPerspective(true), m_isReverseZ(true)
 {
-	SetPrespectiveMatrix(XM_PIDIV4, 9.0f / 16.0f, 0.01f, 1000.0f);
-	m_horizontalSensitivity = 2.0f;
-	m_verticalSensitivity = 2.0f;
-	m_moveSpeed = 500.0f;
+	SetPrespectiveMatrix(45, 9.0f / 16.0f, 0.01f, 1000.0f);
+	m_horizontalSensitivity = 10.0f;
+	m_verticalSensitivity = 10.0f;
+	m_moveSpeed = 20.0f;
 	m_currentPitch = Sin(Dot(GetForward(), s_worldUp));
 
 	Vector3 forward = Normalize(Cross(s_worldUp, GetRight()));
@@ -103,7 +103,7 @@ void Camera::SetLookDirection(const Vector3& forward, const Vector3& up)
 
 	Vector3 normaliedUp = Cross(right, normalizedForward);
 
-	m_basis = Matrix3(right, up, -forward);
+	m_basis = Matrix3(right, normaliedUp, -normalizedForward);
 	m_cameraToWorld.SetRotation(Quaternion(m_basis));
 }
 
@@ -173,14 +173,18 @@ void SceneCamera::Update(float deltaTime)
 {
 	ImGuiIO& io = ImGui::GetIO();
 
-	// not left click the rendering image
-	if (!io.WantCaptureKeyboard && io.MouseDownDuration[0] >= 0.0f)
+	float yaw = 0.0f, pitch = 0.0f, forward = 0.0f, strafe = 0.0f, ascent = 0.0f;
+	// if left mouse click the rendering image
+	if (!io.WantCaptureKeyboard)
 	{
-		float yaw = (float)io.MouseDelta.x * 0.0018f * m_horizontalSensitivity;
-		float pitch = (float)io.MouseDelta.y * -0.0018f * m_verticalSensitivity;
-		float forward = m_moveSpeed * (ImGui::IsKeyPressedMap(ImGuiKey_W) ? deltaTime : 0.0f) + (ImGui::IsKeyPressedMap(ImGuiKey_S) ? -deltaTime : 0.0f);
-		float strafe = m_moveSpeed * (ImGui::IsKeyPressedMap(ImGuiKey_D) ? deltaTime : 0.0f) + (ImGui::IsKeyPressedMap(ImGuiKey_A) ? -deltaTime : 0.0f);
-		float ascent = m_moveSpeed * (ImGui::IsKeyPressedMap(ImGuiKey_E) ? deltaTime : 0.0f) + (ImGui::IsKeyPressedMap(ImGuiKey_Q) ? -deltaTime : 0.0f);
+		if (io.MouseDownDuration[0] >= 0.0f)
+		{
+			yaw = (float)io.MouseDelta.x * 0.0018f * m_horizontalSensitivity;
+			pitch = (float)io.MouseDelta.y * -0.0018f * m_verticalSensitivity;
+		}
+		forward = m_moveSpeed * ((ImGui::IsKeyPressedMap(ImGuiKey_W) ? deltaTime : 0.0f) + (ImGui::IsKeyPressedMap(ImGuiKey_S) ? -deltaTime : 0.0f));
+		strafe = m_moveSpeed * ((ImGui::IsKeyPressedMap(ImGuiKey_D) ? deltaTime : 0.0f) + (ImGui::IsKeyPressedMap(ImGuiKey_A) ? -deltaTime : 0.0f));
+		ascent = m_moveSpeed * ((ImGui::IsKeyPressedMap(ImGuiKey_E) ? deltaTime : 0.0f) + (ImGui::IsKeyPressedMap(ImGuiKey_Q) ? -deltaTime : 0.0f));
 
 		if (m_momentum)
 		{
@@ -191,13 +195,15 @@ void SceneCamera::Update(float deltaTime)
 			ApplyMomentum(m_lastAscent, ascent, deltaTime);
 		}
 
-		m_currentPitch = std::fmod(m_currentPitch + pitch, 360.0);
-		m_currentHeading = std::fmod(m_currentHeading - yaw, 360.0);
-
-		Matrix3 orientation = Matrix3(s_worldEast, s_worldUp, -s_worldNorth) * Matrix3::MakeYRotation(ToRadian(m_currentHeading)) * Matrix3::MakeXRotation(ToRadian(m_currentPitch));
-		Vector3 position = orientation * Vector3(strafe, ascent, -forward) + GetPosition();
-		SetTransform(AffineTransform(orientation, position));
-		UpdateMatrixAndFrustum();
+		
 	}
+
+	m_currentPitch = std::fmod(m_currentPitch + pitch, 360.0f);
+	m_currentHeading = std::fmod(m_currentHeading - yaw, 360.0f);
+
+	Matrix3 orientation = Matrix3(s_worldEast, s_worldUp, -s_worldNorth) * Matrix3::MakeYRotation(ToRadian(m_currentHeading)) * Matrix3::MakeXRotation(ToRadian(m_currentPitch));
+	Vector3 position = orientation * Vector3(strafe, ascent, -forward) + GetPosition();
+	SetTransform(AffineTransform(orientation, position));
+	UpdateMatrixAndFrustum();
 
 }

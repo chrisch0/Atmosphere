@@ -120,6 +120,9 @@ inline void Camera::SetLookAt(const Vector3& eye, const Vector3& lookAt, const V
 {
 	SetLookDirection(lookAt - eye, up);
 	SetPosition(eye);
+	Vector3 forward = Normalize(Cross(s_worldUp, GetRight()));
+	m_currentHeading = ToDegree(ATan2(-Dot(forward, s_worldEast), Dot(forward, s_worldNorth)));
+	m_currentPitch = ToDegree(Sin(Dot(GetForward(), s_worldUp)));
 }
 
 inline void Camera::SetPosition(const Vector3& worldPos)

@@ -1,6 +1,10 @@
 struct VSIn
 {
 	float3 position : POSITION;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float2 uv : TEXCOORD;
+	float3 color : COLOR;
 };
 
 struct VSOut
@@ -28,9 +32,10 @@ cbuffer PassConstant : register(b1)
 VSOut main(VSIn vert)
 {
 	VSOut vsOut;
-	float4x4 MVP = ViewProjMatrix * ModelMatrix;
+	//float4x4 MVP = ViewProjMatrix * ModelMatrix;
+	float4x4 MVP = mul(ViewProjMatrix, ModelMatrix);
 	vsOut.positionCS = mul(MVP, float4(vert.position, 1.0));
-	vsOut.color = ModelColor;
+	vsOut.color = float4(vert.color, 1.0);
 
 	return vsOut;
 }

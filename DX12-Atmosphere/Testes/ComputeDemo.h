@@ -2,11 +2,11 @@
 #include "stdafx.h"
 #include "App/App.h"
 
-class ComputeShader : public App
+class ComputeDemo : public App
 {
 public:
-	ComputeShader();
-	~ComputeShader();
+	ComputeDemo();
+	~ComputeDemo();
 
 	bool Initialize() override;
 	void Draw(const Timer& timer) override;

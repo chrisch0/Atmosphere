@@ -32,10 +32,16 @@ bool CameraDemo::Initialize()
 
 	m_camera = CameraController::CreateCamera<SceneCamera>("Scene Camera");
 	m_camera->SetLookAt({ 3,5,3 }, { 0,0,0 }, { 0,1,0 });
+	m_camera->SetNearClip(1.0f);
+	m_camera->SetFarClip(10000.0f);
 	m_position = Vector3(0.0, 0.0, 0.0);
 	m_rotation = Vector3(0.0, 0.0, 0.0);
 	m_scale = Vector3(1.0, 1.0, 1.0);
 	m_color = Vector4(1.0, 1.0, 1.0, 1.0);
+
+	m_showAnotherDemoWindow = false;
+	m_showDemoWindow = false;
+	m_showHelloWindow = false;
 
 	return true;
 }
@@ -49,10 +55,11 @@ void CameraDemo::CreatePSO()
 
 	D3D12_INPUT_ELEMENT_DESC layout[] = 
 	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 
 	auto depth_stencil_disable = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
@@ -90,36 +97,36 @@ void CameraDemo::CreateGeometry()
 {
 	float box_verts[] =
 	{
-		// position       normal          tangent        uv
-		-0.5, -0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, 1.0,
-		-0.5, +0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-		+0.5, +0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-		+0.5, -0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+		// position       normal          tangent        uv        color
+		-0.5, -0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0,
+		-0.5, +0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+		+0.5, +0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0,
+		+0.5, -0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0,
 
-		-0.5, -0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 1.0, 1.0,
-		+0.5, -0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 1.0,
-		+0.5, +0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0,
-		-0.5, +0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 1.0, 0.0,
+		-0.5, -0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0,
+		+0.5, -0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,
+		+0.5, +0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+		-0.5, +0.5, +0.5, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
 
-		-0.5, +0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
-		-0.5, +0.5, +0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-		+0.5, +0.5, +0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-		+0.5, +0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+		-0.5, +0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+		-0.5, +0.5, +0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+		+0.5, +0.5, +0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
+		+0.5, +0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0,
 
-		-0.5, -0.5, -0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 1.0, 1.0,
-		+0.5, -0.5, -0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0,
-		+0.5, -0.5, +0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0,
-		-0.5, -0.5, +0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0,
+		-0.5, -0.5, -0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0,
+		+0.5, -0.5, -0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0,
+		+0.5, -0.5, +0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0,
+		-0.5, -0.5, +0.5, 0.0, -1.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0,
 
-		-0.5, -0.5, +0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0,
-		-0.5, +0.5, +0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0,
-		-0.5, +0.5, -0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0,
-		-0.5, -0.5, -0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 1.0,
+		-0.5, -0.5, +0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 1.0, 1.0,
+		-0.5, +0.5, +0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0, 1.0,
+		-0.5, +0.5, -0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0, 1.0, 1.0,
+		-0.5, -0.5, -0.5, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 1.0, 0.0, 1.0, 1.0,
 
-		+0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0,
-		+0.5, +0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-		+0.5, +0.5, +0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0,
-		+0.5, -0.5, +0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0
+		+0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0,
+		+0.5, +0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+		+0.5, +0.5, +0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0,
+		+0.5, -0.5, +0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 	};
 
 	m_vertexBuffer.Create(L"BoxVertexBuffer", 24, sizeof(float) * 14, box_verts);
@@ -141,7 +148,7 @@ void CameraDemo::Update(const Timer& timer)
 	g_CameraController.Update(timer.DeltaTime());
 	
 	Matrix3 scale_rotation = Matrix3::MakeScale(m_scale) *
-		Matrix3::MakeYRotation(ToRadian(m_rotation.GetY())) * Matrix3::MakeXRotation(ToRadian(m_rotation.GetX())) * Matrix3::MakeZRotation(m_rotation.GetZ());
+		Matrix3::MakeYRotation(ToRadian(m_rotation.GetY())) * Matrix3::MakeXRotation(ToRadian(m_rotation.GetX())) * Matrix3::MakeZRotation(ToRadian(m_rotation.GetZ()));
 	AffineTransform trans(scale_rotation, m_position);
 	m_modelMatrix = Matrix4(trans);
 }
@@ -156,8 +163,8 @@ void CameraDemo::UpdateUI()
 	float color[4] = { m_color.GetX(), m_color.GetY(), m_color.GetZ(), m_color.GetW() };
 
 	ImGui::DragFloat3("Position", pos, 0.05f, -FLT_MAX, FLT_MAX, "%.2f");
-	ImGui::DragFloat3("Rotation", rotate, -FLT_MAX, FLT_MAX, 0.05f, "%.2f");
-	ImGui::DragFloat3("Scale", scale, 0.0, FLT_MAX, 0.05f, "%.2f");
+	ImGui::DragFloat3("Rotation", rotate, 0.05f, -FLT_MAX, FLT_MAX, "%.2f");
+	ImGui::DragFloat3("Scale", scale, 0.05f, 0.0f, FLT_MAX, "%.2f");
 	ImGui::ColorEdit4("Color", color);
 
 	m_position = Vector3(pos);

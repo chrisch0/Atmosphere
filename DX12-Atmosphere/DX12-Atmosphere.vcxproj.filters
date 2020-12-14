@@ -69,9 +69,6 @@
     <ClInclude Include="Testes\FullScreenQuad.h">
       <Filter>Testes</Filter>
     </ClInclude>
-    <ClInclude Include="Testes\ComputeShader.h">
-      <Filter>Testes</Filter>
-    </ClInclude>
     <ClInclude Include="Math\BoundingPlane.h">
       <Filter>Math</Filter>
     </ClInclude>
@@ -174,6 +171,9 @@
     <ClInclude Include="D3D12\DynamicAllocator.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="Testes\ComputeDemo.h">
+      <Filter>Testes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -206,9 +206,6 @@
     </ClCompile>
     <ClCompile Include="Utils\HelperFuncs.cpp">
       <Filter>Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Testes\ComputeShader.cpp">
-      <Filter>Testes</Filter>
     </ClCompile>
     <ClCompile Include="Math\Frustum.cpp">
       <Filter>Math</Filter>
@@ -275,6 +272,9 @@
     </ClCompile>
     <ClCompile Include="D3D12\DynamicAllocator.cpp">
       <Filter>D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="Testes\ComputeDemo.cpp">
+      <Filter>Testes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

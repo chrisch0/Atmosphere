@@ -126,6 +126,7 @@ protected:
 
 	bool m_showDemoWindow = true;
 	bool m_showAnotherDemoWindow = false;
+	bool m_showHelloWindow = true;
 
 	ImVec4 m_clearColor;
 };

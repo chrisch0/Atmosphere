@@ -178,7 +178,7 @@
     <ClInclude Include="Math\VectorMath.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Testes\CameraDemo.h" />
-    <ClInclude Include="Testes\ComputeShader.h" />
+    <ClInclude Include="Testes\ComputeDemo.h" />
     <ClInclude Include="Testes\FullScreenQuad.h" />
     <ClInclude Include="Utils\Camera.h" />
     <ClInclude Include="Utils\CameraController.h" />
@@ -214,7 +214,7 @@
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="Testes\CameraDemo.cpp" />
-    <ClCompile Include="Testes\ComputeShader.cpp" />
+    <ClCompile Include="Testes\ComputeDemo.cpp" />
     <ClCompile Include="Testes\FullScreenQuad.cpp" />
     <ClCompile Include="Utils\Camera.cpp" />
     <ClCompile Include="Utils\CameraController.cpp" />
