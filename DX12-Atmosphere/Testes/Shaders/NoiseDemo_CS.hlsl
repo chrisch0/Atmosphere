@@ -1,7 +1,7 @@
 #include "../../Shaders/FastNoiseLite.hlsli"
 
 RWTexture2D<float3> noise : register(u0);
-RWStructuredBuffer<uint> gMinMax : register(u1);
+RWStructuredBuffer<int> gMinMax : register(u1);
 
 cbuffer cb0
 {
@@ -9,15 +9,15 @@ cbuffer cb0
 	float frequency;
 };
 
-groupshared uint groupMinMax[2];
+groupshared int groupMinMax[2];
 
 [numthreads(8, 8, 1)]
-void main( uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupThreadID )
+void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
-	if (groupThreadID.x == 0 && groupThreadID.y == 0)
+	if (groupIndex == 0)
 	{
-		groupMinMax[0] = 1.0f;
-		groupMinMax[1] = -1.0f;
+		groupMinMax[0] = 0x7f7fffff;
+		groupMinMax[1] = 0xff7fffff;
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -27,20 +27,20 @@ void main( uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupT
 
 	float res = fnlGetNoise2D(noise_state, globalID.x, globalID.y);
 
-	uint res_i = asuint(res);
-
-	InterlockedMin(groupMinMax[0], res_i);
-	InterlockedMax(groupMinMax[1], res_i);
+	InterlockedMin(groupMinMax[0], asint(-1.0f - f));
+	InterlockedMax(groupMinMax[1], asint(res));
 
 	GroupMemoryBarrierWithGroupSync();
 
-	if (groupThreadID.x == 0 && groupThreadID.y == 0)
+	if (groupIndex == 0)
 	{
 		InterlockedMin(gMinMax[0], groupMinMax[0]);
 		InterlockedMax(gMinMax[1], groupMinMax[1]);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
+
+	//res = (res + 1.0f) * 0.5f;
 
 
 

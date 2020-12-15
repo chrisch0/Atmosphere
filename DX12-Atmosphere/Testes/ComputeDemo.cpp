@@ -91,7 +91,7 @@ void ComputeDemo::CreateResources()
 {
 	m_quad.reset(Mesh::CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.5f));
 	m_noise.Create(L"Noise Texture", 1024, 1024, 1, DXGI_FORMAT_R11G11B10_FLOAT);
-	uint32_t minmax[2] = { (uint32_t)2.0f, (uint32_t)-2.0f };
+	int32_t minmax[2] = { (int32_t)0x7f7fffff, (int32_t)0xff7fffff };
 	m_minMax.Create(L"Global Min Max", 2, sizeof(float), minmax);
 }
 
@@ -144,7 +144,7 @@ void ComputeDemo::UpdateUI()
 	ImGui::Begin("Noise Setting");
 
 	m_isNoiseSettingDirty |= ImGui::DragInt("Seed", &m_seed, 1.0f);
-	m_isNoiseSettingDirty |= ImGui::DragFloat("Frequency", &m_frequency, 0.005f, 0.0, FLT_MAX, "%.3f");
+	m_isNoiseSettingDirty |= ImGui::DragFloat("Frequency", &m_frequency, 0.001f, 0.0, FLT_MAX, "%.3f");
 
 	ImGui::End();
 	m_isFirst = false;
