@@ -38,12 +38,15 @@ void RootSignature::InitStaticSampler(uint32_t shaderRegister, const D3D12_SAMPL
 	}
 }
 
-void RootSignature::InitStaticSampler(uint32_t shaderRegister, const D3D12_STATIC_SAMPLER_DESC& staticSamplerDesc)
+void RootSignature::InitStaticSampler(uint32_t shaderRegister, const D3D12_STATIC_SAMPLER_DESC& staticSamplerDesc, D3D12_SHADER_VISIBILITY visibility /* = D3D12_SHADER_VISIBILITY_ALL */)
 {
 	assert(m_numInitializedStaticSamplers < m_numSamplers);
 	D3D12_STATIC_SAMPLER_DESC& desc = m_samplerArray[m_numInitializedStaticSamplers++];
 
 	desc = staticSamplerDesc;
+	desc.ShaderRegister = shaderRegister;
+	desc.RegisterSpace = 0;
+	desc.ShaderVisibility = visibility;
 }
 
 void RootSignature::Finalize(const std::wstring& name, D3D12_ROOT_SIGNATURE_FLAGS flags /* = D3D12_ROOT_SIGNATURE_FLAG_NONE */)
@@ -83,9 +86,15 @@ void RootSignature::Finalize(const std::wstring& name, D3D12_ROOT_SIGNATURE_FLAG
 		}
 	}
 
-	Microsoft::WRL::ComPtr<ID3DBlob> pOutBlob, pErrorBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob> pOutBlob = nullptr, pErrorBlob = nullptr;
 
-	ThrowIfFailed(D3D12SerializeRootSignature(&rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, pOutBlob.GetAddressOf(), pErrorBlob.GetAddressOf()));
+	HRESULT hr = D3D12SerializeRootSignature(&rootDesc, D3D_ROOT_SIGNATURE_VERSION_1, pOutBlob.GetAddressOf(), pErrorBlob.GetAddressOf());
+	if (pErrorBlob != nullptr)
+	{
+		std::cout << (char*)pErrorBlob->GetBufferPointer() << std::endl;
+	}
+	ThrowIfFailed(hr);
+
 	ThrowIfFailed(g_Device->CreateRootSignature(1, pOutBlob->GetBufferPointer(), pOutBlob->GetBufferSize(), IID_PPV_ARGS(&m_signature)));
 
 	m_signature->SetName(name.c_str());

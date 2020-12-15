@@ -29,6 +29,12 @@
     <Filter Include="Math">
       <UniqueIdentifier>{75b4b700-6aca-4680-ac13-2b898995003d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Mesh">
+      <UniqueIdentifier>{7d5e4ae0-3992-4602-a6a4-996b778366f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{21177cd2-d786-490c-9581-0e90e67f4f00}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -174,6 +180,12 @@
     <ClInclude Include="Testes\ComputeDemo.h">
       <Filter>Testes</Filter>
     </ClInclude>
+    <ClInclude Include="Mesh\Mesh.h">
+      <Filter>Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\GraphicsGlobal.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -276,6 +288,12 @@
     <ClCompile Include="Testes\ComputeDemo.cpp">
       <Filter>Testes</Filter>
     </ClCompile>
+    <ClCompile Include="Mesh\Mesh.cpp">
+      <Filter>Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\GraphicsGlobal.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
@@ -296,10 +314,20 @@
     <FxCompile Include="Testes\Shaders\CameraDemo_VS.hlsl">
       <Filter>Testes\Test Demo Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Testes\Shaders\NoiseDemo_CS.hlsl">
+      <Filter>Testes\Test Demo Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\DrawQuad_VS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Testes\Shaders\ComputeDemo_PS.hlsl">
+      <Filter>Testes\Test Demo Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
       <Filter>Math</Filter>
     </None>
+    <None Include="Shaders\FastNoiseLite.hlsli" />
   </ItemGroup>
 </Project>
