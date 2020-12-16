@@ -1,7 +1,7 @@
 #include "../../Shaders/FastNoiseLite.hlsli"
 
 RWTexture2D<float3> noise : register(u0);
-RWStructuredBuffer<int> gMinMax : register(u1);
+RWBuffer<int> gMinMax : register(u1);
 
 cbuffer cb0
 {
@@ -16,7 +16,7 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 {
 	if (groupIndex == 0)
 	{
-		groupMinMax[0] = 0x7f7fffff;
+		groupMinMax[0] = 0;
 		groupMinMax[1] = 0xff7fffff;
 	}
 
@@ -25,24 +25,26 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 	fnl_state noise_state = fnlCreateState(seed);
 	noise_state.frequency = frequency;
 
-	float res = fnlGetNoise2D(noise_state, globalID.x, globalID.y);
+	float res = fnlGetNoise2D(noise_state, (float)globalID.x, (float)globalID.y);
 
-	InterlockedMin(groupMinMax[0], asint(-1.0f - f));
+	// assert min value < 0
+	if (res < 0)
+	{
+		InterlockedMax(groupMinMax[0], asint(-res));
+	}
 	InterlockedMax(groupMinMax[1], asint(res));
 
 	GroupMemoryBarrierWithGroupSync();
 
 	if (groupIndex == 0)
 	{
-		InterlockedMin(gMinMax[0], groupMinMax[0]);
+		InterlockedMax(gMinMax[0], groupMinMax[0]);
 		InterlockedMax(gMinMax[1], groupMinMax[1]);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
 
-	//res = (res + 1.0f) * 0.5f;
-
-
+	res = (res + 1.0f) * 0.5f;
 
 	noise[globalID.xy] = float3(res, res, res);
 }

@@ -435,6 +435,11 @@ void GraphicsContext::SetDescriptorTable(uint32_t rootIndex, D3D12_GPU_DESCRIPTO
 	m_commandList->SetGraphicsRootDescriptorTable(rootIndex, firstHandle);
 }
 
+D3D12_GPU_DESCRIPTOR_HANDLE CommandContext::SetDynamicDescriptorDirect(D3D12_CPU_DESCRIPTOR_HANDLE handle)
+{
+	return m_dynamicViewDescriptorHeap.UploadDirect(handle);
+}
+
 void GraphicsContext::SetDynamicDescriptor(uint32_t rootIndex, uint32_t offset, D3D12_CPU_DESCRIPTOR_HANDLE handle)
 {
 	SetDynamicDescriptors(rootIndex, offset, 1, &handle);

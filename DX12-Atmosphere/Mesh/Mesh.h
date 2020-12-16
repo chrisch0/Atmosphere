@@ -2,6 +2,18 @@
 #include "stdafx.h"
 #include "Math\VectorMath.h"
 #include "D3D12\GpuBuffer.h"
+#include "BoundingBox.h"
+
+struct SubMesh
+{
+	uint32_t baseVertex;
+	uint32_t indexCount;
+	uint32_t indexStart;
+	D3D12_PRIMITIVE_TOPOLOGY topology;
+	uint32_t firstVertex;
+	uint32_t vertexCount;
+	BoundingBox bounds;
+};
 
 class Mesh
 {
@@ -55,14 +67,24 @@ public:
 		return m_indexBuffer.IndexBufferView();
 	}
 
+	void RenderSubMeshes();
+	void RenderSubMesh(size_t index);
+
 private:
 	static void Subdivide(Mesh* mesh);
 	static Vertex MidPoint(const Vertex& v0, const Vertex& v1);
 	static void CreateGpuBuffer(Mesh* mesh);
 
+	std::vector<SubMesh> m_subMeshes;
+
 	std::vector<Vertex> m_vertices;
 	std::vector<uint16_t> m_indices;
+	std::vector<uint32_t> m_indices32;
 
 	StructuredBuffer m_vertexBuffer;
 	ByteAddressBuffer m_indexBuffer;
+
+	uint32_t m_indexCount;
+	uint32_t m_indexStart;
+	uint32_t m_vertexBase;
 };

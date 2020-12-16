@@ -5,10 +5,13 @@
 #include "D3D12/CommandContext.h"
 #include "D3D12/GraphicsGlobal.h"
 #include "Mesh/Mesh.h"
+#include "Math/Common.h"
 
 #include "CompiledShaders/NoiseDemo_CS.h"
+#include "CompiledShaders/Noise3DDemo_CSd.h"
 #include "CompiledShaders/DrawQuad_VSd.h"
 #include "CompiledShaders/ComputeDemo_PSd.h"
+#include "CompiledShaders/Compute3DDemo_PSd.h"
 
 ComputeDemo::ComputeDemo()
 {
@@ -42,6 +45,7 @@ bool ComputeDemo::Initialize()
 
 	m_isNoiseSettingDirty = true;
 	m_isFirst = true;
+	m_generate3D = false;
 
 	return true;
 }
@@ -65,6 +69,10 @@ void ComputeDemo::CreatePipelineState()
 	m_computePSO.SetComputeShader(g_pNoiseDemo_CS, sizeof(g_pNoiseDemo_CS));
 	m_computePSO.Finalize();
 
+	m_computeNoise3DPSO.SetRootSignature(m_computeRS);
+	m_computeNoise3DPSO.SetComputeShader(g_pNoise3DDemo_CSd, sizeof(g_pNoise3DDemo_CSd));
+	m_computeNoise3DPSO.Finalize();
+
 	D3D12_INPUT_ELEMENT_DESC layout[] = 
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -72,7 +80,6 @@ void ComputeDemo::CreatePipelineState()
 		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 	};
-
 
 	m_graphicsPSO.SetRootSignature(m_graphicsRS);
 	m_graphicsPSO.SetSampleMask(UINT_MAX);
@@ -85,13 +92,18 @@ void ComputeDemo::CreatePipelineState()
 	m_graphicsPSO.SetDepthStencilState(Global::DepthStateDisabled);
 	m_graphicsPSO.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 	m_graphicsPSO.Finalize();
+
+	m_showNoise3DPSO = m_graphicsPSO;
+	m_showNoise3DPSO.SetPixelShader(g_pCompute3DDemo_PSd, sizeof(g_pCompute3DDemo_PSd));
+	m_showNoise3DPSO.Finalize();
 }
 
 void ComputeDemo::CreateResources()
 {
 	m_quad.reset(Mesh::CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.5f));
-	m_noise.Create(L"Noise Texture", 1024, 1024, 1, DXGI_FORMAT_R11G11B10_FLOAT);
-	int32_t minmax[2] = { (int32_t)0x7f7fffff, (int32_t)0xff7fffff };
+	m_noise.Create(L"Noise Texture", 1024, 1024, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_noise3D.Create(L"Noise3D Texture", 256, 256, 256, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	int32_t minmax[2] = { 0, (int32_t)0xff7fffff };
 	m_minMax.Create(L"Global Min Max", 2, sizeof(float), minmax);
 }
 
@@ -108,27 +120,46 @@ void ComputeDemo::Draw(const Timer& timer)
 	{
 		ComputeContext& context = graphicsContext.GetComputeContext();
 		context.SetRootSignature(m_computeRS);
-		context.SetPipelineState(m_computePSO);
-		context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		context.SetConstants(0, m_seed, m_frequency);
-		context.SetDynamicDescriptor(1, 0, m_noise.GetUAV());
-		context.SetDynamicDescriptor(1, 1, m_minMax.GetUAV());
-		context.Dispatch2D(m_noise.GetWidth(), m_noise.GetHeight());
-
-		context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+		if (m_generate3D)
+		{
+			context.SetPipelineState(m_computeNoise3DPSO);
+			context.TransitionResource(m_noise3D, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.SetConstants(0, m_seed, m_frequency);
+			context.SetDynamicDescriptor(1, 0, m_noise3D.GetUAV());
+			context.Dispatch3D(m_noise3D.GetWidth(), m_noise3D.GetHeight(), m_noise3D.GetDepth(), 8, 8, 1);
+			context.TransitionResource(m_noise3D, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+		}
+		else
+		{
+			context.SetPipelineState(m_computePSO);
+			context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.SetConstants(0, m_seed, m_frequency);
+			context.SetDynamicDescriptor(1, 0, m_noise.GetUAV());
+			context.SetDynamicDescriptor(1, 1, m_minMax.GetUAV());
+			context.Dispatch2D(m_noise.GetWidth(), m_noise.GetHeight());
+			context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+		}
 	}
 
-	graphicsContext.TransitionResource(m_noise, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 	graphicsContext.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	m_displayBuffer[m_currBackBuffer].SetClearColor(m_clearColor);
 	graphicsContext.ClearColor(m_displayBuffer[m_currBackBuffer]);
 
 	graphicsContext.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
 	graphicsContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	graphicsContext.SetPipelineState(m_graphicsPSO);
 	graphicsContext.SetRootSignature(m_graphicsRS);
-	graphicsContext.SetDynamicDescriptor(0, 0, m_noise.GetSRV());
+	if (m_generate3D)
+	{
+		graphicsContext.SetPipelineState(m_showNoise3DPSO);
+		graphicsContext.SetDynamicDescriptor(0, 0, m_noise3D.GetSRV());
+	}
+	else
+	{
+		graphicsContext.SetPipelineState(m_graphicsPSO);
+		graphicsContext.SetDynamicDescriptor(0, 0, m_noise.GetSRV());
+	}
 	graphicsContext.SetViewportAndScissor(m_screenViewport, m_scissorRect);
 	graphicsContext.SetVertexBuffer(0, m_quad->VertexBufferView());
 	graphicsContext.SetIndexBuffer(m_quad->IndexBufferView());
@@ -143,6 +174,7 @@ void ComputeDemo::UpdateUI()
 	m_isNoiseSettingDirty = m_isFirst;
 	ImGui::Begin("Noise Setting");
 
+	m_isNoiseSettingDirty |= ImGui::Checkbox("Generate 3D Noise", &m_generate3D);
 	m_isNoiseSettingDirty |= ImGui::DragInt("Seed", &m_seed, 1.0f);
 	m_isNoiseSettingDirty |= ImGui::DragFloat("Frequency", &m_frequency, 0.001f, 0.0, FLT_MAX, "%.3f");
 

@@ -177,7 +177,10 @@
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="Math\VectorMath.h" />
+    <ClInclude Include="Mesh\BoundingBox.h" />
     <ClInclude Include="Mesh\Mesh.h" />
+    <ClInclude Include="Mesh\MeshRenderer.h" />
+    <ClInclude Include="Noise\NoiseGenerator.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Testes\CameraDemo.h" />
     <ClInclude Include="Testes\ComputeDemo.h" />
@@ -217,6 +220,8 @@
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="Mesh\Mesh.cpp" />
+    <ClCompile Include="Mesh\MeshRenderer.cpp" />
+    <ClCompile Include="Noise\NoiseGenerator.cpp" />
     <ClCompile Include="Testes\CameraDemo.cpp" />
     <ClCompile Include="Testes\ComputeDemo.cpp" />
     <ClCompile Include="Testes\FullScreenQuad.cpp" />
@@ -317,6 +322,22 @@
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\Asm\%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
+    <FxCompile Include="Testes\Shaders\Compute3DDemo_PS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_p%(Filename)d</VariableName>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ObjectFileOutput>
+      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\bin\CompiledShaders\%(Filename)d.h</HeaderFileOutput>
+      <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\Asm\%(Filename)d.asm</AssemblerOutputFile>
+    </FxCompile>
     <FxCompile Include="Testes\Shaders\ComputeDemo_PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
@@ -331,6 +352,22 @@
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\Asm\%(Filename)d.asm</AssemblerOutputFile>
       <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_p%(Filename)d</VariableName>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\bin\CompiledShaders\%(Filename)d.h</HeaderFileOutput>
+    </FxCompile>
+    <FxCompile Include="Testes\Shaders\Noise3DDemo_CS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_p%(Filename)d</VariableName>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ObjectFileOutput>
+      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
+      <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\Asm\%(Filename)d.asm</AssemblerOutputFile>
       <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\bin\CompiledShaders\%(Filename)d.h</HeaderFileOutput>
     </FxCompile>
     <FxCompile Include="Testes\Shaders\NoiseDemo_CS.hlsl">

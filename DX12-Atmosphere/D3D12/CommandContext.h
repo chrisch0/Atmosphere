@@ -119,6 +119,7 @@ public:
 	void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12DescriptorHeap* heapPtr);
 	void SetDescriptorHeaps(uint32_t heapCount, D3D12_DESCRIPTOR_HEAP_TYPE type[], ID3D12DescriptorHeap* heapPtrs[]);
 
+	D3D12_GPU_DESCRIPTOR_HANDLE SetDynamicDescriptorDirect(D3D12_CPU_DESCRIPTOR_HANDLE handle);
 protected:
 	void BindDescriptorHeaps();
 
@@ -191,7 +192,6 @@ public:
 	void SetBufferUAV(uint32_t rootIndex, const GpuBuffer& UAV, UINT64 offset = 0);
 	void SetDescriptorTable(uint32_t rootIndex, D3D12_GPU_DESCRIPTOR_HANDLE firstHandle);
 
-	//void SetDynamicDescriptorDirect(D3D12_CPU_DESCRIPTOR_HANDLE handle);
 	void SetDynamicDescriptor(uint32_t rootIndex, uint32_t offset, D3D12_CPU_DESCRIPTOR_HANDLE handle);
 	void SetDynamicDescriptors(uint32_t rootIndex, uint32_t offset, uint32_t count, const D3D12_CPU_DESCRIPTOR_HANDLE handles[]);
 	void SetDynamicSampler(uint32_t rootIndex, uint32_t offset, D3D12_CPU_DESCRIPTOR_HANDLE handle);
