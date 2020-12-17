@@ -39,6 +39,9 @@ private:
 	ColorBuffer3D m_noise3D;
 	StructuredBuffer m_minMax;
 
+	D3D12_GPU_DESCRIPTOR_HANDLE m_tex2DHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_tex3DHandle;
+
 	std::shared_ptr<Camera> m_camera;
 	std::shared_ptr<Mesh> m_quad;
 

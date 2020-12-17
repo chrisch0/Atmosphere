@@ -8,10 +8,10 @@
 #include "Math/Common.h"
 
 #include "CompiledShaders/NoiseDemo_CS.h"
-#include "CompiledShaders/Noise3DDemo_CSd.h"
-#include "CompiledShaders/DrawQuad_VSd.h"
-#include "CompiledShaders/ComputeDemo_PSd.h"
-#include "CompiledShaders/Compute3DDemo_PSd.h"
+#include "CompiledShaders/Noise3DDemo_CS.h"
+#include "CompiledShaders/DrawQuad_VS.h"
+#include "CompiledShaders/ComputeDemo_PS.h"
+#include "CompiledShaders/Compute3DDemo_PS.h"
 
 ComputeDemo::ComputeDemo()
 {
@@ -70,7 +70,7 @@ void ComputeDemo::CreatePipelineState()
 	m_computePSO.Finalize();
 
 	m_computeNoise3DPSO.SetRootSignature(m_computeRS);
-	m_computeNoise3DPSO.SetComputeShader(g_pNoise3DDemo_CSd, sizeof(g_pNoise3DDemo_CSd));
+	m_computeNoise3DPSO.SetComputeShader(g_pNoise3DDemo_CS, sizeof(g_pNoise3DDemo_CS));
 	m_computeNoise3DPSO.Finalize();
 
 	D3D12_INPUT_ELEMENT_DESC layout[] = 
@@ -85,8 +85,8 @@ void ComputeDemo::CreatePipelineState()
 	m_graphicsPSO.SetSampleMask(UINT_MAX);
 	m_graphicsPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 	m_graphicsPSO.SetRenderTargetFormat(m_backBufferFormat, DXGI_FORMAT_UNKNOWN);
-	m_graphicsPSO.SetVertexShader(g_pDrawQuad_VSd, sizeof(g_pDrawQuad_VSd));
-	m_graphicsPSO.SetPixelShader(g_pComputeDemo_PSd, sizeof(g_pComputeDemo_PSd));
+	m_graphicsPSO.SetVertexShader(g_pDrawQuad_VS, sizeof(g_pDrawQuad_VS));
+	m_graphicsPSO.SetPixelShader(g_pComputeDemo_PS, sizeof(g_pComputeDemo_PS));
 	m_graphicsPSO.SetInputLayout(_countof(layout), layout);
 	m_graphicsPSO.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
 	m_graphicsPSO.SetDepthStencilState(Global::DepthStateDisabled);
@@ -94,7 +94,7 @@ void ComputeDemo::CreatePipelineState()
 	m_graphicsPSO.Finalize();
 
 	m_showNoise3DPSO = m_graphicsPSO;
-	m_showNoise3DPSO.SetPixelShader(g_pCompute3DDemo_PSd, sizeof(g_pCompute3DDemo_PSd));
+	m_showNoise3DPSO.SetPixelShader(g_pCompute3DDemo_PS, sizeof(g_pCompute3DDemo_PS));
 	m_showNoise3DPSO.Finalize();
 }
 
@@ -159,6 +159,7 @@ void ComputeDemo::Draw(const Timer& timer)
 	{
 		graphicsContext.SetPipelineState(m_graphicsPSO);
 		graphicsContext.SetDynamicDescriptor(0, 0, m_noise.GetSRV());
+
 	}
 	graphicsContext.SetViewportAndScissor(m_screenViewport, m_scissorRect);
 	graphicsContext.SetVertexBuffer(0, m_quad->VertexBufferView());
@@ -166,6 +167,7 @@ void ComputeDemo::Draw(const Timer& timer)
 	graphicsContext.DrawIndexed(6, 0, 0);
 
 	graphicsContext.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_COMMON);
+
 	graphicsContext.Finish();
 }
 
@@ -180,4 +182,17 @@ void ComputeDemo::UpdateUI()
 
 	ImGui::End();
 	m_isFirst = false;
+
+	ImGui::Begin("Noise Window");
+	ImVec2 window_size = ImGui::GetWindowSize();
+	ImGui::Text("CPU handle = %p", m_noise3D.GetSRV().ptr);
+	ImGui::Text("Window Size: %d x % d", (int)window_size.x, (int)window_size.y);
+	if (m_generate3D)
+	{
+		ImGui::Image((ImTextureID)(m_noise3D.GetSRV().ptr), ImVec2(256.0f, 256.0f));
+		//ImDraw
+	}
+	else
+		ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(256.0f, 256.0f));
+	ImGui::End();
 }

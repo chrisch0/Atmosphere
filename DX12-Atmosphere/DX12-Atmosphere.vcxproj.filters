@@ -347,6 +347,9 @@
     <FxCompile Include="Testes\Shaders\Compute3DDemo_PS.hlsl">
       <Filter>Testes\Test Demo Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="imgui\TileTexture3D_PS.hlsl">
+      <Filter>imgui\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

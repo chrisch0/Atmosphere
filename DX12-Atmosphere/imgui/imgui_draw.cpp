@@ -421,13 +421,14 @@ ImDrawList* ImDrawList::CloneOutput() const
     return dst;
 }
 
-void ImDrawList::AddDrawCmd()
+void ImDrawList::AddDrawCmd(int imageState)
 {
     ImDrawCmd draw_cmd;
     draw_cmd.ClipRect = _CmdHeader.ClipRect;    // Same as calling ImDrawCmd_HeaderCopy()
     draw_cmd.TextureId = _CmdHeader.TextureId;
     draw_cmd.VtxOffset = _CmdHeader.VtxOffset;
     draw_cmd.IdxOffset = IdxBuffer.Size;
+	draw_cmd.TextureDisplayState = imageState;
 
     IM_ASSERT(draw_cmd.ClipRect.x <= draw_cmd.ClipRect.z && draw_cmd.ClipRect.y <= draw_cmd.ClipRect.w);
     CmdBuffer.push_back(draw_cmd);
@@ -557,7 +558,7 @@ void ImDrawList::PopClipRect()
     _OnChangedClipRect();
 }
 
-void ImDrawList::PushTextureID(ImTextureID texture_id)
+void ImDrawList::PushTextureID(ImTextureID texture_id, int texture_state)
 {
     _TextureIdStack.push_back(texture_id);
     _CmdHeader.TextureId = texture_id;
@@ -1358,6 +1359,22 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, cons
 
     if (push_texture_id)
         PopTextureID();
+}
+
+void ImDrawList::AddImage3D(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
+{
+	if ((col & IM_COL32_A_MASK) == 0)
+		return;
+
+	const bool push_texture_id = user_texture_id != _CmdHeader.TextureId;
+	if (push_texture_id)
+		PushTextureID(user_texture_id);
+
+	PrimReserve(6, 4);
+	PrimRectUV(p_min, p_max, uv_min, uv_max, col);
+
+	if (push_texture_id)
+		PopTextureID();
 }
 
 void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, ImU32 col)

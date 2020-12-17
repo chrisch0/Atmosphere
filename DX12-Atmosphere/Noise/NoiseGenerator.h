@@ -94,20 +94,31 @@ public:
 
 	void Initialize();
 	void UpdateUI();
-	void Destroy();
+	//void Destroy();
 
 private:
 	void NoiseConfig(GraphicsContext& context, size_t index);
 
-	void AddNoise2D(const std::string& name, uint32_t width, uint32_t height);
-	void AddNoise3D(const std::string& name, uint32_t width, uint32_t height, uint32_t depth);
+	//void AddNoise2D(const std::string& name, uint32_t width, uint32_t height);
+	//void AddNoise3D(const std::string& name, uint32_t width, uint32_t height, uint32_t depth);
+	//void Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, NoiseState* state, bool isDomainWarp);
+	//void Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, uint32_t depth, NoiseState* state, bool isDomainWarp);
+
+	//void TileTexture3D();
 private:
 	std::unordered_map<std::string, std::shared_ptr<PixelBuffer>> m_noiseTextures;
 	std::vector<std::string> m_noiseTextureNames;
 	std::vector<std::shared_ptr<NoiseState>> m_noiseStates;
 	std::vector<bool> m_isNoise3D;
 	std::vector<bool> m_isDomainWarp;
+	std::vector<Vector3> m_textureSize;
+
+	//RootSignature m_generateNoiseRS;
+	//RootSignature m_displayNoiseRS;
+	//ComputePSO m_noise2DPSO;
+	//ComputePSO m_noise3DPSO;
+	//ComputePSO m_domainWarp2DPSO;
+	//ComputePSO m_domainWarp3DPSO;
 
 	bool m_showNoiseWindow;
-	bool m_isFirst;
 };

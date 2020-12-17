@@ -354,6 +354,8 @@ void App::CreateFontTexture()
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
 	m_fontColorBuffer = TextureManager::CreateTexture2D(L"FontTexture2D", width, height, DXGI_FORMAT_R8G8B8A8_UNORM, pixels);
+	// IMPORTANT: the pcmd->TextureId usage is different with the ImGui demo, so use the D3D12_CPU_DESCRIPTOR_HANDLE to set the io.Fonts->TexID
+	io.Fonts->TexID = (ImTextureID)m_fontColorBuffer->GetSRV().ptr;
 }
 
 int App::Run()
@@ -536,19 +538,6 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 	DynMem vertexBuffer = context.AllocateMemory(vtxCount * vertexStride);
 	DynMem indexBuffer = context.AllocateMemory(idxCount * sizeof(ImDrawIdx));
 
-	/*if (!render_data->VertexBuffer || drawData->TotalVtxCount > render_data->VertexCount + 5000)
-	{
-		render_data->VertexBuffer.reset(new ImDrawVert[render_data->VertexCount + 5000]);
-	}
-	if (!render_data->IndexBuffer || drawData->TotalIdxCount > render_data->IndexCount + 10000)
-	{
-		render_data->IndexBuffer.reset(new ImDrawIdx[render_data->IndexCount + 10000]);
-	}*/
-	//render_data->VertexCount = drawData->TotalVtxCount;
-	//render_data->IndexCount = drawData->TotalIdxCount;
-
-	/*auto* vtx_dst = render_data->VertexBuffer.get();
-	auto* idx_dst = render_data->IndexBuffer.get();*/
 	ImDrawVert* vtx_dst = (ImDrawVert*)vertexBuffer.dataPtr;
 	ImDrawIdx* idx_dst = (ImDrawIdx*)indexBuffer.dataPtr;
 	for (int n = 0; n < drawData->CmdListsCount; n++)
@@ -559,8 +548,6 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 		vtx_dst += cmd_list->VtxBuffer.Size;
 		idx_dst += cmd_list->IdxBuffer.Size;
 	}
-	//context.SetDynamicVB(0, render_data->VertexCount, sizeof(ImDrawVert), render_data->VertexBuffer.get());
-	//context.SetDynamicIB(render_data->IndexCount, render_data->IndexBuffer.get());	
 	context.SetDynamicVB(0, vtxCount, sizeof(ImDrawVert), vertexBuffer.dataPtr);
 	context.SetDynamicIB(idxCount, (uint16_t*)indexBuffer.dataPtr);
 
@@ -593,7 +580,6 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 	context.SetPipelineState(m_displayPSO);
 	context.SetRootSignature(m_displayRootSignature);
 	context.SetConstantArray(0, 16, mvp);
-	context.SetDynamicDescriptor(1, 0, m_fontColorBuffer->GetSRV());
 	context.SetBlendFactor({ 0.0f, 0.0f, 0.0f, 0.0f });
 
 	// Render command lists
@@ -614,10 +600,13 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 				if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
 				{
 					//SetupRenderState(draw_data, ctx, fr);
+					context.SetPipelineState(m_displayPSO);
+					context.SetRootSignature(m_displayRootSignature);
+					context.SetConstantArray(0, 16, mvp);
 				}
 				else
 				{
-					pcmd->UserCallback(cmd_list, pcmd);
+					pcmd->UserCallback(context, cmd_list, pcmd);
 				}
 			}
 			else
@@ -627,6 +616,8 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 				if (r.right > r.left && r.bottom > r.top)
 				{
 					//ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
+					// IMPORTANT: the pcmd->TextureId usage is different with the ImGui demo, use D3D12_CPU_DESCRIPOR_HANDLE to set the ImGui texID (ImGui::Image, font.TexID, ..., etc)
+					context.SetDynamicDescriptor(1, 0, *(D3D12_CPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
 					context.SetScissor(r);
 					context.DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
 				}
