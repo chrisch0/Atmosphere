@@ -116,7 +116,7 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 			{
 				auto new_texture = std::make_shared<ColorBuffer>();
 				std::wstring wname(name.begin(), name.end());
-				new_texture->Create(wname, size.GetX(), size.GetY(), 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+				new_texture->Create(wname, (uint32_t)size.GetX(), (uint32_t)size.GetY(), 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 				size.SetZ(1);
 				iter->second = new_texture;
 				//Generate(new_texture, size.GetX(), size.GetY(), noise_state.get(), domain_warp);

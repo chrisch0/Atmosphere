@@ -2139,6 +2139,7 @@ struct ImDrawCmdHeader
 {
     ImVec4          ClipRect;
     ImTextureID     TextureId;
+	unsigned int    TextureState;
     unsigned int    VtxOffset;
 };
 
@@ -2215,6 +2216,7 @@ struct ImDrawList
     ImDrawIdx*              _IdxWritePtr;       // [Internal] point within IdxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
     ImVector<ImVec4>        _ClipRectStack;     // [Internal]
     ImVector<ImTextureID>   _TextureIdStack;    // [Internal]
+	ImVector<unsigned int>           _TextureStateStack; // [Internal]
     ImVector<ImVec2>        _Path;              // [Internal] current path building
     ImDrawCmdHeader         _CmdHeader;         // [Internal] template of active commands. Fields should match those of CmdBuffer.back().
     ImDrawListSplitter      _Splitter;          // [Internal] for channels api (note: prefer using your own persistent instance of ImDrawListSplitter!)
@@ -2226,7 +2228,7 @@ struct ImDrawList
     IMGUI_API void  PushClipRect(ImVec2 clip_rect_min, ImVec2 clip_rect_max, bool intersect_with_current_clip_rect = false);  // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
     IMGUI_API void  PushClipRectFullScreen();
     IMGUI_API void  PopClipRect();
-    IMGUI_API void  PushTextureID(ImTextureID texture_id, int texture_state = 0);
+    IMGUI_API void  PushTextureID(ImTextureID texture_id, unsigned int texture_state = 0);
     IMGUI_API void  PopTextureID();
     inline ImVec2   GetClipRectMin() const { const ImVec4& cr = _ClipRectStack.back(); return ImVec2(cr.x, cr.y); }
     inline ImVec2   GetClipRectMax() const { const ImVec4& cr = _ClipRectStack.back(); return ImVec2(cr.z, cr.w); }
@@ -2277,7 +2279,7 @@ struct ImDrawList
 
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'UserCallback' in ImDrawCmd and call the function instead of rendering triangles.
-    IMGUI_API void  AddDrawCmd(int imageState = 0);                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
+    IMGUI_API void  AddDrawCmd(unsigned int imageState = 0);                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
     IMGUI_API ImDrawList* CloneOutput() const;                                  // Create a clone of the CmdBuffer/IdxBuffer/VtxBuffer.
 
     // Advanced: Channels
@@ -2307,7 +2309,7 @@ struct ImDrawList
     IMGUI_API void  _ClearFreeMemory();
     IMGUI_API void  _PopUnusedDrawCmd();
     IMGUI_API void  _OnChangedClipRect();
-    IMGUI_API void  _OnChangedTextureID();
+    IMGUI_API void  _OnChangedTextureID(unsigned int texture_state = 0);
     IMGUI_API void  _OnChangedVtxOffset();
 };
 

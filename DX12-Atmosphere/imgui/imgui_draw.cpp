@@ -391,6 +391,7 @@ void ImDrawList::_ResetForNewFrame()
     _IdxWritePtr = NULL;
     _ClipRectStack.resize(0);
     _TextureIdStack.resize(0);
+	_TextureStateStack.resize(0);
     _Path.resize(0);
     _Splitter.Clear();
     CmdBuffer.push_back(ImDrawCmd());
@@ -407,6 +408,7 @@ void ImDrawList::_ClearFreeMemory()
     _IdxWritePtr = NULL;
     _ClipRectStack.clear();
     _TextureIdStack.clear();
+	_TextureStateStack.clear();
     _Path.clear();
     _Splitter.ClearFreeMemory();
 }
@@ -421,7 +423,7 @@ ImDrawList* ImDrawList::CloneOutput() const
     return dst;
 }
 
-void ImDrawList::AddDrawCmd(int imageState)
+void ImDrawList::AddDrawCmd(unsigned int imageState)
 {
     ImDrawCmd draw_cmd;
     draw_cmd.ClipRect = _CmdHeader.ClipRect;    // Same as calling ImDrawCmd_HeaderCopy()
@@ -489,13 +491,13 @@ void ImDrawList::_OnChangedClipRect()
     curr_cmd->ClipRect = _CmdHeader.ClipRect;
 }
 
-void ImDrawList::_OnChangedTextureID()
+void ImDrawList::_OnChangedTextureID(unsigned int texture_state)
 {
     // If current command is used with different settings we need to add a new command
     ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
     if (curr_cmd->ElemCount != 0 && curr_cmd->TextureId != _CmdHeader.TextureId)
     {
-        AddDrawCmd();
+        AddDrawCmd(texture_state);
         return;
     }
     IM_ASSERT(curr_cmd->UserCallback == NULL);
@@ -509,6 +511,7 @@ void ImDrawList::_OnChangedTextureID()
     }
 
     curr_cmd->TextureId = _CmdHeader.TextureId;
+	curr_cmd->TextureDisplayState = _CmdHeader.TextureState;
 }
 
 void ImDrawList::_OnChangedVtxOffset()
@@ -558,18 +561,23 @@ void ImDrawList::PopClipRect()
     _OnChangedClipRect();
 }
 
-void ImDrawList::PushTextureID(ImTextureID texture_id, int texture_state)
+void ImDrawList::PushTextureID(ImTextureID texture_id, unsigned int texture_state)
 {
     _TextureIdStack.push_back(texture_id);
+	_TextureStateStack.push_back(texture_state);
     _CmdHeader.TextureId = texture_id;
-    _OnChangedTextureID();
+	_CmdHeader.TextureState = texture_state;
+    _OnChangedTextureID(texture_state);
 }
 
 void ImDrawList::PopTextureID()
 {
     _TextureIdStack.pop_back();
+	_TextureStateStack.pop_back();
     _CmdHeader.TextureId = (_TextureIdStack.Size == 0) ? (ImTextureID)NULL : _TextureIdStack.Data[_TextureIdStack.Size - 1];
-    _OnChangedTextureID();
+	int texture_state = (_TextureStateStack.Size == 0) ? (ImTextureID)NULL : _TextureStateStack.Data[_TextureStateStack.Size - 1];
+	_CmdHeader.TextureState = texture_state;
+    _OnChangedTextureID(texture_state);
 }
 
 // Reserve space for a number of vertices and indices.

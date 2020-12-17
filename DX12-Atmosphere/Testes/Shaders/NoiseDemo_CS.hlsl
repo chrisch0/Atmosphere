@@ -1,6 +1,6 @@
 #include "../../Shaders/FastNoiseLite.hlsli"
 
-RWTexture2D<float3> noise : register(u0);
+RWTexture2D<float4> noise : register(u0);
 RWBuffer<int> gMinMax : register(u1);
 
 cbuffer cb0
@@ -46,5 +46,5 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 
 	res = (res + 1.0f) * 0.5f;
 
-	noise[globalID.xy] = float3(res, res, res);
+	noise[globalID.xy] = float4(res, res, res, 1.0);
 }

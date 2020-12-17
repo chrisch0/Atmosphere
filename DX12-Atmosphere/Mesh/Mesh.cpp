@@ -3,8 +3,8 @@
 
 void Mesh::CreateGpuBuffer(Mesh* mesh)
 {
-	mesh->m_vertexBuffer.Create(L"Box Vertices", mesh->m_vertices.size(), (uint32_t)sizeof(Vertex), mesh->m_vertices.data());
-	mesh->m_indexBuffer.Create(L"Box Indices", mesh->m_indices.size(), (uint32_t)sizeof(uint16_t), mesh->m_indices.data());
+	mesh->m_vertexBuffer.Create(L"Box Vertices", (uint32_t)mesh->m_vertices.size(), (uint32_t)sizeof(Vertex), mesh->m_vertices.data());
+	mesh->m_indexBuffer.Create(L"Box Indices", (uint32_t)mesh->m_indices.size(), (uint32_t)sizeof(uint16_t), mesh->m_indices.data());
 	mesh->m_vertices.clear();
 	mesh->m_indices.clear();
 }

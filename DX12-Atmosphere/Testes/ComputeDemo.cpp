@@ -185,14 +185,16 @@ void ComputeDemo::UpdateUI()
 
 	ImGui::Begin("Noise Window");
 	ImVec2 window_size = ImGui::GetWindowSize();
-	ImGui::Text("CPU handle = %p", m_noise3D.GetSRV().ptr);
-	ImGui::Text("Window Size: %d x % d", (int)window_size.x, (int)window_size.y);
+	//ImGui::Text("CPU handle = %p", m_noise3D.GetSRV().ptr);
+	//ImGui::Text("Window Size: %d x % d", (int)window_size.x, (int)window_size.y);
+	//ImGui::Text("Cursor Pos: %d x % d", (int)pos.x, (int)pos.y);
+	ImVec2 pos = ImGui::GetCursorPos();
 	if (m_generate3D)
 	{
-		ImGui::Image((ImTextureID)(m_noise3D.GetSRV().ptr), ImVec2(256.0f, 256.0f));
+		ImGui::Image((ImTextureID)(m_noise3D.GetSRV().ptr), ImVec2(window_size.x, window_size.y - 2 * pos.y));
 		//ImDraw
 	}
 	else
-		ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(256.0f, 256.0f));
+		ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(window_size.x - 2 * pos.x, window_size.y - pos.y - 10));
 	ImGui::End();
 }
