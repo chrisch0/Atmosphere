@@ -67,10 +67,10 @@ protected:
 	uint32_t m_sampleCount;
 };
 
-class ColorBuffer3D : public PixelBuffer
+class VolumeColorBuffer : public PixelBuffer
 {
 public:
-	ColorBuffer3D(Color clearColor = Color(0.0f, 0.0f, 0.0f, 0.0f))
+	VolumeColorBuffer(Color clearColor = Color(0.0f, 0.0f, 0.0f, 0.0f))
 		: m_clearColor(clearColor), m_numMipMaps(0), m_fragmentCount(1), m_sampleCount(1)
 	{
 		m_srvHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;

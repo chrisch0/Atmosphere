@@ -120,7 +120,7 @@ void ColorBuffer::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, u
 	}
 }
 
-void ColorBuffer3D::Create(const std::wstring& name, uint32_t width, uint32_t height, uint32_t depth, uint32_t numMips, DXGI_FORMAT format, D3D12_GPU_VIRTUAL_ADDRESS vidMemPtr /* = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN */)
+void VolumeColorBuffer::Create(const std::wstring& name, uint32_t width, uint32_t height, uint32_t depth, uint32_t numMips, DXGI_FORMAT format, D3D12_GPU_VIRTUAL_ADDRESS vidMemPtr /* = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN */)
 {
 	numMips = (numMips == 0 ? ComputeNumMips(width, height, depth) : numMips);
 	D3D12_RESOURCE_FLAGS flags = CombineResourceFlags();
@@ -140,7 +140,7 @@ void ColorBuffer3D::Create(const std::wstring& name, uint32_t width, uint32_t he
 	CreateDerivedViews(g_Device, format, numMips);
 }
 
-void ColorBuffer3D::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, uint32_t numMips)
+void VolumeColorBuffer::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, uint32_t numMips)
 {
 	m_numMipMaps = numMips - 1;
 

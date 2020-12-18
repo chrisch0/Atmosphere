@@ -65,11 +65,11 @@ void NoiseGenerator::UpdateUI()
 	{
 		if (cur_dim)
 		{
-			//AddNoise3D(new_texture_name, width, height, depth);
+			AddNoise3D(new_texture_name, width, height, depth);
 		}
 		else
 		{
-			//AddNoise2D(new_texture_name, width, height);
+			AddNoise2D(new_texture_name, width, height);
 		}
 	}
 
@@ -88,9 +88,8 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 	
 	bool dirty_flag = false;
 	auto name = m_noiseTextureNames[i];
-	bool tex_3d = m_isNoise3D[i];
+	bool is_volume_texture = m_isVolumeNoise[i];
 	auto noise_state = m_noiseStates[i];
-	bool domain_warp = m_isDomainWarp[i];
 	auto& size = m_textureSize[i];
 	auto iter = m_noiseTextures.find(m_noiseTextureNames[i]);
 	assert(iter != m_noiseTextures.end());
@@ -99,13 +98,12 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 	{
 		ImGui::Text(name.data());
 		ImGui::Text("Size: %d x %d x %d", (int)size.GetX(), (int)size.GetY(), (int)size.GetZ());
-		dirty_flag |= ImGui::Checkbox("3D", &tex_3d);
-		if (m_isNoise3D[i] != tex_3d)
+		dirty_flag |= ImGui::Checkbox("3D", &is_volume_texture);
+		if (m_isVolumeNoise[i] != is_volume_texture)
 		{
-
-			if (tex_3d)
+			if (is_volume_texture)
 			{
-				auto new_texture = std::make_shared<ColorBuffer3D>();
+				auto new_texture = std::make_shared<VolumeColorBuffer>();
 				std::wstring wname(name.begin(), name.end());
 				new_texture->Create(wname, size.GetX(), size.GetY(), 64, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 				size.SetZ(64);
@@ -122,14 +120,14 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 				//Generate(new_texture, size.GetX(), size.GetY(), noise_state.get(), domain_warp);
 			}
 		}
-		m_isNoise3D[i] = tex_3d;
-		dirty_flag |= ImGui::Checkbox("Visualize Domain Warp", &domain_warp);
-		if (!domain_warp)
+		m_isVolumeNoise[i] = is_volume_texture;
+		dirty_flag |= ImGui::Checkbox("Visualize Domain Warp", &visualize_domain_warp);
+		if (!visualize_domain_warp)
 		{
 			ImGui::Text("General");
 			const char* noise_type[] = { "Open Simplex 2", "Open Simplex 2S", "Cellular", "Perlin", "Value Cubic", "Value" };
 			dirty_flag |= ImGui::Combo("Noise Type", (int*)&(noise_state->noise_type), noise_type, IM_ARRAYSIZE(noise_type));
-			if (tex_3d)
+			if (is_volume_texture)
 			{
 				const char* rotation_type_3d[] = {"None", "Improve XY Planes", "Improve XZ Planes"};
 				dirty_flag |= ImGui::Combo("Rotation Type", (int*)&(noise_state->rotation_type_3d), rotation_type_3d, IM_ARRAYSIZE(rotation_type_3d));
@@ -167,7 +165,7 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 			ImGui::Text("Domain Warp");
 			const char* type[] = { "None", "Open Simplex 2", "Open Simplex 2 Reduced", "Basic Grid" };
 			dirty_flag |= ImGui::Combo("Type", (int*)&(noise_state->domain_warp_type), type, IM_ARRAYSIZE(type));
-			if (tex_3d)
+			if (is_volume_texture)
 			{
 				const char* rotation_type_3d[] = { "None", "Improve XY Planes", "Improve XZ Planes" };
 				dirty_flag |= ImGui::Combo("Rotation Type", (int*)&(noise_state->rotation_type_3d), rotation_type_3d, IM_ARRAYSIZE(rotation_type_3d));
@@ -185,88 +183,87 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 				dirty_flag |= ImGui::DragFloat("Gain", &(noise_state->gain), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
 			}
 		}
+		static bool invert = false;
+		dirty_flag |= ImGui::Checkbox("Invert Color", &invert);
+		noise_state->invert = (int)invert;
 	}
 	ImGui::EndGroup();
 	ImGui::SameLine();
 
-	//if (tex_3d)
-	//{
-	//	auto tex = std::dynamic_pointer_cast<ColorBuffer3D>(iter->second);
-	//	auto gpu_handle = context.SetDynamicDescriptorDirect(tex->GetSRV());
-	//	ImGui::Image()
-	//}
+	if (is_volume_texture)
+	{
+		
+	}
+	else
+	{
+
+	}
 }
 
-//void NoiseGenerator::AddNoise3D(const std::string& name, uint32_t width, uint32_t height, uint32_t depth)
-//{
-//	auto iter = m_noiseTextures.find(name);
-//	std::shared_ptr<ColorBuffer3D> tex = std::make_shared<ColorBuffer3D>();
-//	std::string n = name;
-//	if (iter != m_noiseTextures.end())
-//	{
-//		n += "_";
-//	}
-//	std::wstring wn(n.begin(), n.end());
-//	tex->Create(wn, width, height, depth, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
-//	m_noiseTextures.insert({ n, tex });
-//	m_noiseTextureNames.push_back(n);
-//	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
-//	m_isNoise3D.push_back(true);
-//	m_isDomainWarp.push_back(false);
-//	m_textureSize.emplace_back((float)width, (float)height, (float)depth);
-//	Generate(tex, width, height, depth, m_noiseStates.back().get(), false);
-//}
-//
-//void NoiseGenerator::AddNoise2D(const std::string& name, uint32_t width, uint32_t height)
-//{
-//	auto iter = m_noiseTextures.find(name);
-//	std::shared_ptr<ColorBuffer> tex = std::make_shared<ColorBuffer>();
-//	std::string n = name;
-//	if (iter != m_noiseTextures.end())
-//	{
-//		n += "_";
-//	}
-//	std::wstring wn(n.begin(), n.end());
-//	tex->Create(wn, width, height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
-//	m_noiseTextures.insert({ n, tex });
-//	m_noiseTextureNames.push_back(n);
-//	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
-//	m_isNoise3D.push_back(false);
-//	m_isDomainWarp.push_back(false);
-//	m_textureSize.emplace_back((float)width, (float)height, 1.0f);
-//	Generate(tex, width, height, m_noiseStates.back().get(), false);
-//}
-//
-//void NoiseGenerator::Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, uint32_t depth, NoiseState* state, bool isDomainWarp)
-//{
-//	auto tex = std::dynamic_pointer_cast<ColorBuffer3D>(texPtr);
-//
-//	ComputeContext& context = ComputeContext::Begin();
-//	context.SetRootSignature(m_noiseRS);
-//	if (isDomainWarp)
-//		context.SetPipelineState(m_domainWarp3DPSO);
-//	else
-//		context.SetPipelineState(m_noise3DPSO);
-//	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-//	context.SetDynamicConstantBufferView(0, sizeof(NoiseState), state);
-//	context.SetDynamicDescriptor(1, 0, tex->GetUAV());
-//	context.Dispatch3D(tex->GetWidth(), tex->GetHeight(), tex->GetDepth(), 8, 8, 1);
-//	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
-//}
-//
-//void NoiseGenerator::Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, NoiseState* state, bool isDomainWarp)
-//{
-//	auto tex = std::dynamic_pointer_cast<ColorBuffer>(texPtr);
-//
-//	ComputeContext& context = ComputeContext::Begin();
-//	context.SetRootSignature(m_noiseRS);
-//	if (isDomainWarp)
-//		context.SetPipelineState(m_domainWarp2DPSO);
-//	else
-//		context.SetPipelineState(m_noise2DPSO);
-//	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-//	context.SetDynamicConstantBufferView(0, sizeof(NoiseState), state);
-//	context.SetDynamicDescriptor(1, 0, tex->GetUAV());
-//	context.Dispatch2D(tex->GetWidth(), tex->GetHeight());
-//	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
-//}
+void NoiseGenerator::AddNoise3D(const std::string& name, uint32_t width, uint32_t height, uint32_t depth)
+{
+	auto iter = m_noiseTextures.find(name);
+	std::shared_ptr<VolumeColorBuffer> tex = std::make_shared<VolumeColorBuffer>();
+	std::string n = name;
+	if (iter != m_noiseTextures.end())
+	{
+		n += "_";
+	}
+	std::wstring wn(n.begin(), n.end());
+	tex->Create(wn, width, height, depth, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_noiseTextures.insert({ n, tex });
+	m_noiseTextureNames.push_back(n);
+	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
+	m_isVolumeNoise.push_back(true);
+	m_isVisualizeDomainWarp.push_back(false);
+	m_textureSize.emplace_back((float)width, (float)height, (float)depth);
+	Generate(tex, width, height, depth, m_noiseStates.back().get(), false);
+}
+
+void NoiseGenerator::AddNoise2D(const std::string& name, uint32_t width, uint32_t height)
+{
+	auto iter = m_noiseTextures.find(name);
+	std::shared_ptr<ColorBuffer> tex = std::make_shared<ColorBuffer>();
+	std::string n = name;
+	if (iter != m_noiseTextures.end())
+	{
+		n += "_";
+	}
+	std::wstring wn(n.begin(), n.end());
+	tex->Create(wn, width, height, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_noiseTextures.insert({ n, tex });
+	m_noiseTextureNames.push_back(n);
+	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
+	m_isVolumeNoise.push_back(false);
+	m_isVisualizeDomainWarp.push_back(false);
+	m_textureSize.emplace_back((float)width, (float)height, 1.0f);
+	Generate(tex, width, height, m_noiseStates.back().get(), false);
+}
+
+void NoiseGenerator::Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, uint32_t depth, NoiseState* state)
+{
+	auto tex = std::dynamic_pointer_cast<VolumeColorBuffer>(texPtr);
+
+	ComputeContext& context = ComputeContext::Begin();
+	context.SetRootSignature(m_genNoiseRS);
+	context.SetPipelineState(m_genVolumeNoisePSO);
+	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicConstantBufferView(0, sizeof(NoiseState), state);
+	context.SetDynamicDescriptor(1, 0, tex->GetUAV());
+	context.Dispatch3D(tex->GetWidth(), tex->GetHeight(), tex->GetDepth(), 8, 8, 1);
+	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+}
+
+void NoiseGenerator::Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, NoiseState* state)
+{
+	auto tex = std::dynamic_pointer_cast<ColorBuffer>(texPtr);
+
+	ComputeContext& context = ComputeContext::Begin();
+	context.SetRootSignature(m_genNoiseRS);
+	context.SetPipelineState(m_genNoisePSO);
+	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicConstantBufferView(0, sizeof(NoiseState), state);
+	context.SetDynamicDescriptor(1, 0, tex->GetUAV());
+	context.Dispatch2D(tex->GetWidth(), tex->GetHeight());
+	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+}

@@ -38,6 +38,9 @@
     <Filter Include="Noise">
       <UniqueIdentifier>{fb5cff99-7762-4664-9af7-4e9bc03e4443}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\GenerateNoise">
+      <UniqueIdentifier>{7ca2d0f9-4d87-4de1-98c1-d96e5cbd833a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -350,13 +353,22 @@
     <FxCompile Include="imgui\TileTexture3D_PS.hlsl">
       <Filter>imgui\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="imgui\PreviewTexture3D_PS.hlsl">
+      <Filter>imgui\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GenerateNoise_CS.hlsl">
+      <Filter>Shaders\GenerateNoise</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GenerateVolumeNoise_CS.hlsl">
+      <Filter>Shaders\GenerateNoise</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
       <Filter>Math</Filter>
     </None>
     <None Include="Shaders\FastNoiseLite.hlsli">
-      <Filter>Shaders</Filter>
+      <Filter>Shaders\GenerateNoise</Filter>
     </None>
   </ItemGroup>
 </Project>

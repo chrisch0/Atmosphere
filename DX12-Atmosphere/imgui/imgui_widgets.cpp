@@ -1003,7 +1003,7 @@ void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2&
     }
 }
 
-void ImGui::TiledVolumeImage(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
+void ImGui::TiledVolumeImage(ImTextureID user_texture_id, const ImVec2& size, const unsigned int texture_depth, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
 {
 	ImGuiWindow* window = GetCurrentWindow();
 	if (window->SkipItems)
@@ -1016,14 +1016,16 @@ void ImGui::TiledVolumeImage(ImTextureID user_texture_id, const ImVec2& size, co
 	if (!ItemAdd(bb, 0))
 		return;
 
+	int texture_state = (texture_depth << 16) | 1;
+
 	if (border_col.w > 0.0f)
 	{
 		window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), 0.0f);
-		window->DrawList->AddImage3D(user_texture_id, bb.Min + ImVec2(1, 1), bb.Max - ImVec2(1, 1), uv0, uv1, GetColorU32(tint_col));
+		window->DrawList->AddVolumeImage(user_texture_id, bb.Min + ImVec2(1, 1), bb.Max - ImVec2(1, 1), texture_state, uv0, uv1, GetColorU32(tint_col));
 	}
 	else
 	{
-		window->DrawList->AddImage3D(user_texture_id, bb.Min, bb.Max, uv0, uv1, GetColorU32(tint_col));
+		window->DrawList->AddVolumeImage(user_texture_id, bb.Min, bb.Max, texture_state, uv0, uv1, GetColorU32(tint_col));
 	}
 }
 
@@ -1072,6 +1074,50 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
 
     const ImVec2 padding = (frame_padding >= 0) ? ImVec2((float)frame_padding, (float)frame_padding) : g.Style.FramePadding;
     return ImageButtonEx(id, user_texture_id, size, uv0, uv1, padding, bg_col, tint_col);
+}
+
+bool ImGui::VolumeImageButtonEx(ImGuiID id, ImTextureID texture_id, const ImVec2& size, const unsigned int texture_state, const ImVec2& uv0, const ImVec2& uv1, const ImVec2& padding, const ImVec4& bg_col, const ImVec4& tint_col)
+{
+	ImGuiContext& g = *GImGui;
+	ImGuiWindow* window = GetCurrentWindow();
+	if (window->SkipItems)
+		return false;
+
+	const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size + padding * 2);
+	ItemSize(bb);
+	if (!ItemAdd(bb, id))
+		return false;
+
+	bool hovered, held;
+	bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+
+	// Render
+	const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+	RenderNavHighlight(bb, id);
+	RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
+	if (bg_col.w > 0.0f)
+		window->DrawList->AddRectFilled(bb.Min + padding, bb.Max - padding, GetColorU32(bg_col));
+
+	window->DrawList->AddVolumeImage(texture_id, bb.Min + padding, bb.Max - padding, texture_state, uv0, uv1, GetColorU32(tint_col));
+
+	return pressed;
+}
+
+bool ImGui::VolumeImageButton(ImTextureID user_texture_id, const ImVec2& size, const unsigned int texture_depth, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col, const ImVec4& tint_col)
+{
+	ImGuiContext& g = *GImGui;
+	ImGuiWindow* window = g.CurrentWindow;
+	if (window->SkipItems)
+		return false;
+
+	// Default to using texture ID as ID. User can still push string/integer prefixes.
+	PushID((void*)(intptr_t)user_texture_id);
+	const ImGuiID id = window->GetID("#image");
+	PopID();
+
+	const ImVec2 padding = (frame_padding >= 0) ? ImVec2((float)frame_padding, (float)frame_padding) : g.Style.FramePadding;
+	unsigned int texture_state = (texture_depth << 16) | 0x10;
+	return VolumeImageButtonEx(id, user_texture_id, size, texture_state, uv0, uv1, padding, bg_col, tint_col);
 }
 
 bool ImGui::Checkbox(const char* label, bool* v)

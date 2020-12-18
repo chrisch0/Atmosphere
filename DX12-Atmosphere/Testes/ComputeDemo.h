@@ -8,7 +8,7 @@ class GraphicsPSO;
 class ComputePSO;
 class Camera;
 class ColorBuffer;
-class ColorBuffer3D;
+class VolumeColorBuffer;
 class Mesh;
 
 class ComputeDemo : public App
@@ -36,7 +36,7 @@ private:
 	ComputePSO m_computeNoise3DPSO;
 
 	ColorBuffer m_noise;
-	ColorBuffer3D m_noise3D;
+	VolumeColorBuffer m_noise3D;
 	StructuredBuffer m_minMax;
 
 	D3D12_GPU_DESCRIPTOR_HANDLE m_tex2DHandle;

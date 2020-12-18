@@ -102,7 +102,7 @@ void ComputeDemo::CreateResources()
 {
 	m_quad.reset(Mesh::CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.5f));
 	m_noise.Create(L"Noise Texture", 1024, 1024, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	m_noise3D.Create(L"Noise3D Texture", 256, 256, 256, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_noise3D.Create(L"Noise3D Texture", 256, 256, 128, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	int32_t minmax[2] = { 0, (int32_t)0xff7fffff };
 	m_minMax.Create(L"Global Min Max", 2, sizeof(float), minmax);
 }
@@ -186,15 +186,45 @@ void ComputeDemo::UpdateUI()
 	ImGui::Begin("Noise Window");
 	ImVec2 window_size = ImGui::GetWindowSize();
 	//ImGui::Text("CPU handle = %p", m_noise3D.GetSRV().ptr);
-	//ImGui::Text("Window Size: %d x % d", (int)window_size.x, (int)window_size.y);
+	ImGui::Text("Window Size: %d x % d", (int)window_size.x, (int)window_size.y);
 	//ImGui::Text("Cursor Pos: %d x % d", (int)pos.x, (int)pos.y);
-	ImVec2 pos = ImGui::GetCursorPos();
 	if (m_generate3D)
 	{
-		ImGui::Image((ImTextureID)(m_noise3D.GetSRV().ptr), ImVec2(window_size.x, window_size.y - 2 * pos.y));
-		//ImDraw
+		static bool new_window = false;
+		if (ImGui::VolumeImageButton((ImTextureID)(m_noise3D.GetSRV().ptr), ImVec2(128.0, 128.0), m_noise3D.GetDepth()))
+		{
+			new_window = !new_window;
+		}
+		if (new_window)
+		{
+			ImGui::Begin("New Window");
+			window_size = ImGui::GetWindowSize();
+			ImVec2 pos = ImGui::GetCursorPos();
+			ImGui::TiledVolumeImage((ImTextureID)(m_noise3D.GetSRV().ptr), ImVec2(window_size.x - 2 * pos.x, window_size.y - pos.y - 10), (int)m_noise3D.GetDepth());
+			ImGui::End();
+		}	
 	}
 	else
-		ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(window_size.x - 2 * pos.x, window_size.y - pos.y - 10));
+	{
+		static bool new_window = false;
+		static bool is_open = false;
+		if (ImGui::ImageButton((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(128.0, 128.0)))
+		{
+			new_window = !new_window;
+			is_open = true;
+		}
+		if (new_window)
+		{
+			ImGui::Begin("New Window");
+			window_size = ImGui::GetWindowSize();
+			ImVec2 pos = ImGui::GetCursorPos();
+			if (is_open)
+				ImGui::SetWindowSize(ImVec2((float)m_noise.GetWidth() + 2.0f * pos.x, (float)m_noise.GetHeight() + pos.y + 10.0f));
+			ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(window_size.x - 2 * pos.x, window_size.y - pos.y - 10));
+			//ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(m_noise.GetWidth(), m_noise.GetHeight()));
+			ImGui::End();
+			is_open = false;
+		}
+	}
 	ImGui::End();
 }

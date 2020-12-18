@@ -8,6 +8,8 @@
 #include "imgui/imgui_impl_win32.h"
 #include "CompiledShaders/imgui_vert.h"
 #include "CompiledShaders/imgui_pixel.h"
+#include "CompiledShaders/TileTexture3D_PS.h"
+#include "CompiledShaders/PreviewTexture3D_PS.h"
 
 using namespace Microsoft::WRL;
 
@@ -290,12 +292,12 @@ void App::CreateAppRootSignature()
 	staticSampler.RegisterSpace = 0;
 	staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	m_displayRootSignature.Reset(2, 1);
+	m_displayRootSignature.Reset(3, 1);
 	m_displayRootSignature[0].InitAsConstants(16, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-	m_displayRootSignature[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_displayRootSignature[1].InitAsConstants(1, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_displayRootSignature[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
 	m_displayRootSignature.InitStaticSampler(0, staticSampler);
 	m_displayRootSignature.Finalize(L"Display", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
 }
 
 void App::CreateAppPipelineState()
@@ -343,6 +345,14 @@ void App::CreateAppPipelineState()
 	m_displayPSO.SetRasterizerState(rasterDesc);
 	m_displayPSO.SetDepthStencilState(depthDesc);
 	m_displayPSO.Finalize();
+
+	m_tiledVolumeTexturePSO = m_displayPSO;
+	m_tiledVolumeTexturePSO.SetPixelShader(g_pTileTexture3D_PS, sizeof(g_pTileTexture3D_PS));
+	m_tiledVolumeTexturePSO.Finalize();
+
+	m_previewVolumeTexturePSO = m_tiledVolumeTexturePSO;
+	m_previewVolumeTexturePSO.SetPixelShader(g_pPreviewTexture3D_PS, sizeof(g_pPreviewTexture3D_PS));
+	m_previewVolumeTexturePSO.Finalize();
 }
 
 void App::CreateFontTexture()
@@ -577,7 +587,6 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 	};
 
 	context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context.SetPipelineState(m_displayPSO);
 	context.SetRootSignature(m_displayRootSignature);
 	context.SetConstantArray(0, 16, mvp);
 	context.SetBlendFactor({ 0.0f, 0.0f, 0.0f, 0.0f });
@@ -600,9 +609,9 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 				if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
 				{
 					//SetupRenderState(draw_data, ctx, fr);
-					context.SetPipelineState(m_displayPSO);
-					context.SetRootSignature(m_displayRootSignature);
-					context.SetConstantArray(0, 16, mvp);
+					//context.SetPipelineState(m_displayPSO);
+					//context.SetRootSignature(m_displayRootSignature);
+					//context.SetConstantArray(0, 16, mvp);
 				}
 				else
 				{
@@ -615,9 +624,25 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 				const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
 				if (r.right > r.left && r.bottom > r.top)
 				{
+					if (pcmd->TextureDisplayState == 0)
+					{
+						context.SetPipelineState(m_displayPSO);
+					}
+					else if ((pcmd->TextureDisplayState & 1))
+					{
+						context.SetPipelineState(m_tiledVolumeTexturePSO);
+						int dim = (pcmd->TextureDisplayState >> 16);
+						context.SetConstantArray(1, 1, &dim);
+					}
+					else if ((pcmd->TextureDisplayState & 0x10))
+					{
+						context.SetPipelineState(m_previewVolumeTexturePSO);
+						int dim = (pcmd->TextureDisplayState >> 16);
+						context.SetConstantArray(1, 1, &dim);
+					}
 					//ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
 					// IMPORTANT: the pcmd->TextureId usage is different with the ImGui demo, use D3D12_CPU_DESCRIPOR_HANDLE to set the ImGui texID (ImGui::Image, font.TexID, ..., etc)
-					context.SetDynamicDescriptor(1, 0, *(D3D12_CPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
+					context.SetDynamicDescriptor(2, 0, *(D3D12_CPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
 					context.SetScissor(r);
 					context.DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
 				}

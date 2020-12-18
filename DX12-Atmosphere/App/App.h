@@ -121,6 +121,8 @@ protected:
 	// Imgui
 	RootSignature m_displayRootSignature;
 	GraphicsPSO m_displayPSO;
+	GraphicsPSO m_tiledVolumeTexturePSO;
+	GraphicsPSO m_previewVolumeTexturePSO;
 
 	const Texture2D* m_fontColorBuffer;
 
