@@ -94,6 +94,8 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 	auto iter = m_noiseTextures.find(m_noiseTextureNames[i]);
 	assert(iter != m_noiseTextures.end());
 
+	noise_state->invert_visualize_warp = 0;
+
 	ImGui::BeginGroup();
 	{
 		ImGui::Text(name.data());
@@ -108,7 +110,7 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 				new_texture->Create(wname, size.GetX(), size.GetY(), 64, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 				size.SetZ(64);
 				iter->second = new_texture;
-				//Generate(new_texture, size.GetX(), size.GetY(), size.GetZ(), noise_state.get(), domain_warp);
+				Generate(new_texture, size.GetX(), size.GetY(), size.GetZ(), noise_state.get());
 			}
 			else
 			{
@@ -117,50 +119,52 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 				new_texture->Create(wname, (uint32_t)size.GetX(), (uint32_t)size.GetY(), 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 				size.SetZ(1);
 				iter->second = new_texture;
-				//Generate(new_texture, size.GetX(), size.GetY(), noise_state.get(), domain_warp);
+				Generate(new_texture, size.GetX(), size.GetY(), noise_state.get());
 			}
 		}
 		m_isVolumeNoise[i] = is_volume_texture;
-		dirty_flag |= ImGui::Checkbox("Visualize Domain Warp", &visualize_domain_warp);
-		if (!visualize_domain_warp)
-		{
-			ImGui::Text("General");
-			const char* noise_type[] = { "Open Simplex 2", "Open Simplex 2S", "Cellular", "Perlin", "Value Cubic", "Value" };
-			dirty_flag |= ImGui::Combo("Noise Type", (int*)&(noise_state->noise_type), noise_type, IM_ARRAYSIZE(noise_type));
-			if (is_volume_texture)
-			{
-				const char* rotation_type_3d[] = {"None", "Improve XY Planes", "Improve XZ Planes"};
-				dirty_flag |= ImGui::Combo("Rotation Type", (int*)&(noise_state->rotation_type_3d), rotation_type_3d, IM_ARRAYSIZE(rotation_type_3d));
-			}
-			dirty_flag |= ImGui::DragInt("Seed", &(noise_state->seed));
-			dirty_flag |= ImGui::DragFloat("Frequency", &(noise_state->frequency), 0.001f, 0.0f, FLT_MAX, "%.3f");
-			
-			ImGui::Text("Fractal");
-			const char* fractal_type[] = { "None", "FBM", "Ridged", "Ping Pong" };
-			dirty_flag |= ImGui::Combo("Fractal Type", (int*)&(noise_state->fractal_type), fractal_type, IM_ARRAYSIZE(fractal_type));
-			if (noise_state->fractal_type != kFractalNone)
-			{
-				dirty_flag |= ImGui::DragInt("Octaves", &(noise_state->octaves), 1.0f, 0, INT_MAX);
-				dirty_flag |= ImGui::DragFloat("Lacunarity", &(noise_state->lacunarity), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
-				dirty_flag |= ImGui::DragFloat("Gain", &(noise_state->gain), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
-				dirty_flag |= ImGui::DragFloat("Weighted Strength", &(noise_state->weighted_strength), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
-				if (noise_state->fractal_type == kFractalPingPong)
-				{
-					dirty_flag |= ImGui::DragFloat("Ping Pong Strength", &(noise_state->ping_pong_strength), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
-				}
-			}
 
-			if (noise_state->noise_type == kNoiseCellular)
+		static bool visualize_domain_warp = false;
+		dirty_flag |= ImGui::Checkbox("Visualize Domain Warp", &visualize_domain_warp);
+		noise_state->invert_visualize_warp |= (int)visualize_domain_warp;
+
+		ImGui::Text("General");
+		const char* noise_type[] = { "Open Simplex 2", "Open Simplex 2S", "Cellular", "Perlin", "Value Cubic", "Value" };
+		dirty_flag |= ImGui::Combo("Noise Type", (int*)&(noise_state->noise_type), noise_type, IM_ARRAYSIZE(noise_type));
+		if (is_volume_texture)
+		{
+			const char* rotation_type_3d[] = { "None", "Improve XY Planes", "Improve XZ Planes" };
+			dirty_flag |= ImGui::Combo("Rotation Type", (int*)&(noise_state->rotation_type_3d), rotation_type_3d, IM_ARRAYSIZE(rotation_type_3d));
+		}
+		dirty_flag |= ImGui::DragInt("Seed", &(noise_state->seed));
+		dirty_flag |= ImGui::DragFloat("Frequency", &(noise_state->frequency), 0.001f, 0.0f, FLT_MAX, "%.3f");
+
+		ImGui::Text("Fractal");
+		const char* fractal_type[] = { "None", "FBM", "Ridged", "Ping Pong" };
+		dirty_flag |= ImGui::Combo("Fractal Type", (int*)&(noise_state->fractal_type), fractal_type, IM_ARRAYSIZE(fractal_type));
+		if (noise_state->fractal_type != kFractalNone)
+		{
+			dirty_flag |= ImGui::DragInt("Octaves", &(noise_state->octaves), 1.0f, 0, INT_MAX);
+			dirty_flag |= ImGui::DragFloat("Lacunarity", &(noise_state->lacunarity), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
+			dirty_flag |= ImGui::DragFloat("Gain", &(noise_state->gain), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
+			dirty_flag |= ImGui::DragFloat("Weighted Strength", &(noise_state->weighted_strength), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
+			if (noise_state->fractal_type == kFractalPingPong)
 			{
-				ImGui::Text("Cellular");
-				const char* distance_function[] = { "Euclidean", "Euclidean Sq", "Manhattan", "Hybrid" };
-				dirty_flag |= ImGui::Combo("Distance Function", (int*)&(noise_state->cellular_distance_func), distance_function, IM_ARRAYSIZE(distance_function));
-				const char* return_type[] = { "Cell Value", "Distance", "Distance 2", "Distance 2 Add", "Distance 2 Sub", "Distance 2 Mul", "Distance 2 Div" };
-				dirty_flag |= ImGui::Combo("Return Type", (int*)&(noise_state->cellular_return_type), return_type, IM_ARRAYSIZE(return_type));
-				dirty_flag |= ImGui::DragFloat("Jitter", &(noise_state->cellular_jitter_mod), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
+				dirty_flag |= ImGui::DragFloat("Ping Pong Strength", &(noise_state->ping_pong_strength), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
 			}
 		}
-		else
+
+		if (noise_state->noise_type == kNoiseCellular)
+		{
+			ImGui::Text("Cellular");
+			const char* distance_function[] = { "Euclidean", "Euclidean Sq", "Manhattan", "Hybrid" };
+			dirty_flag |= ImGui::Combo("Distance Function", (int*)&(noise_state->cellular_distance_func), distance_function, IM_ARRAYSIZE(distance_function));
+			const char* return_type[] = { "Cell Value", "Distance", "Distance 2", "Distance 2 Add", "Distance 2 Sub", "Distance 2 Mul", "Distance 2 Div" };
+			dirty_flag |= ImGui::Combo("Return Type", (int*)&(noise_state->cellular_return_type), return_type, IM_ARRAYSIZE(return_type));
+			dirty_flag |= ImGui::DragFloat("Jitter", &(noise_state->cellular_jitter_mod), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
+		}
+
+		// Domain warp setting
 		{
 			ImGui::Text("Domain Warp");
 			const char* type[] = { "None", "Open Simplex 2", "Open Simplex 2 Reduced", "Basic Grid" };
@@ -171,21 +175,21 @@ void NoiseGenerator::NoiseConfig(GraphicsContext& context, size_t i)
 				dirty_flag |= ImGui::Combo("Rotation Type", (int*)&(noise_state->rotation_type_3d), rotation_type_3d, IM_ARRAYSIZE(rotation_type_3d));
 			}
 			dirty_flag |= ImGui::DragFloat("Amplitude", &(noise_state->domain_warp_amp), 1.0f, -FLT_MAX, FLT_MAX, "%.2f");
-			dirty_flag |= ImGui::DragFloat("Frequency", &(noise_state->frequency), 0.001f, -FLT_MAX, FLT_MAX, "%.3f");
+			dirty_flag |= ImGui::DragFloat("Frequency", &(noise_state->domain_warp_frequency), 0.001f, -FLT_MAX, FLT_MAX, "%.3f");
 
 			ImGui::Text("Domain Warp Fractal");
 			const char* fractal_type[] = { "None", "Domain Warp Progressive", "Domain Warp Independent" };
-			dirty_flag |= ImGui::Combo("Fractal Type", (int*)&(noise_state->fractal_type), fractal_type, IM_ARRAYSIZE(fractal_type));
+			dirty_flag |= ImGui::Combo("Fractal Type", (int*)&(noise_state->domain_warp_fractal_type), fractal_type, IM_ARRAYSIZE(fractal_type));
 			if (noise_state->fractal_type != kFractalNone)
 			{
-				dirty_flag |= ImGui::DragInt("Octaves", &(noise_state->octaves), 1.0f, 0, INT_MAX);
-				dirty_flag |= ImGui::DragFloat("Lacunarity", &(noise_state->lacunarity), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
-				dirty_flag |= ImGui::DragFloat("Gain", &(noise_state->gain), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
+				dirty_flag |= ImGui::DragInt("Octaves", &(noise_state->domain_warp_octaves), 1.0f, 0, INT_MAX);
+				dirty_flag |= ImGui::DragFloat("Lacunarity", &(noise_state->domain_warp_lacunarity), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
+				dirty_flag |= ImGui::DragFloat("Gain", &(noise_state->domain_warp_gain), 0.01f, -FLT_MAX, FLT_MAX, "%.3f");
 			}
 		}
 		static bool invert = false;
 		dirty_flag |= ImGui::Checkbox("Invert Color", &invert);
-		noise_state->invert = (int)invert;
+		noise_state->invert_visualize_warp |= ((int)invert << 16);
 	}
 	ImGui::EndGroup();
 	ImGui::SameLine();
@@ -215,9 +219,8 @@ void NoiseGenerator::AddNoise3D(const std::string& name, uint32_t width, uint32_
 	m_noiseTextureNames.push_back(n);
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
 	m_isVolumeNoise.push_back(true);
-	m_isVisualizeDomainWarp.push_back(false);
 	m_textureSize.emplace_back((float)width, (float)height, (float)depth);
-	Generate(tex, width, height, depth, m_noiseStates.back().get(), false);
+	Generate(tex, width, height, depth, m_noiseStates.back().get());
 }
 
 void NoiseGenerator::AddNoise2D(const std::string& name, uint32_t width, uint32_t height)
@@ -235,9 +238,8 @@ void NoiseGenerator::AddNoise2D(const std::string& name, uint32_t width, uint32_
 	m_noiseTextureNames.push_back(n);
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
 	m_isVolumeNoise.push_back(false);
-	m_isVisualizeDomainWarp.push_back(false);
 	m_textureSize.emplace_back((float)width, (float)height, 1.0f);
-	Generate(tex, width, height, m_noiseStates.back().get(), false);
+	Generate(tex, width, height, m_noiseStates.back().get());
 }
 
 void NoiseGenerator::Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, uint32_t depth, NoiseState* state)

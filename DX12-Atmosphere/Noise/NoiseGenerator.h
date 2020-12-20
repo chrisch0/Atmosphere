@@ -79,10 +79,18 @@ struct NoiseState
 	NoiseCellularDistanceFunc cellular_distance_func;
 	NoiseCellularReturnType cellular_return_type;
 	float cellular_jitter_mod;
+	// high 16 bit: is invert color, low 16 bit: is visualize domain warp
+	int invert_visualize_warp;
+	// domain warp parameters
+	int domain_warp_seed;
 	NoiseDomainWarpType domain_warp_type;
+	NoiseRotationType3D domain_warp_rotation_type_3d;
 	float domain_warp_amp;
-	// is reverse color
-	int invert;
+	float domain_warp_frequency;
+	NoiseFractalType domain_warp_fractal_type;
+	int domain_warp_octaves;
+	float domain_warp_lacunarity;
+	float domain_warp_gain;
 };
 
 class NoiseGenerator
