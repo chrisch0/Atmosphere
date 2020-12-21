@@ -27,24 +27,34 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 
 	float res = fnlGetNoise2D(noise_state, (float)globalID.x, (float)globalID.y);
 
+	//// assert min value < 0
+	//if (res < 0)
+	//{
+	//	InterlockedMax(groupMinMax[0], asint(-res));
+	//}
+	//InterlockedMax(groupMinMax[1], asint(res));
+
+	//GroupMemoryBarrierWithGroupSync();
+
+	//if (groupIndex == 0)
+	//{
+	//	InterlockedMax(gMinMax[0], groupMinMax[0]);
+	//	InterlockedMax(gMinMax[1], groupMinMax[1]);
+	//}
+
+	//AllMemoryBarrierWithGroupSync();
+
 	// assert min value < 0
 	if (res < 0)
 	{
-		InterlockedMax(groupMinMax[0], asint(-res));
+		InterlockedMax(gMinMax[0], asint(-res));
 	}
-	InterlockedMax(groupMinMax[1], asint(res));
+	InterlockedMax(gMinMax[1], asint(res));
 
-	GroupMemoryBarrierWithGroupSync();
+	AllMemoryBarrierWithGroupSync();
 
-	if (groupIndex == 0)
-	{
-		InterlockedMax(gMinMax[0], groupMinMax[0]);
-		InterlockedMax(gMinMax[1], groupMinMax[1]);
-	}
-
-	GroupMemoryBarrierWithGroupSync();
-
-	res = (res + 1.0f) * 0.5f;
+	//res = (res + 1.0f) * 0.5f;
+	res = (res + asfloat(gMinMax[0])) / (asfloat(gMinMax[0]) + asfloat(gMinMax[1]));
 
 	noise[globalID.xy] = float4(res, res, res, 1.0);
 }

@@ -2,10 +2,8 @@
 #include "stdafx.h"
 #include "App/App.h"
 #include "D3D12/GpuBuffer.h"
+#include "Noise/NoiseGenerator.h"
 
-class RootSignature;
-class GraphicsPSO;
-class ComputePSO;
 class Camera;
 class ColorBuffer;
 class VolumeColorBuffer;
@@ -44,6 +42,8 @@ private:
 
 	std::shared_ptr<Camera> m_camera;
 	std::shared_ptr<Mesh> m_quad;
+
+	NoiseGenerator m_noiseGenerator;
 
 	int m_seed;
 	float m_frequency;

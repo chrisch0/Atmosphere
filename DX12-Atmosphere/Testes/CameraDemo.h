@@ -4,8 +4,6 @@
 #include "D3D12/GpuBuffer.h"
 #include "Math/VectorMath.h"
 
-class RootSignature;
-class GraphicsPSO;
 class Camera;
 
 class CameraDemo : public App

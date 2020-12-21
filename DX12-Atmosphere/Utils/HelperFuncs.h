@@ -51,5 +51,7 @@ namespace D3DUtils
 		// 512
 		return (byteSize + 255) & ~255;
 	}
+
+	ImVec2 GetTiledVolumeTextureSize(uint32_t width, uint32_t height, uint32_t depth);
 }
 

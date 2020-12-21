@@ -20,7 +20,7 @@ ComputeDemo::ComputeDemo()
 
 ComputeDemo::~ComputeDemo()
 {
-
+	m_noiseGenerator.Destroy();
 }
 
 bool ComputeDemo::Initialize()
@@ -46,6 +46,8 @@ bool ComputeDemo::Initialize()
 	m_isNoiseSettingDirty = true;
 	m_isFirst = true;
 	m_generate3D = false;
+
+	m_noiseGenerator.Initialize();
 
 	return true;
 }
@@ -103,13 +105,13 @@ void ComputeDemo::CreateResources()
 	m_quad.reset(Mesh::CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.5f));
 	m_noise.Create(L"Noise Texture", 1024, 1024, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	m_noise3D.Create(L"Noise3D Texture", 256, 256, 128, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
-	int32_t minmax[2] = { 0, (int32_t)0xff7fffff };
+	int32_t minmax[2] = { 0, 0 };
 	m_minMax.Create(L"Global Min Max", 2, sizeof(float), minmax);
 }
 
 void ComputeDemo::Update(const Timer& timer)
 {
-
+	m_noiseGenerator.UpdateUI();
 }
 
 void ComputeDemo::Draw(const Timer& timer)
@@ -131,6 +133,7 @@ void ComputeDemo::Draw(const Timer& timer)
 		}
 		else
 		{
+			context.ClearUAV(m_minMax);
 			context.SetPipelineState(m_computePSO);
 			context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -216,10 +219,10 @@ void ComputeDemo::UpdateUI()
 		if (new_window)
 		{
 			ImGui::Begin("New Window");
-			window_size = ImGui::GetWindowSize();
 			ImVec2 pos = ImGui::GetCursorPos();
 			if (is_open)
 				ImGui::SetWindowSize(ImVec2((float)m_noise.GetWidth() + 2.0f * pos.x, (float)m_noise.GetHeight() + pos.y + 10.0f));
+			window_size = ImGui::GetWindowSize();
 			ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(window_size.x - 2 * pos.x, window_size.y - pos.y - 10));
 			//ImGui::Image((ImTextureID)(m_noise.GetSRV().ptr), ImVec2(m_noise.GetWidth(), m_noise.GetHeight()));
 			ImGui::End();

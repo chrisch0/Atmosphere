@@ -319,6 +319,7 @@
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\$(Configuration)\Asm\%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
+    <None Include="Shaders\ColorUtils.hlsli" />
     <None Include="Shaders\FastNoiseLite.hlsli">
       <FileType>Document</FileType>
     </None>

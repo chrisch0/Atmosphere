@@ -1,10 +1,11 @@
 #pragma once
 #include "stdafx.h"
+#include "D3D12/GpuBuffer.h"
+#include "D3D12/RootSignature.h"
+#include "D3D12/PipelineState.h"
 
-class RootSignature;
-class GraphicsPSO;
-class ComputePSO;
 class PixelBuffer;
+class ColorBuffer;
 class GraphicsContext;
 
 enum NoiseType
@@ -82,7 +83,6 @@ struct NoiseState
 	// high 16 bit: is invert color, low 16 bit: is visualize domain warp
 	int invert_visualize_warp;
 	// domain warp parameters
-	int domain_warp_seed;
 	NoiseDomainWarpType domain_warp_type;
 	NoiseRotationType3D domain_warp_rotation_type_3d;
 	float domain_warp_amp;
@@ -107,14 +107,13 @@ public:
 	void Destroy();
 
 private:
-	void NoiseConfig(GraphicsContext& context, size_t index);
+	void NoiseConfig(size_t index);
 
 	void AddNoise2D(const std::string& name, uint32_t width, uint32_t height);
 	void AddNoise3D(const std::string& name, uint32_t width, uint32_t height, uint32_t depth);
 	void Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, NoiseState* state);
 	void Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, uint32_t depth, NoiseState* state);
 
-	void TileTexture3D();
 private:
 	std::unordered_map<std::string, std::shared_ptr<PixelBuffer>> m_noiseTextures;
 	std::vector<std::string> m_noiseTextureNames;
@@ -125,6 +124,9 @@ private:
 	RootSignature m_genNoiseRS;
 	ComputePSO m_genNoisePSO;
 	ComputePSO m_genVolumeNoisePSO;
+	StructuredBuffer m_minMax;
+
+	std::shared_ptr<ColorBuffer> m_testTexture;
 
 	bool m_showNoiseWindow;
 };

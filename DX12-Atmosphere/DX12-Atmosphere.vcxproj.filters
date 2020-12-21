@@ -41,6 +41,9 @@
     <Filter Include="Shaders\GenerateNoise">
       <UniqueIdentifier>{7ca2d0f9-4d87-4de1-98c1-d96e5cbd833a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\ColorUtils">
+      <UniqueIdentifier>{1007efa3-d64c-4b08-a9b8-6245560ef14a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -369,6 +372,9 @@
     </None>
     <None Include="Shaders\FastNoiseLite.hlsli">
       <Filter>Shaders\GenerateNoise</Filter>
+    </None>
+    <None Include="Shaders\ColorUtils.hlsli">
+      <Filter>Shaders\ColorUtils</Filter>
     </None>
   </ItemGroup>
 </Project>
