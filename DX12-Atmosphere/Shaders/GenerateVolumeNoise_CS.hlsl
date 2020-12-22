@@ -1,6 +1,7 @@
 #include "FastNoiseLite.hlsli"
 
 RWTexture3D<float4> noise_volume_texture : register(u0);
+RWBuffer<int> min_max : register(u1);
 
 cbuffer noise_state : register(b0)
 {
@@ -20,7 +21,7 @@ cbuffer noise_state : register(b0)
 	int cellular_return_type;
 	float cellular_jitter_mod;
 	// high 16 bit: is invert color, low 16 bit: is visualize domain warp
-	int invert;
+	int invert_visualize_warp;
 	// domain warp parameters
 	// minus 1 to use the actual domain warp type
 	int domain_warp_type;
@@ -36,27 +37,64 @@ cbuffer noise_state : register(b0)
 [numthreads(8, 8, 1)]
 void main(uint3 globalID : SV_DispatchThreadID)
 {
-	fnl_state noise_state = fnlCreateState(seed);
-	noise_state.frequency = frequency;
-	noise_state.noise_type = noise_type;
-	noise_state.rotation_type_3d = rotation_type_3d;
-	noise_state.fractal_type = fractal_type;
-	noise_state.octaves = octaves;
-	noise_state.lacunarity = lacunarity;
-	noise_state.gain = gain;
-	noise_state.weighted_strength = weighted_strength;
-	noise_state.ping_pong_strength = ping_pong_strength;
-	noise_state.cellular_distance_func = cellular_distance_func;
-	noise_state.cellular_return_type = cellular_return_type;
-	noise_state.cellular_jitter_mod = cellular_jitter_mod;
-	noise_state.domain_warp_type = domain_warp_type;
-	noise_state.domain_warp_amp = domain_warp_amp;
-
-	float val = fnlGetNoise3D(noise_state, (float)globalID.x, (float)globalID.y, (float)globalID.z);
-	val = (val + 1.0f) * 0.5f;
-	if (invert == 1)
+	if (globalID.x == 0 && globalID.y == 0 && globalID.z == 0)
 	{
-		val = 1.0 - val;
+		min_max[0] = 0;
+		min_max[1] = 0;
 	}
-	noise_volume_texture[globalID.xyz] = float4(val, val, val, 1.0);
+	AllMemoryBarrierWithGroupSync();
+
+	fnl_state noise_state = fnlCreateState(seed);
+	float3 uvw = float3(globalID);
+	if (domain_warp_type > 0)
+	{
+		noise_state.domain_warp_type = domain_warp_type - 1;
+		noise_state.frequency = domain_warp_frequency;
+		noise_state.rotation_type_3d = domain_warp_rotation_type_3d;
+		noise_state.domain_warp_amp = domain_warp_amp;
+		noise_state.fractal_type = domain_warp_fractal_type == 0 ? domain_warp_fractal_type : domain_warp_fractal_type + 3;
+		noise_state.octaves = domain_warp_octaves;
+		noise_state.lacunarity = domain_warp_lacunarity;
+		noise_state.gain = domain_warp_gain;
+
+		fnlDomainWarp3D(noise_state, uvw.x, uvw.y, uvw.z);
+	}
+	
+	bool visualize_warp = ((invert_visualize_warp & 1) > 0);
+	if (visualize_warp)
+	{
+		float3 val = uvw - float3(globalID);
+
+		float min_val = min(min(val.x, val.y), val.z);
+		float max_val = max(max(val.x, val.y), val.z);
+
+		if (min_val < 0.0)
+			InterlockedMax(min_max[0], asint(-min_val));
+		InterlockedMax(min_max[1], asint(max_val));
+
+		noise_volume_texture[globalID] = float4(val, 1.0f);
+	}
+	else
+	{
+		noise_state.frequency = frequency;
+		noise_state.noise_type = noise_type;
+		noise_state.rotation_type_3d = rotation_type_3d;
+		noise_state.fractal_type = fractal_type;
+		noise_state.octaves = octaves;
+		noise_state.lacunarity = lacunarity;
+		noise_state.gain = gain;
+		noise_state.weighted_strength = weighted_strength;
+		noise_state.ping_pong_strength = ping_pong_strength;
+		noise_state.cellular_distance_func = cellular_distance_func;
+		noise_state.cellular_return_type = cellular_return_type;
+		noise_state.cellular_jitter_mod = cellular_jitter_mod;
+
+		float val = fnlGetNoise3D(noise_state, uvw.x, uvw.y, uvw.z);
+
+		if (val < 0.0)
+			InterlockedMax(min_max[0], asint(-val));
+		InterlockedMax(min_max[1], asint(val));
+
+		noise_volume_texture[globalID.xyz] = float4(val, val, val, 1.0);
+	}
 }

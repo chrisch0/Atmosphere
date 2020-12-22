@@ -118,7 +118,7 @@ void ComputeDemo::Draw(const Timer& timer)
 {
 	GraphicsContext& graphicsContext = GraphicsContext::Begin();
 
-	//if (m_isNoiseSettingDirty)
+	if (m_isNoiseSettingDirty)
 	{
 		ComputeContext& context = graphicsContext.GetComputeContext();
 		context.SetRootSignature(m_computeRS);

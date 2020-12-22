@@ -365,6 +365,12 @@
     <FxCompile Include="Shaders\GenerateVolumeNoise_CS.hlsl">
       <Filter>Shaders\GenerateNoise</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\MapNoiseColor_CS.hlsl">
+      <Filter>Shaders\GenerateNoise</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\MapVolumeNoiseColor_CS.hlsl">
+      <Filter>Shaders\GenerateNoise</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

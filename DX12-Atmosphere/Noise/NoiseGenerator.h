@@ -5,7 +5,7 @@
 #include "D3D12/PipelineState.h"
 
 class PixelBuffer;
-class ColorBuffer;
+class VolumeColorBuffer;
 class GraphicsContext;
 
 enum NoiseType
@@ -122,11 +122,14 @@ private:
 	std::vector<Vector3> m_textureSize;
 
 	RootSignature m_genNoiseRS;
+	RootSignature m_mapColorRS;
 	ComputePSO m_genNoisePSO;
 	ComputePSO m_genVolumeNoisePSO;
+	ComputePSO m_mapNoiseColorPSO;
+	ComputePSO m_mapVolumeNoiseColorPSO;
 	StructuredBuffer m_minMax;
 
-	std::shared_ptr<ColorBuffer> m_testTexture;
+	std::shared_ptr<VolumeColorBuffer> m_testTexture;
 
 	bool m_showNoiseWindow;
 };

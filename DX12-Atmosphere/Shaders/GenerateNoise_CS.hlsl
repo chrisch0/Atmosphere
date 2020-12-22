@@ -1,10 +1,7 @@
 #include "FastNoiseLite.hlsli"
-#include "ColorUtils.hlsli"
 
 RWTexture2D<float4> noise_texture : register(u0);
 RWBuffer<int> min_max : register(u1);
-
-groupshared int groupMinMax[2];
 
 cbuffer noise_state : register(b0)
 {
@@ -40,20 +37,12 @@ cbuffer noise_state : register(b0)
 [numthreads(8, 8, 1)]
 void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 {
-	//if (globalID.x == 0 && globalID.y == 0 && globalID.z == 0)
-	//{
-	//	min_max[0] = 0;
-	//	min_max[1] = 0;
-	//}
-	//AllMemoryBarrierWithGroupSync();
-
-	// assume min value < 0
-	if (groupIndex == 0)
+	if (globalID.x == 0 && globalID.y == 0 && globalID.z == 0)
 	{
-		groupMinMax[0] = 0;
-		groupMinMax[1] = 0xff7fffff;
+		min_max[0] = 0;
+		min_max[1] = 0;
 	}
-	GroupMemoryBarrierWithGroupSync();
+	AllMemoryBarrierWithGroupSync();
 
 	fnl_state noise_state = fnlCreateState(seed);
 	float2 uv = float2(globalID.xy);
@@ -63,7 +52,7 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 		noise_state.frequency = domain_warp_frequency;
 		noise_state.rotation_type_3d = domain_warp_rotation_type_3d;
 		noise_state.domain_warp_amp = domain_warp_amp;
-		noise_state.fractal_type = domain_warp_fractal_type;
+		noise_state.fractal_type = domain_warp_fractal_type == 0 ? domain_warp_fractal_type : domain_warp_fractal_type + 3;
 		noise_state.octaves = domain_warp_octaves;
 		noise_state.lacunarity = domain_warp_lacunarity;
 		noise_state.gain = domain_warp_gain;
@@ -78,28 +67,14 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 
 		float min_val = min(val.x, val.y);
 		float max_val = max(val.x, val.y);
+		
 		if (min_val < 0.0)
-			InterlockedMax(groupMinMax[0], asint(-min_val));
-		InterlockedMax(groupMinMax[1], asint(max_val));
-		GroupMemoryBarrierWithGroupSync();
-
-		if (groupIndex == 0)
 		{
-			InterlockedMax(groupMinMax[0], min_max[0]);
-			InterlockedMin(groupMinMax[1], min_max[1]);
+			InterlockedMax(min_max[0], asint(-min_val));
 		}
-		AllMemoryBarrierWithGroupSync();
+		InterlockedMax(min_max[1], asint(max_val));
 
-		val = (val + asfloat(min_max[0])) / (asfloat(min_max[0]) + asfloat(min_max[1]));
-
-		float h = atan2(val.y, val.x) * 57.2957795 + 180.0;
-		float b = min(1.0, sqrt(val.x * val.x + val.y * val.y) * 2);
-		float s = 0.9f;
-
-		float3 rgb = HSVToRGB(float3(h, b, s));
-
-		rgb = ((invert_visualize_warp & 0x00010000) > 0) ? float3(1.0f, 1.0f, 1.0f) - rgb : rgb;
-		noise_texture[globalID.xy] = float4(rgb, 1.0f);
+		noise_texture[globalID.xy] = float4(val, 0.0, 1.0f);
 	}
 	else
 	{
@@ -117,29 +92,11 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 		noise_state.cellular_jitter_mod = cellular_jitter_mod;
 
 		float val = fnlGetNoise2D(noise_state, uv.x, uv.y);
-		
-		/*if (val < 0.0)
-			InterlockedMax(groupMinMax[0], asint(-val));
-		InterlockedMax(groupMinMax[1], asint(val));
-		GroupMemoryBarrierWithGroupSync();
-
-		if (groupIndex == 0)
-		{
-			InterlockedMax(min_max[0], groupMinMax[0]);
-			InterlockedMax(min_max[1], groupMinMax[1]);
-		}
-		AllMemoryBarrierWithGroupSync();*/
 
 		if (val < 0.0)
 			InterlockedMax(min_max[0], asint(-val));
 		InterlockedMax(min_max[1], asint(val));
-		
-		AllMemoryBarrierWithGroupSync();
-
-		val = (val + asfloat(min_max[0])) / (asfloat(min_max[0]) + asfloat(min_max[1]));
-		//val = (val + 1.0) * 0.5f;
-
-		val = ((invert_visualize_warp & 0x00010000) > 0) ? 1.0 - val : val;
+	
 		noise_texture[globalID.xy] = float4(val, val, val, 1.0);
 	}
 	
