@@ -155,6 +155,8 @@ void CameraDemo::Update(const Timer& timer)
 
 void CameraDemo::UpdateUI()
 {
+	g_CameraController.UpdateUI();
+
 	ImGui::Begin("Box Setting");
 	
 	float pos[3] = { m_position.GetX(), m_position.GetY(), m_position.GetZ() };

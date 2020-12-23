@@ -42,7 +42,7 @@ void CameraController::UpdateUI()
 
 void CameraController::Update(float deltaTime)
 {
-	UpdateUI();
+	//UpdateUI();
 
 	if (ImGui::IsKeyPressedMap(ImGuiKey_C))
 	{

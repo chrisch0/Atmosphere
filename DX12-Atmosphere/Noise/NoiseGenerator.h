@@ -5,8 +5,9 @@
 #include "D3D12/PipelineState.h"
 
 class PixelBuffer;
+class ColorBuffer;
 class VolumeColorBuffer;
-class GraphicsContext;
+class ComputeContext;
 
 enum NoiseType
 {
@@ -106,13 +107,27 @@ public:
 	void UpdateUI();
 	void Destroy();
 
+	size_t NumTextures() const { return m_noiseTextures.size(); }
+	std::string GetTextureName(size_t idx) { return m_noiseTextureNames[idx]; }
+	std::shared_ptr<PixelBuffer> GetTexture(size_t idx);
+	std::shared_ptr<PixelBuffer> GetTexture(const std::string& name);
+
+	void AddNoise(const std::string& name, uint32_t width, uint32_t height);
+	void AddVolumeNoise(const std::string& name, uint32_t width, uint32_t height, uint32_t depth);
+	void AddNoise(const std::string& name, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
+	void AddVolumeNoise(const std::string& name, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
+
+	void GenerateNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state);
+	void GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state);
+
+	void GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
+	void GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
+
+	void MapNoiseColor(ComputeContext& context, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
+	void MapNoiseColor(ComputeContext& context, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
+
 private:
 	void NoiseConfig(size_t index);
-
-	void AddNoise2D(const std::string& name, uint32_t width, uint32_t height);
-	void AddNoise3D(const std::string& name, uint32_t width, uint32_t height, uint32_t depth);
-	void Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, NoiseState* state);
-	void Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, uint32_t depth, NoiseState* state);
 
 private:
 	std::unordered_map<std::string, std::shared_ptr<PixelBuffer>> m_noiseTextures;
@@ -128,8 +143,6 @@ private:
 	ComputePSO m_mapNoiseColorPSO;
 	ComputePSO m_mapVolumeNoiseColorPSO;
 	StructuredBuffer m_minMax;
-
-	std::shared_ptr<VolumeColorBuffer> m_testTexture;
 
 	bool m_showNoiseWindow;
 };

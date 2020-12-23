@@ -44,6 +44,9 @@
     <Filter Include="Shaders\ColorUtils">
       <UniqueIdentifier>{1007efa3-d64c-4b08-a9b8-6245560ef14a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Volumetric">
+      <UniqueIdentifier>{bc909b87-714a-46ca-a723-6436b169ad4c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -204,6 +207,9 @@
     <ClInclude Include="Mesh\BoundingBox.h">
       <Filter>Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="Volumetric\CloudShapeManager.h">
+      <Filter>Volumetric</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -317,6 +323,9 @@
     </ClCompile>
     <ClCompile Include="Mesh\MeshRenderer.cpp">
       <Filter>Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="Volumetric\CloudShapeManager.cpp">
+      <Filter>Volumetric</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

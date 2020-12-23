@@ -189,6 +189,7 @@
     <ClInclude Include="Utils\CameraController.h" />
     <ClInclude Include="Utils\HelperFuncs.h" />
     <ClInclude Include="Utils\Timer.h" />
+    <ClInclude Include="Volumetric\CloudShapeManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App\App.cpp" />
@@ -229,6 +230,7 @@
     <ClCompile Include="Utils\CameraController.cpp" />
     <ClCompile Include="Utils\HelperFuncs.cpp" />
     <ClCompile Include="Utils\Timer.cpp" />
+    <ClCompile Include="Volumetric\CloudShapeManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_pixel.hlsl">

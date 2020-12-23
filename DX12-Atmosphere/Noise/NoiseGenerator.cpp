@@ -43,7 +43,7 @@ NoiseGenerator::NoiseGenerator()
 
 NoiseGenerator::~NoiseGenerator()
 {
-	
+	Destroy();
 }
 
 void NoiseGenerator::Initialize()
@@ -77,13 +77,15 @@ void NoiseGenerator::Initialize()
 
 	uint32_t minmax[2] = { 0, 0 };
 	m_minMax.Create(L"MinMaxBuffer", 2, sizeof(uint32_t), minmax);
-	m_testTexture = std::make_shared<VolumeColorBuffer>();
-	m_testTexture->Create(L"Test texture", 128, 128, 32, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 }
 
 void NoiseGenerator::Destroy()
 {
-
+	m_noiseTextures.clear();
+	m_noiseTextureNames.clear();
+	m_noiseStates.clear();
+	m_isVolumeNoise.clear();
+	m_textureSize.clear();
 }
 
 void NoiseGenerator::UpdateUI()
@@ -123,11 +125,11 @@ void NoiseGenerator::UpdateUI()
 		{
 			if (cur_dim)
 			{
-				AddNoise3D(new_texture_name, width, height, depth);
+				AddVolumeNoise(new_texture_name, width, height, depth);
 			}
 			else
 			{
-				AddNoise2D(new_texture_name, width, height);
+				AddNoise(new_texture_name, width, height);
 			}
 		}
 		ImGui::PopItemWidth();
@@ -228,7 +230,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 
 		// Domain warp setting
 		{
-			ImGui::PushID((int)(i * 1000 + i));
+			ImGui::PushID((int)(1000));
 			ImGui::Text("Domain Warp");
 			const char* type[] = { "None", "Open Simplex 2", "Open Simplex 2 Reduced", "Basic Grid" };
 			dirty_flag |= ImGui::Combo("Type", (int*)&(noise_state->domain_warp_type), type, IM_ARRAYSIZE(type));
@@ -262,9 +264,9 @@ void NoiseGenerator::NoiseConfig(size_t i)
 	if (dirty_flag)
 	{
 		if (is_volume_texture)
-			Generate(iter->second, (uint32_t)size.GetX(), (uint32_t)size.GetY(), (uint32_t)size.GetZ(), noise_state.get());
+			GenerateVolumeNoise(iter->second, noise_state.get());
 		else
-			Generate(iter->second, (uint32_t)size.GetX(), (uint32_t)size.GetY(), noise_state.get());
+			GenerateNoise(iter->second, noise_state.get());
 	}
 
 	if (is_volume_texture)
@@ -318,7 +320,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 	}
 }
 
-void NoiseGenerator::AddNoise3D(const std::string& name, uint32_t width, uint32_t height, uint32_t depth)
+void NoiseGenerator::AddVolumeNoise(const std::string& name, uint32_t width, uint32_t height, uint32_t depth)
 {
 	auto iter = m_noiseTextures.find(name);
 	std::shared_ptr<VolumeColorBuffer> tex = std::make_shared<VolumeColorBuffer>();
@@ -335,10 +337,27 @@ void NoiseGenerator::AddNoise3D(const std::string& name, uint32_t width, uint32_
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
 	m_isVolumeNoise.push_back(true);
 	m_textureSize.emplace_back((float)width, (float)height, (float)depth);
-	Generate(tex, width, height, depth, m_noiseStates.back().get());
+	GenerateVolumeNoise(tex, m_noiseStates.back().get());
 }
 
-void NoiseGenerator::AddNoise2D(const std::string& name, uint32_t width, uint32_t height)
+void NoiseGenerator::AddVolumeNoise(const std::string& name, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state)
+{
+	auto iter = m_noiseTextures.find(name);
+	std::string n = name;
+	while (iter != m_noiseTextures.end())
+	{
+		n += "_";
+		iter = m_noiseTextures.find(n);
+	}
+	m_noiseTextures.insert({ n, texPtr });
+	m_noiseTextureNames.push_back(n);
+	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
+	m_noiseStates.back().reset(state);
+	m_isVolumeNoise.push_back(true);
+	m_textureSize.emplace_back((float)texPtr->GetWidth(), (float)texPtr->GetHeight(), (float)texPtr->GetDepth());
+}
+
+void NoiseGenerator::AddNoise(const std::string& name, uint32_t width, uint32_t height)
 {
 	auto iter = m_noiseTextures.find(name);
 	std::shared_ptr<ColorBuffer> tex = std::make_shared<ColorBuffer>();
@@ -355,59 +374,94 @@ void NoiseGenerator::AddNoise2D(const std::string& name, uint32_t width, uint32_
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
 	m_isVolumeNoise.push_back(false);
 	m_textureSize.emplace_back((float)width, (float)height, 1.0f);
-	Generate(tex, width, height, m_noiseStates.back().get());
+	GenerateNoise(tex, m_noiseStates.back().get());
 }
 
-void NoiseGenerator::Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, uint32_t depth, NoiseState* state)
+void NoiseGenerator::AddNoise(const std::string& name, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state)
+{
+	auto iter = m_noiseTextures.find(name);
+	std::string n = name;
+	while (iter != m_noiseTextures.end())
+	{
+		n += "_";
+		iter = m_noiseTextures.find(n);
+	}
+	m_noiseTextures.insert({ n, texPtr });
+	m_noiseTextureNames.push_back(n);
+	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
+	m_noiseStates.back().reset(state);
+	m_isVolumeNoise.push_back(false);
+	m_textureSize.emplace_back((float)texPtr->GetWidth(), (float)texPtr->GetHeight(), 1.0f);
+}
+
+void NoiseGenerator::GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state)
 {
 	auto tex = std::dynamic_pointer_cast<VolumeColorBuffer>(texPtr);
 
 	ComputeContext& context = ComputeContext::Begin();
-	context.SetRootSignature(m_genNoiseRS);
-	context.SetPipelineState(m_genVolumeNoisePSO);
-	context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	context.SetDynamicConstantBufferView(0, sizeof(NoiseState), state);
-	context.SetDynamicDescriptor(1, 0, tex->GetUAV());
-	context.SetDynamicDescriptor(1, 1, m_minMax.GetUAV());
-	context.Dispatch3D(tex->GetWidth(), tex->GetHeight(), tex->GetDepth(), 8, 8, 1);
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, true);
-	context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
-
-	context.SetRootSignature(m_mapColorRS);
-	context.SetPipelineState(m_mapVolumeNoiseColorPSO);
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	context.SetDynamicDescriptor(0, 0, tex->GetUAV());
-	context.SetDynamicDescriptor(1, 0, m_minMax.GetSRV());
-	context.SetConstant(2, state->invert_visualize_warp, 0);
-	context.Dispatch3D(tex->GetWidth(), tex->GetHeight(), tex->GetDepth(), 8, 8, 1);
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	GenerateRawNoiseData(context, tex, state);
+	MapNoiseColor(context, tex, state);
 	context.Finish(true);
 }
 
-void NoiseGenerator::Generate(std::shared_ptr<PixelBuffer> texPtr, uint32_t width, uint32_t height, NoiseState* state)
+void NoiseGenerator::GenerateNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state)
 {
 	auto tex = std::dynamic_pointer_cast<ColorBuffer>(texPtr);
 
 	ComputeContext& context = ComputeContext::Begin();
+	GenerateRawNoiseData(context, tex, state);
+	MapNoiseColor(context, tex, state);
+	context.Finish(true);
+}
+
+void NoiseGenerator::GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state)
+{
+	context.SetRootSignature(m_genNoiseRS);
+	context.SetPipelineState(m_genVolumeNoisePSO);
+	context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicConstantBufferView(0, sizeof(NoiseState), state);
+	context.SetDynamicDescriptor(1, 0, texPtr->GetUAV());
+	context.SetDynamicDescriptor(1, 1, m_minMax.GetUAV());
+	context.Dispatch3D(texPtr->GetWidth(), texPtr->GetHeight(), texPtr->GetDepth(), 8, 8, 1);
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, true);
+}
+
+void NoiseGenerator::GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state)
+{
 	context.SetRootSignature(m_genNoiseRS);
 	context.SetPipelineState(m_genNoisePSO);
 	context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	context.SetDynamicConstantBufferView(0, sizeof(NoiseState), state);
-	context.SetDynamicDescriptor(1, 0, tex->GetUAV());
+	context.SetDynamicDescriptor(1, 0, texPtr->GetUAV());
 	context.SetDynamicDescriptor(1, 1, m_minMax.GetUAV());
-	context.Dispatch2D(tex->GetWidth(), tex->GetHeight());
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, true);
+	context.Dispatch2D(texPtr->GetWidth(), texPtr->GetHeight());
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, true);
+}
+
+void NoiseGenerator::MapNoiseColor(ComputeContext& context, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state)
+{
 	context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
-	
 	context.SetRootSignature(m_mapColorRS);
-	context.SetPipelineState(m_mapNoiseColorPSO);
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	context.SetDynamicDescriptor(0, 0, tex->GetUAV());
+	context.SetPipelineState(m_mapVolumeNoiseColorPSO);
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(0, 0, texPtr->GetUAV());
 	context.SetDynamicDescriptor(1, 0, m_minMax.GetSRV());
 	context.SetConstant(2, state->invert_visualize_warp, 0);
-	context.Dispatch2D(tex->GetWidth(), tex->GetHeight());
-	context.TransitionResource(*tex, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	context.Finish(true);
+	context.Dispatch3D(texPtr->GetWidth(), texPtr->GetHeight(), texPtr->GetDepth(), 8, 8, 1);
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+
+void NoiseGenerator::MapNoiseColor(ComputeContext& context, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state)
+{
+	context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
+	context.SetRootSignature(m_mapColorRS);
+	context.SetPipelineState(m_mapNoiseColorPSO);
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(0, 0, texPtr->GetUAV());
+	context.SetDynamicDescriptor(1, 0, m_minMax.GetSRV());
+	context.SetConstant(2, state->invert_visualize_warp, 0);
+	context.Dispatch2D(texPtr->GetWidth(), texPtr->GetHeight());
+	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }

@@ -111,7 +111,6 @@ void ComputeDemo::CreateResources()
 
 void ComputeDemo::Update(const Timer& timer)
 {
-	m_noiseGenerator.UpdateUI();
 }
 
 void ComputeDemo::Draw(const Timer& timer)
@@ -176,6 +175,8 @@ void ComputeDemo::Draw(const Timer& timer)
 
 void ComputeDemo::UpdateUI()
 {
+	m_noiseGenerator.UpdateUI();
+
 	m_isNoiseSettingDirty = m_isFirst;
 	ImGui::Begin("Noise Setting");
 
