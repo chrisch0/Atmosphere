@@ -47,6 +47,9 @@
     <Filter Include="Volumetric">
       <UniqueIdentifier>{bc909b87-714a-46ca-a723-6436b169ad4c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\Volumetric">
+      <UniqueIdentifier>{79167b2e-4f84-4f8d-bb22-37e6292021e0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -210,6 +213,7 @@
     <ClInclude Include="Volumetric\CloudShapeManager.h">
       <Filter>Volumetric</Filter>
     </ClInclude>
+    <ClInclude Include="VolumetricCloud.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -327,6 +331,7 @@
     <ClCompile Include="Volumetric\CloudShapeManager.cpp">
       <Filter>Volumetric</Filter>
     </ClCompile>
+    <ClCompile Include="VolumetricCloud.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
@@ -380,6 +385,9 @@
     <FxCompile Include="Shaders\MapVolumeNoiseColor_CS.hlsl">
       <Filter>Shaders\GenerateNoise</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\GenerateBasicShape_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
@@ -390,6 +398,9 @@
     </None>
     <None Include="Shaders\ColorUtils.hlsli">
       <Filter>Shaders\ColorUtils</Filter>
+    </None>
+    <None Include="Shaders\Common.hlsli">
+      <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
 </Project>

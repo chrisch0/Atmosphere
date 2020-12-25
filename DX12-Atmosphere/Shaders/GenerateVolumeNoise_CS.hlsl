@@ -1,7 +1,10 @@
 #include "FastNoiseLite.hlsli"
+#include "Common.hlsli"
 
 RWTexture3D<float4> noise_volume_texture : register(u0);
-RWBuffer<int> min_max : register(u1);
+RWBuffer<uint> min_max : register(u1);
+
+groupshared uint group_min_max[2];
 
 cbuffer noise_state : register(b0)
 {
@@ -35,13 +38,20 @@ cbuffer noise_state : register(b0)
 };
 
 [numthreads(8, 8, 1)]
-void main(uint3 globalID : SV_DispatchThreadID)
+void main(uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	if (globalID.x == 0 && globalID.y == 0 && globalID.z == 0)
 	{
-		min_max[0] = 0;
+		min_max[0] = 0xffffffff;
 		min_max[1] = 0;
 	}
+
+	if (groupIndex == 0)
+	{
+		group_min_max[0] = 0xffffffff;
+		group_min_max[1] = 0;
+	}
+
 	AllMemoryBarrierWithGroupSync();
 
 	fnl_state noise_state = fnlCreateState(seed);
@@ -68,9 +78,11 @@ void main(uint3 globalID : SV_DispatchThreadID)
 		float min_val = min(min(val.x, val.y), val.z);
 		float max_val = max(max(val.x, val.y), val.z);
 
-		if (min_val < 0.0)
-			InterlockedMax(min_max[0], asint(-min_val));
-		InterlockedMax(min_max[1], asint(max_val));
+		uint uint_min_val = ToComparableUint(min_val);
+		uint uint_max_val = ToComparableUint(max_val);
+
+		InterlockedMin(group_min_max[0], uint_min_val);
+		InterlockedMax(group_min_max[1], uint_max_val);
 
 		noise_volume_texture[globalID] = float4(val, 1.0f);
 	}
@@ -91,10 +103,18 @@ void main(uint3 globalID : SV_DispatchThreadID)
 
 		float val = fnlGetNoise3D(noise_state, uvw.x, uvw.y, uvw.z);
 
-		if (val < 0.0)
-			InterlockedMax(min_max[0], asint(-val));
-		InterlockedMax(min_max[1], asint(val));
+		uint uint_val = ToComparableUint(val);
+		InterlockedMin(group_min_max[0], uint_val);
+		InterlockedMax(group_min_max[1], uint_val);
 
 		noise_volume_texture[globalID.xyz] = float4(val, val, val, 1.0);
+	}
+
+	GroupMemoryBarrierWithGroupSync();
+
+	if (groupIndex == 0)
+	{
+		InterlockedMin(min_max[0], group_min_max[0]);
+		InterlockedMax(min_max[1], group_min_max[1]);
 	}
 }

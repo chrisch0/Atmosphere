@@ -94,6 +94,7 @@ bool App::Initialize()
 	CreateAppRootSignature();
 	CreateAppPipelineState();
 	CreateFontTexture();
+	Global::InitializeGlobalStates();
 
 	return true;
 }

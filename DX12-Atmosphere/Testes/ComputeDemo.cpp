@@ -3,7 +3,6 @@
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
 #include "D3D12/CommandContext.h"
-#include "D3D12/GraphicsGlobal.h"
 #include "Mesh/Mesh.h"
 #include "Math/Common.h"
 
@@ -29,8 +28,6 @@ bool ComputeDemo::Initialize()
 	m_clientWidth = 1024;
 	if (!App::Initialize())
 		return false;
-
-	Global::InitializeGlobalStates();
 
 	CreateRootSignature();
 	CreatePipelineState();
@@ -132,7 +129,7 @@ void ComputeDemo::Draw(const Timer& timer)
 		}
 		else
 		{
-			context.ClearUAV(m_minMax);
+			//context.ClearUAV(m_minMax);
 			context.SetPipelineState(m_computePSO);
 			context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);

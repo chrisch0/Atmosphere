@@ -26,7 +26,10 @@ inline void ThrowIfFailed(HRESULT hr)
 	}
 }
 
-namespace D3DUtils
+class ColorBuffer;
+class VolumeColorBuffer;
+
+namespace Utils
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(
 		ID3D12Device* device,
@@ -53,5 +56,7 @@ namespace D3DUtils
 	}
 
 	ImVec2 GetTiledVolumeTextureSize(uint32_t width, uint32_t height, uint32_t depth);
-}
 
+	void AutoResizeVolumeImage(VolumeColorBuffer* image, bool isWindowOpen);
+	void AutoResizeImage(ColorBuffer* image, bool isWindowOpen);
+}

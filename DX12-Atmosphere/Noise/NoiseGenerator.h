@@ -92,6 +92,26 @@ struct NoiseState
 	int domain_warp_octaves;
 	float domain_warp_lacunarity;
 	float domain_warp_gain;
+
+	void SetInvert(bool invert)
+	{
+		invert_visualize_warp &= ((uint32_t)(invert) << 16 | (0xFFFF));
+	}
+
+	void SetVisualizeWarp(bool visualize_warp)
+	{
+		invert_visualize_warp &= (0xFFFF0000 | (uint32_t)(visualize_warp));
+	}
+
+	bool GetInvert() const
+	{
+
+	}
+
+	bool GetVisualizeWarp() const
+	{
+
+	}
 };
 
 class NoiseGenerator
@@ -112,8 +132,11 @@ public:
 	std::shared_ptr<PixelBuffer> GetTexture(size_t idx);
 	std::shared_ptr<PixelBuffer> GetTexture(const std::string& name);
 
-	void AddNoise(const std::string& name, uint32_t width, uint32_t height);
-	void AddVolumeNoise(const std::string& name, uint32_t width, uint32_t height, uint32_t depth);
+	std::shared_ptr<ColorBuffer> CreateNoise(const std::string& name, uint32_t width, uint32_t height, DXGI_FORMAT format);
+	std::shared_ptr<VolumeColorBuffer> CreateVolumeNoise(const std::string& name, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format);
+	std::shared_ptr<ColorBuffer> CreateNoise(const std::string& name, uint32_t width, uint32_t height, DXGI_FORMAT format, NoiseState* state);
+	std::shared_ptr<VolumeColorBuffer> CreateVolumeNoise(const std::string& name, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format, NoiseState* state);
+	
 	void AddNoise(const std::string& name, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
 	void AddVolumeNoise(const std::string& name, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
 
@@ -135,6 +158,8 @@ private:
 	std::vector<std::shared_ptr<NoiseState>> m_noiseStates;
 	std::vector<bool> m_isVolumeNoise;
 	std::vector<Vector3> m_textureSize;
+	std::vector<DXGI_FORMAT> m_textureFormat;
+	std::vector<bool> m_imageWindow;
 
 	RootSignature m_genNoiseRS;
 	RootSignature m_mapColorRS;
@@ -142,6 +167,10 @@ private:
 	ComputePSO m_genVolumeNoisePSO;
 	ComputePSO m_mapNoiseColorPSO;
 	ComputePSO m_mapVolumeNoiseColorPSO;
+	ComputePSO m_genNoiseRGBAPSO;
+	ComputePSO m_genVolumeNoiseRGBAPSO;
+	ComputePSO m_mapNoiseColorRGBAPSO;
+	ComputePSO m_mapVolumeNoiseColorRGBAPSO;
 	StructuredBuffer m_minMax;
 
 	bool m_showNoiseWindow;

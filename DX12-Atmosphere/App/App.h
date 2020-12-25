@@ -5,6 +5,7 @@
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
 #include "D3D12/Texture.h"
+#include "D3D12/GraphicsGlobal.h"
 
 struct ImGui_RenderBuffers;
 struct ImGui_FrameContext;
