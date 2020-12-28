@@ -12,9 +12,10 @@ void CloudShapeManager::Initialize()
 	m_noiseGenerator = std::make_shared<NoiseGenerator>();
 	m_noiseGenerator->Initialize();
 
-	m_basicShapeRS.Reset(2, 2);
+	m_basicShapeRS.Reset(3, 2);
 	m_basicShapeRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
 	m_basicShapeRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 10);
+	m_basicShapeRS[2].InitAsConstantBufferView(0);
 	m_basicShapeRS.InitStaticSampler(0, Global::SamplerPointBorderDesc);
 	m_basicShapeRS.InitStaticSampler(1, Global::SamplerLinearBorderDesc);
 	m_basicShapeRS.Finalize(L"BasicShapeRS");
@@ -24,6 +25,9 @@ void CloudShapeManager::Initialize()
 	m_basicShapePSO.Finalize();
 
 	m_showWindow = true;
+
+	m_basicShapeMin = 0.5f;
+	m_basicShapeMax = 2.0f;
 }
 
 void CloudShapeManager::CreateBasicCloudShape()
@@ -31,7 +35,7 @@ void CloudShapeManager::CreateBasicCloudShape()
 	// Perlin
 	NoiseState* perlin = new NoiseState();
 	perlin->seed = 1567;
-	perlin->frequency = 0.04f;
+	perlin->frequency = 0.05f;
 	perlin->noise_type = kNoisePerlin;
 	perlin->fractal_type = kFractalNone;
 	m_perlinNoise = m_noiseGenerator->CreateVolumeNoise("PerlinNoise", 128, 128, 128, DXGI_FORMAT_R32_FLOAT, perlin);
@@ -44,6 +48,7 @@ void CloudShapeManager::CreateBasicCloudShape()
 	worleyFBM_Low->fractal_type = kFractalFBM;
 	worleyFBM_Low->octaves = 5;
 	worleyFBM_Low->lacunarity = 2.0f;
+	worleyFBM_Low->SetInvert(true);
 	m_worleyFBMLow = m_noiseGenerator->CreateVolumeNoise("WorleyFBMLow", 128, 128, 128, DXGI_FORMAT_R32_FLOAT, worleyFBM_Low);
 
 	NoiseState* worleyFBM_Mid = new NoiseState(*worleyFBM_Low);
@@ -88,56 +93,92 @@ void CloudShapeManager::GenerateBasicCloudShape()
 	context.SetDynamicDescriptor(0, 3, m_worleyFBMHigh->GetSRV());
 	context.SetDynamicDescriptor(1, 0, m_basicShape->GetUAV());
 	context.SetDynamicDescriptor(1, 1, m_basicShapeView->GetUAV());
+	struct
+	{
+		float min;
+		float max;
+	} shape_range;
+	shape_range.min = m_basicShapeMin;
+	shape_range.max = m_basicShapeMax;
+	context.SetDynamicConstantBufferView(2, sizeof(shape_range), &shape_range);
 	context.Dispatch3D(128, 128, 128, 8, 8, 8);
 	context.TransitionResource(*m_basicShape, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*m_basicShapeView, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.Finish();
 }
 
+void CloudShapeManager::Update()
+{
+	bool dirty_flag = m_noiseGenerator->IsDirty("PerlinNoise");
+	dirty_flag |= m_noiseGenerator->IsDirty("WorleyFBMLow");
+	dirty_flag |= m_noiseGenerator->IsDirty("WorlyFBMMid");
+	dirty_flag |= m_noiseGenerator->IsDirty("WorlyFBMHigh");
+	if (dirty_flag)
+	{
+		GenerateBasicCloudShape();
+	}
+}
+
 void CloudShapeManager::UpdateUI()
 {
 	m_noiseGenerator->UpdateUI();
 
-	/*if (!m_showWindow)
+	if (!m_showWindow)
 		return;
 
 	ImGui::Begin("Cloud Shape Manager", &m_showWindow);
 
-	ImGui::Text("Basic Cloud Shape");
-	if (ImGui::Button("Refresh"))
+	bool refresh_basic_shape = false;
+	ImGui::BeginGroup();
+	{
+		ImGui::PushItemWidth(125);
+		ImGui::Text("Basic Cloud Shape");
+		ImGui::Text("Basic Shape Range");
+		refresh_basic_shape |= ImGui::InputFloat("Basic Shape Min", &m_basicShapeMin, 0.01f, 0.1f);
+		refresh_basic_shape |= ImGui::InputFloat("Basic Shape Max", &m_basicShapeMax, 0.01f, 0.1f);
+		ImGui::PopItemWidth();
+	}
+	ImGui::EndGroup();
+
+	ImGui::SameLine();
+	ImGui::BeginGroup();
+	{
+		static bool tiled_basic_shape_window = false;
+		static bool window_open = false;
+		if (ImGui::VolumeImageButton((ImTextureID)(m_basicShape->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_basicShape->GetDepth()))
+		{
+			tiled_basic_shape_window = !tiled_basic_shape_window;
+			window_open = true;
+		}
+		if (tiled_basic_shape_window)
+		{
+			ImGui::Begin("Basic Shape Texture 3D", &tiled_basic_shape_window);
+			Utils::AutoResizeVolumeImage(m_basicShape.get(), window_open);
+			ImGui::End();
+			window_open = false;
+		}
+
+		ImGui::SameLine();
+		static bool basic_shape_view = false;
+		if (ImGui::ImageButton((ImTextureID)(m_basicShapeView->GetSRV().ptr), ImVec2(128.0f, 128.0f)))
+		{
+			basic_shape_view = !basic_shape_view;
+			window_open = true;
+		}
+		if (basic_shape_view)
+		{
+			ImGui::Begin("Basic Shape View", &basic_shape_view);
+			Utils::AutoResizeImage(m_basicShapeView.get(), window_open);
+			ImGui::End();
+			window_open = false;
+		}
+	}
+	ImGui::EndGroup();
+
+	ImGui::End();
+
+	if (refresh_basic_shape)
 	{
 		GenerateBasicCloudShape();
 	}
-
-	static bool tiled_basic_shape_window = false;
-	static bool window_open = false;
-	if (ImGui::VolumeImageButton((ImTextureID)(m_basicShape->GetSRV().ptr), ImVec2(256.0f, 256.0f), m_basicShape->GetDepth()))
-	{
-		tiled_basic_shape_window = !tiled_basic_shape_window;
-		window_open = true;
-	}
-	if (tiled_basic_shape_window)
-	{
-		ImGui::Begin("Basic Shape Texture 3D", &tiled_basic_shape_window);
-		Utils::AutoResizeVolumeImage(m_basicShape.get(), window_open);
-		ImGui::End();
-		window_open = false;
-	}
-
-	ImGui::SameLine();
-	static bool basic_shape_view = false;
-	if (ImGui::ImageButton((ImTextureID)(m_basicShapeView->GetSRV().ptr), ImVec2(256.0f, 256.0f)))
-	{
-		basic_shape_view = !basic_shape_view;
-		window_open = true;
-	}
-	if (basic_shape_view)
-	{
-		ImGui::Begin("Basic Shape View", &basic_shape_view);
-		Utils::AutoResizeImage(m_basicShapeView.get(), window_open);
-		ImGui::End();
-		window_open = false;
-	}
-
-	ImGui::End();*/
 }

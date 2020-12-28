@@ -1,10 +1,10 @@
 #include "FastNoiseLite.hlsli"
 #include "Common.hlsli"
 
-RWTexture2D<float4> noise_texture : register(u0);
-RWBuffer<uint> min_max : register(u1);
+RWTexture2D<float4> NoiseTexture : register(u0);
+RWBuffer<uint> MinMax : register(u1);
 
-groupshared uint group_min_max[2];
+groupshared uint GroupMinMax[2];
 
 cbuffer noise_state : register(b0)
 {
@@ -42,14 +42,14 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 {
 	if (globalID.x == 0 && globalID.y == 0 && globalID.z == 0)
 	{
-		min_max[0] = 0xffffffff;
-		min_max[1] = 0;
+		MinMax[0] = 0xffffffff;
+		MinMax[1] = 0;
 	}
 
 	if (groupIndex == 0)
 	{
-		group_min_max[0] = 0xffffffff;
-		group_min_max[1] = 0;
+		GroupMinMax[0] = 0xffffffff;
+		GroupMinMax[1] = 0;
 	}
 
 	AllMemoryBarrierWithGroupSync();
@@ -81,10 +81,10 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 		uint uint_min_val = ToComparableUint(min_val);
 		uint uint_max_val = ToComparableUint(max_val);
 		
-		InterlockedMin(group_min_max[0], uint_min_val);
-		InterlockedMax(group_min_max[1], uint_max_val);
+		InterlockedMin(GroupMinMax[0], uint_min_val);
+		InterlockedMax(GroupMinMax[1], uint_max_val);
 
-		noise_texture[globalID.xy] = float4(val, 0.0, 1.0f);
+		NoiseTexture[globalID.xy] = float4(val, 0.0, 1.0f);
 	}
 	else
 	{
@@ -104,17 +104,17 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 		float val = fnlGetNoise2D(noise_state, uv.x, uv.y);
 
 		uint uint_val = ToComparableUint(val);
-		InterlockedMin(group_min_max[0], uint_val);
-		InterlockedMax(group_min_max[1], uint_val);
+		InterlockedMin(GroupMinMax[0], uint_val);
+		InterlockedMax(GroupMinMax[1], uint_val);
 	
-		noise_texture[globalID.xy] = float4(val, val, val, 1.0);
+		NoiseTexture[globalID.xy] = float4(val, val, val, 1.0);
 	}
 	
 	GroupMemoryBarrierWithGroupSync();
 
 	if (groupIndex == 0)
 	{
-		InterlockedMin(min_max[0], group_min_max[0]);
-		InterlockedMax(min_max[1], group_min_max[1]);
+		InterlockedMin(MinMax[0], GroupMinMax[0]);
+		InterlockedMax(MinMax[1], GroupMinMax[1]);
 	}
 }

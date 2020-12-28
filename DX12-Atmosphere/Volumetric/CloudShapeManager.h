@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
+#include "D3D12/GpuBuffer.h"
 
 class NoiseGenerator;
 class ColorBuffer;
@@ -32,6 +33,8 @@ private:
 	std::shared_ptr<VolumeColorBuffer> m_worleyFBMHigh;
 	std::shared_ptr<VolumeColorBuffer> m_basicShape;
 	std::shared_ptr<ColorBuffer> m_basicShapeView;
+	float m_basicShapeMin;
+	float m_basicShapeMax;
 
 	bool m_showWindow;
 };

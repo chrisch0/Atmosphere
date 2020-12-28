@@ -43,6 +43,15 @@ float Tofloat(uint32_t a)
 	return *reinterpret_cast<float*>(&a);
 }
 
+uint32_t ToUint(float f)
+{
+	uint32_t t = *reinterpret_cast<uint32_t*>(&f);
+	uint32_t mask = t >> 31;
+	mask = (1 + ~mask) | 0x80000000;
+	t ^= mask;
+	return t;
+}
+
 bool VolumetricCloud::Initialize()
 {
 	if (!App::Initialize())
@@ -55,42 +64,23 @@ bool VolumetricCloud::Initialize()
 	m_showHelloWindow = false;
 
 	m_cloudShapeManager.Initialize();
-	//m_cloudShapeManager.CreateBasicCloudShape();
+	m_cloudShapeManager.CreateBasicCloudShape();
 
 	uint32_t min = 0xffffffff;
 	uint32_t max = 0;
 
-	float f = Tofloat(max);
-	f = Tofloat(min);
+	uint32_t ui = ToUint(-1);
+	ui = ToUint(1);
 
-	max = UintMax(max, -3.30282347E+38);
-	f = Tofloat(max);
-	max = UintMax(max, -0.98);
-	f = Tofloat(max);
-	max = UintMax(max, 0.89);
-	f = Tofloat(max);
+	float f = Tofloat(1016515113);
+	f = Tofloat(3212836864);
 
-	min = UintMin(min, 3.40282347E+38);
-	f = Tofloat(min);
-	min = UintMin(min, 3.40282E+38);
-	f = Tofloat(min);
-	min = UintMin(min, 0.3);
-	f = Tofloat(min);
-	min = UintMin(min, 0.0);
-	f = Tofloat(min);
-	min = UintMin(min, -0.3);
-	f = Tofloat(min);
-	min = UintMin(min, -12134.0f);
-	f = Tofloat(min);
-	min = UintMin(min, 3.40282347E+38);
-	f = Tofloat(min);
-	min = UintMin(min, -3.40282347E+38);
-	f = Tofloat(min);
 	return true;
 }
 
 void VolumetricCloud::Update(const Timer& timer)
 {
+	m_cloudShapeManager.Update();
 	//m_cloudShapeManager.GenerateBasicCloudShape();
 }
 

@@ -88,6 +88,14 @@ void NoiseGenerator::Destroy()
 	m_textureSize.clear();
 }
 
+bool NoiseGenerator::IsDirty(const std::string& name)
+{
+	auto iter = m_noiseTextureID.find(name);
+	if (iter != m_noiseTextureID.end())
+		return m_dirtyFlags[iter->second];
+	return false;
+}
+
 void NoiseGenerator::UpdateUI()
 {
 	if (ImGui::IsKeyPressedMap(ImGuiKey_N))
@@ -269,7 +277,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 	ImGui::EndGroup();
 	ImGui::SameLine(420);
 
-	//if (dirty_flag)
+	if (dirty_flag)
 	{
 		if (is_volume_texture)
 			GenerateVolumeNoise(iter->second, noise_state.get());
@@ -279,7 +287,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 
 	if (is_volume_texture)
 	{
-		auto& image_view = m_imageWindow[i];
+		bool image_view = m_imageWindow[i];
 		static bool window_open = false;
 		auto volume_tex = std::dynamic_pointer_cast<VolumeColorBuffer>(iter->second);
 		if (ImGui::VolumeImageButton((ImTextureID)(volume_tex->GetSRV().ptr), ImVec2(256.0f, 256.0f), volume_tex->GetDepth()))
@@ -289,15 +297,16 @@ void NoiseGenerator::NoiseConfig(size_t i)
 		}
 		if (image_view)
 		{
-			ImGui::Begin(name.c_str());
+			ImGui::Begin(name.c_str(), &image_view);
 			Utils::AutoResizeVolumeImage(volume_tex.get(), window_open);
 			ImGui::End();
 			window_open = false;
 		}
+		m_imageWindow[i] = image_view;
 	}
 	else
 	{
-		auto& image_view = m_imageWindow[i];
+		bool image_view = m_imageWindow[i];
 		static bool window_open = false;
 		auto tex = std::dynamic_pointer_cast<ColorBuffer>(iter->second);
 		if (ImGui::ImageButton((ImTextureID)(tex->GetSRV().ptr), ImVec2(256.0f, 256.0f)))
@@ -307,12 +316,14 @@ void NoiseGenerator::NoiseConfig(size_t i)
 		}
 		if (image_view)
 		{
-			ImGui::Begin(name.c_str());
+			ImGui::Begin(name.c_str(), &image_view);
 			Utils::AutoResizeImage(tex.get(), window_open);
 			ImGui::End();
 			window_open = false;
 		}
+		m_imageWindow[i] = image_view;
 	}
+	m_dirtyFlags[i] = dirty_flag;
 }
 
 std::shared_ptr<VolumeColorBuffer> NoiseGenerator::CreateVolumeNoise(const std::string& name, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format)
@@ -333,6 +344,7 @@ std::shared_ptr<VolumeColorBuffer> NoiseGenerator::CreateVolumeNoise(const std::
 	}
 	std::wstring wn(n.begin(), n.end());
 	tex->Create(wn, width, height, depth, 1, format);
+	m_noiseTextureID.insert({ n, m_noiseTextureNames.size() });
 	m_noiseTextures.insert({ n, tex });
 	m_noiseTextureNames.push_back(n);
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
@@ -341,6 +353,7 @@ std::shared_ptr<VolumeColorBuffer> NoiseGenerator::CreateVolumeNoise(const std::
 	m_textureSize.emplace_back((float)width, (float)height, (float)depth);
 	m_textureFormat.push_back(format);
 	m_imageWindow.push_back(false);
+	m_dirtyFlags.push_back(false);
 	GenerateVolumeNoise(tex, m_noiseStates.back().get());
 	return tex;
 }
@@ -354,6 +367,7 @@ void NoiseGenerator::AddVolumeNoise(const std::string& name, std::shared_ptr<Vol
 		n += "_";
 		iter = m_noiseTextures.find(n);
 	}
+	m_noiseTextureID.insert({ n, m_noiseTextureNames.size() });
 	m_noiseTextures.insert({ n, texPtr });
 	m_noiseTextureNames.push_back(n);
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
@@ -362,6 +376,7 @@ void NoiseGenerator::AddVolumeNoise(const std::string& name, std::shared_ptr<Vol
 	m_textureSize.emplace_back((float)texPtr->GetWidth(), (float)texPtr->GetHeight(), (float)texPtr->GetDepth());
 	m_textureFormat.push_back(texPtr->GetFormat());
 	m_imageWindow.push_back(false);
+	m_dirtyFlags.push_back(false);
 }
 
 std::shared_ptr<ColorBuffer> NoiseGenerator::CreateNoise(const std::string& name, uint32_t width, uint32_t height, DXGI_FORMAT format)
@@ -382,6 +397,7 @@ std::shared_ptr<ColorBuffer> NoiseGenerator::CreateNoise(const std::string& name
 	}
 	std::wstring wn(n.begin(), n.end());
 	tex->Create(wn, width, height, 1, format);
+	m_noiseTextureID.insert({ n, m_noiseTextureNames.size() });
 	m_noiseTextures.insert({ n, tex });
 	m_noiseTextureNames.push_back(n);
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
@@ -390,6 +406,7 @@ std::shared_ptr<ColorBuffer> NoiseGenerator::CreateNoise(const std::string& name
 	m_textureSize.emplace_back((float)width, (float)height, 1.0f);
 	m_textureFormat.push_back(format);
 	m_imageWindow.push_back(false);
+	m_dirtyFlags.push_back(false);
 	GenerateNoise(tex, m_noiseStates.back().get());
 	return tex;
 }
@@ -403,6 +420,7 @@ void NoiseGenerator::AddNoise(const std::string& name, std::shared_ptr<ColorBuff
 		n += "_";
 		iter = m_noiseTextures.find(n);
 	}
+	m_noiseTextureID.insert({ n, m_noiseTextureNames.size() });
 	m_noiseTextures.insert({ n, texPtr });
 	m_noiseTextureNames.push_back(n);
 	m_noiseStates.emplace_back(std::make_shared<NoiseState>());
@@ -411,6 +429,7 @@ void NoiseGenerator::AddNoise(const std::string& name, std::shared_ptr<ColorBuff
 	m_textureSize.emplace_back((float)texPtr->GetWidth(), (float)texPtr->GetHeight(), 1.0f);
 	m_textureFormat.push_back(texPtr->GetFormat());
 	m_imageWindow.push_back(false);
+	m_dirtyFlags.push_back(false);
 }
 
 void NoiseGenerator::GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state)

@@ -95,22 +95,23 @@ struct NoiseState
 
 	void SetInvert(bool invert)
 	{
-		invert_visualize_warp &= ((uint32_t)(invert) << 16 | (0xFFFF));
+		uint32_t t = ((uint32_t)(invert) << 16);
+		invert_visualize_warp |= t;
 	}
 
 	void SetVisualizeWarp(bool visualize_warp)
 	{
-		invert_visualize_warp &= (0xFFFF0000 | (uint32_t)(visualize_warp));
+		invert_visualize_warp |= ((uint32_t)(visualize_warp));
 	}
 
 	bool GetInvert() const
 	{
-
+		return (((invert_visualize_warp >> 16) & 1) > 0);
 	}
 
 	bool GetVisualizeWarp() const
 	{
-
+		return (((invert_visualize_warp & 1) > 0));
 	}
 };
 
@@ -149,17 +150,21 @@ public:
 	void MapNoiseColor(ComputeContext& context, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
 	void MapNoiseColor(ComputeContext& context, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
 
+	bool IsDirty(size_t idx) const { return m_dirtyFlags[idx]; }
+	bool IsDirty(const std::string& name);
 private:
 	void NoiseConfig(size_t index);
 
 private:
 	std::unordered_map<std::string, std::shared_ptr<PixelBuffer>> m_noiseTextures;
+	std::unordered_map<std::string, size_t> m_noiseTextureID;
 	std::vector<std::string> m_noiseTextureNames;
 	std::vector<std::shared_ptr<NoiseState>> m_noiseStates;
 	std::vector<bool> m_isVolumeNoise;
 	std::vector<Vector3> m_textureSize;
 	std::vector<DXGI_FORMAT> m_textureFormat;
 	std::vector<bool> m_imageWindow;
+	std::vector<bool> m_dirtyFlags;
 
 	RootSignature m_genNoiseRS;
 	RootSignature m_mapColorRS;
