@@ -82,6 +82,22 @@ float SampleCloudDensity(float3 p, float3 weather_data, bool simpleSample)
 	return base_cloud * density_height_gradient;
 }
 
+float HenyeyGreenstein(float3 lightDir, float3 viewDir, float G)
+{
+	float cos_angle = dot(lightDir, viewDir);
+	return ((1.0f - G * G) / pow((1.0f + G * G - 2.0f * G * cos_angle), 1.5f)) / 4.0f * 3.1415926f;
+}
+
+float4 Integrate(float4 sum, float dif, float den)
+{
+	float3 lin = float3(0.65f, 0.7f, 0.75f) * 1.4f + float3(1.0f, 0.6f, 0.3f) * dif;
+	float4 col = float4(lerp(float3(1.0f, 0.95f, 0.8f), float3(0.25f, 0.3f, 0.35f), den), den);
+	col.xyz *= lin;
+	col.a *= 0.4f;
+	col.rgb *= col.a;
+	return sum + col * (1.0f - sum.a);
+}
+
 float4 main(PSInput psInput) : SV_Target
 {
 	float3 raymarch_start = ViewerPos + psInput.viewDir;
@@ -95,10 +111,15 @@ float4 main(PSInput psInput) : SV_Target
 
 	float density = 0.0f;
 	float3 p = start;
+	float4 sum = 0.0f;
+	float3 sun_dir = normalize(float3(0.5f, 0.5f, 0.5f));
+	float3 color = LocalPositionToUVW(p, psInput.boxScale);
+
 	for (int i = 0; i < sample_count; ++i)
 	{
 		float3 uvw = LocalPositionToUVW(p, psInput.boxScale);
 		density += SampleCloudDensity(uvw, float3(1.0f, 1.0f, 1.0f), false) * step;
+
 		p += dir * step;
 
 	}

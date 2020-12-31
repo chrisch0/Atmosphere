@@ -11,17 +11,18 @@ void Camera::UpdateUI()
 	if (ImGui::CollapsingHeader(m_name.c_str()))
 	{
 		ImGui::PushItemWidth(120);
+		bool transform_dirty = false;
 		// position
 		Vector3 pos = GetPosition();
 		float x = pos.GetX(), y = pos.GetY(), z = pos.GetZ();
-		ImGui::DragFloat("X", &x, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
-		ImGui::DragFloat("Y", &y, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
-		ImGui::DragFloat("Z", &z, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+		transform_dirty |= ImGui::DragFloat("X", &x, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
+		transform_dirty |= ImGui::DragFloat("Y", &y, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
+		transform_dirty |= ImGui::DragFloat("Z", &z, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
 
 		// pitch head roll
-		ImGui::DragFloat("Pitch", &m_currentPitch, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
-		ImGui::DragFloat("Head", &m_currentHeading, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
-		ImGui::DragFloat("Roll", &m_currentRoll, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
+		transform_dirty |= ImGui::DragFloat("Pitch", &m_currentPitch, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
+		transform_dirty |= ImGui::DragFloat("Head", &m_currentHeading, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None); ImGui::SameLine();
+		transform_dirty |= ImGui::DragFloat("Roll", &m_currentRoll, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
 		ImGui::PopItemWidth();
 
 		m_currentPitch = std::fmod(m_currentPitch, 360.0f);
@@ -30,11 +31,15 @@ void Camera::UpdateUI()
 		pos = Vector3(x, y, z);
 
 		// Update camera parameter
-		Matrix3 orientation = Matrix3(s_worldEast, s_worldUp, -s_worldNorth) *
-			Matrix3::MakeYRotation(ToRadian(m_currentHeading)) * Matrix3::MakeXRotation(ToRadian(m_currentPitch)) * Matrix3::MakeZRotation(ToRadian(m_currentRoll));
-		SetTransform(AffineTransform(orientation, pos));
+		if (transform_dirty)
+		{
+			Matrix3 orientation = Matrix3(s_worldEast, s_worldUp, -s_worldNorth) *
+				Matrix3::MakeYRotation(ToRadian(m_currentHeading)) * Matrix3::MakeXRotation(ToRadian(m_currentPitch)) * Matrix3::MakeZRotation(ToRadian(m_currentRoll));
+			SetTransform(AffineTransform(orientation, pos));
+		}
 
 		// Camera type
+		bool proj_dirty = false;
 		const char* cameraType[] = { "Perspective", "Orthographic" };
 		int curIdx = m_isPerspective ? 0 : 1;
 		if (ImGui::BeginCombo("Camera Type", cameraType[curIdx], 0))
@@ -43,7 +48,10 @@ void Camera::UpdateUI()
 			{
 				const bool isSelected = (curIdx == n);
 				if (ImGui::Selectable(cameraType[n], isSelected))
+				{
+					proj_dirty = true;
 					curIdx = n;
+				}
 
 				if (isSelected)
 					ImGui::SetItemDefaultFocus();
@@ -53,13 +61,14 @@ void Camera::UpdateUI()
 		m_isPerspective = curIdx == 0;
 
 		// Reverse Z
-		ImGui::Checkbox("Reverse Z", &m_isReverseZ);
+		proj_dirty |= ImGui::Checkbox("Reverse Z", &m_isReverseZ);
 
 		// Projection parameters
-		ImGui::SliderFloat("Vertical FOV", &m_verticalFOV, 20.0f, 120.0f, "%.2f");
-		ImGui::DragFloat("Near Plane", &m_nearClip, 0.05f, 0.01f, m_farClip, "%.2f");
-		ImGui::DragFloat("Far Plane", &m_farClip, 0.05f, m_nearClip + 1.0f, FLT_MAX, "%.2f");
-		UpdateProjMatrix();
+		proj_dirty |= ImGui::SliderFloat("Vertical FOV", &m_verticalFOV, 20.0f, 120.0f, "%.2f");
+		proj_dirty |= ImGui::DragFloat("Near Plane", &m_nearClip, 0.05f, 0.01f, m_farClip, "%.2f");
+		proj_dirty |= ImGui::DragFloat("Far Plane", &m_farClip, 0.05f, m_nearClip + 1.0f, FLT_MAX, "%.2f");
+		if (proj_dirty)
+			UpdateProjMatrix();
 		
 		// movement speed
 		ImGui::SliderFloat("Movement Speed", &m_moveSpeed, 1, 2000, "%.2f");
