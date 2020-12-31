@@ -59,4 +59,11 @@ namespace Utils
 
 	void AutoResizeVolumeImage(VolumeColorBuffer* image, bool isWindowOpen);
 	void AutoResizeImage(ColorBuffer* image, bool isWindowOpen);
+
+	template <typename T>
+	T Clamp(T& val, T min, T max)
+	{
+		val = (val < min ? min : (val > max ? max : val));
+		return val;
+	}
 }

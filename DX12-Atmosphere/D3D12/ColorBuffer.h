@@ -28,7 +28,7 @@ public:
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetRTV() const { return m_rtvHandle; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV() const { return m_uavHandle[0]; }
 
-	void SetClearColor(Color clearColor) { m_clearColor = clearColor; }
+	void SetClearColor(const Color& clearColor) { m_clearColor = clearColor; }
 
 	void SetMsaaMode(uint32_t numColorSamples, uint32_t numCoverageSamples)
 	{

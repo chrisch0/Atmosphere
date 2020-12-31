@@ -59,6 +59,7 @@ void Camera::UpdateUI()
 		ImGui::SliderFloat("Vertical FOV", &m_verticalFOV, 20.0f, 120.0f, "%.2f");
 		ImGui::DragFloat("Near Plane", &m_nearClip, 0.05f, 0.01f, m_farClip, "%.2f");
 		ImGui::DragFloat("Far Plane", &m_farClip, 0.05f, m_nearClip + 1.0f, FLT_MAX, "%.2f");
+		UpdateProjMatrix();
 		
 		// movement speed
 		ImGui::SliderFloat("Movement Speed", &m_moveSpeed, 1, 2000, "%.2f");
@@ -194,8 +195,6 @@ void SceneCamera::Update(float deltaTime)
 			ApplyMomentum(m_lastStrafe, strafe, deltaTime);
 			ApplyMomentum(m_lastAscent, ascent, deltaTime);
 		}
-
-		
 	}
 
 	m_currentPitch = std::fmod(m_currentPitch + pitch, 360.0f);

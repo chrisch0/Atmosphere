@@ -15,15 +15,26 @@ public:
 	void Update();
 	void UpdateUI();
 
-	void CreateStratusGradient();
-	void CreateCumulusGradient();
-	void CreateCumulonimbusGradient();
-
 	void CreateBasicCloudShape();
+	void CreateGradient();
+
 	void GenerateBasicCloudShape();
+	void GenerateGradient(std::shared_ptr<ColorBuffer> texPtr, float cloudMin, float cloudMax, float solidMin, float solidMax);
+
+	void SetShowWindow(bool val) { m_showWindow = val; }
+	void SetShowNoiseGeneratorWindow(bool val);
+
+	VolumeColorBuffer* GetBasicCloudShape() const { return m_basicShape.get(); }
+	ColorBuffer* GetStratusGradient() const { return m_stratusGradient.get(); }
+	ColorBuffer* GetCumulusGradinet() const { return m_cumulusGradient.get(); }
+	ColorBuffer* GetCumulonimbusGradient() const { return m_cumulonimbusGradient.get(); }
+
 private:
 	RootSignature m_basicShapeRS;
+	RootSignature m_gradientRS;
+
 	ComputePSO m_basicShapePSO;
+	ComputePSO m_gradientPSO;
 
 	std::shared_ptr<NoiseGenerator> m_noiseGenerator;
 
@@ -33,6 +44,9 @@ private:
 	std::shared_ptr<VolumeColorBuffer> m_worleyFBMHigh;
 	std::shared_ptr<VolumeColorBuffer> m_basicShape;
 	std::shared_ptr<ColorBuffer> m_basicShapeView;
+	std::shared_ptr<ColorBuffer> m_stratusGradient;
+	std::shared_ptr<ColorBuffer> m_cumulusGradient;
+	std::shared_ptr<ColorBuffer> m_cumulonimbusGradient;
 	float m_basicShapeMin;
 	float m_basicShapeMax;
 

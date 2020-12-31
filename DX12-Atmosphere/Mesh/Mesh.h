@@ -57,14 +57,24 @@ public:
 	Mesh() {}
 	~Mesh() {}
 
-	D3D12_VERTEX_BUFFER_VIEW VertexBufferView()
+	D3D12_VERTEX_BUFFER_VIEW VertexBufferView() const
 	{
 		return m_vertexBuffer.VertexBufferView();
 	}
 	
-	D3D12_INDEX_BUFFER_VIEW IndexBufferView()
+	D3D12_INDEX_BUFFER_VIEW IndexBufferView() const
 	{
 		return m_indexBuffer.IndexBufferView();
+	}
+
+	D3D12_PRIMITIVE_TOPOLOGY Topology() const
+	{
+		return m_topology;
+	}
+
+	uint32_t IndexCount() const
+	{
+		return m_indexCount;
 	}
 
 	void RenderSubMeshes();
@@ -83,6 +93,7 @@ private:
 
 	StructuredBuffer m_vertexBuffer;
 	ByteAddressBuffer m_indexBuffer;
+	D3D12_PRIMITIVE_TOPOLOGY m_topology;
 
 	uint32_t m_indexCount;
 	uint32_t m_indexStart;

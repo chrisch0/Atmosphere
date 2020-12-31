@@ -6,6 +6,7 @@
 #include "D3D12/TextureManager.h"
 
 #include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_internal.h"
 #include "CompiledShaders/imgui_vert.h"
 #include "CompiledShaders/imgui_pixel.h"
 #include "CompiledShaders/TileTexture3D_PS.h"
@@ -385,14 +386,16 @@ int App::Run()
 		else
 		{
 			m_timer.Tick();
+			CalculateFrameStats();
 
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
 
-			CalculateFrameStats();
-			
-			UpdateUI();
-			UpdateImGuiDemo();
+			if (m_renderUI)
+			{
+				UpdateUI();
+				UpdateImGuiDemo();
+			}
 
 			Update(m_timer);
 			Draw(m_timer);
@@ -498,7 +501,11 @@ void App::UpdateImGuiDemo()
 
 void App::Display()
 {
+	if (ImGui::IsKeyPressedMap(ImGuiKey_U))
+		m_renderUI = !m_renderUI;
+
 	GraphicsContext& context = GraphicsContext::Begin(L"Display");
+
 	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	//m_displayBuffer[m_currBackBuffer].SetClearColor(m_clearColor);
 	//context.ClearColor(m_displayBuffer[m_currBackBuffer]);
@@ -514,10 +521,12 @@ void App::Display()
 
 	RenderUI(context, drawData);
 
+
 	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_PRESENT);
 	context.Finish();
 
 	ImGuiIO& io = ImGui::GetIO();
+
 	// Update and Render additional Platform Windows
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
@@ -910,7 +919,7 @@ void App::RenderAppSubWindow(ImGuiViewport* viewport, void*)
 	}
 	context.SetRenderTarget(current_render_target.GetRTV());
 
-	auto drawData = viewport->DrawData;	
+	auto drawData = viewport->DrawData;
 	RenderUI(context, drawData);
 
 	context.TransitionResource(current_render_target, D3D12_RESOURCE_STATE_PRESENT);

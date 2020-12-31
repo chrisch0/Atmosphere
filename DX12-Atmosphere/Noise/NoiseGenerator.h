@@ -152,6 +152,8 @@ public:
 
 	bool IsDirty(size_t idx) const { return m_dirtyFlags[idx]; }
 	bool IsDirty(const std::string& name);
+
+	void SetShowWindow(bool val) { m_showNoiseWindow = val; }
 private:
 	void NoiseConfig(size_t index);
 

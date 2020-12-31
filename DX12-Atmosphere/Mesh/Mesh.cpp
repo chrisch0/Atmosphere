@@ -5,6 +5,7 @@ void Mesh::CreateGpuBuffer(Mesh* mesh)
 {
 	mesh->m_vertexBuffer.Create(L"Box Vertices", (uint32_t)mesh->m_vertices.size(), (uint32_t)sizeof(Vertex), mesh->m_vertices.data());
 	mesh->m_indexBuffer.Create(L"Box Indices", (uint32_t)mesh->m_indices.size(), (uint32_t)sizeof(uint16_t), mesh->m_indices.data());
+	mesh->m_indexCount = (uint32_t)mesh->m_indices.size();
 	mesh->m_vertices.clear();
 	mesh->m_indices.clear();
 }
@@ -15,6 +16,7 @@ Mesh* Mesh::CreateBox(uint32_t numSubdivisions)
 	Vertex v[24];
 
 	// Fill in the front face vertex data.
+	//            Position          Normal             Tangent           UV            
 	v[0] = Vertex(-0.5, -0.5, -0.5, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 	v[1] = Vertex(-0.5, +0.5, -0.5, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 	v[2] = Vertex(+0.5, +0.5, -0.5, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
@@ -91,6 +93,7 @@ Mesh* Mesh::CreateBox(uint32_t numSubdivisions)
 		Subdivide(mesh);
 
 	CreateGpuBuffer(mesh);
+	mesh->m_topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	return mesh;
 }
@@ -196,6 +199,7 @@ Mesh* Mesh::CreateSphere(uint16_t sliceCount, uint16_t stackCount)
 	}
 
 	CreateGpuBuffer(mesh);
+	mesh->m_topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	return mesh;
 }
@@ -273,6 +277,7 @@ Mesh* Mesh::CreateGeosphere(uint32_t numSubdivisions)
 	}
 
 	CreateGpuBuffer(mesh);
+	mesh->m_topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	return mesh;
 }
@@ -340,6 +345,7 @@ Mesh* Mesh::CreateGrid(uint16_t m, uint16_t n)
 	}
 
 	CreateGpuBuffer(mesh);
+	mesh->m_topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	return mesh;
 }
@@ -388,6 +394,7 @@ Mesh* Mesh::CreateQuad(float x, float y, float w, float h, float depth)
 	mesh->m_indices[5] = 3;
 
 	CreateGpuBuffer(mesh);
+	mesh->m_topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	return mesh;
 }

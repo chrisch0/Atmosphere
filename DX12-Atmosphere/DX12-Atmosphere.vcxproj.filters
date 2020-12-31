@@ -238,9 +238,6 @@
     <ClCompile Include="imgui\imgui_impl_win32.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="App\MultiViewport.cpp">
-      <Filter>App</Filter>
-    </ClCompile>
     <ClCompile Include="Testes\FullScreenQuad.cpp">
       <Filter>Testes</Filter>
     </ClCompile>
@@ -386,6 +383,15 @@
       <Filter>Shaders\GenerateNoise</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\GenerateBasicShape_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GenerateGradient_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VolumetricCloud_PS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VolumetricCloud_VS.hlsl">
       <Filter>Shaders\Volumetric</Filter>
     </FxCompile>
   </ItemGroup>
