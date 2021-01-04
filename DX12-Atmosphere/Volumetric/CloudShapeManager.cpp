@@ -140,7 +140,7 @@ void CloudShapeManager::GenerateBasicCloudShape()
 	context.SetDynamicDescriptor(1, 0, m_basicShape->GetUAV());
 	context.SetDynamicDescriptor(1, 1, m_basicShapeView->GetUAV());
 	context.SetDynamicConstantBufferView(2, sizeof(shape_range), &shape_range);
-	context.Dispatch3D(128, 128, 128, 8, 8, 8);
+	context.Dispatch3D(m_basicShape->GetWidth(), m_basicShape->GetHeight(), m_basicShape->GetDepth(), 8, 8, 8);
 	context.TransitionResource(*m_basicShape, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*m_basicShapeView, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.Finish();
@@ -168,7 +168,7 @@ void CloudShapeManager::GenerateGradient(std::shared_ptr<ColorBuffer> texPtr, fl
 	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	context.SetDynamicDescriptor(0, 0, texPtr->GetUAV());
 	context.SetDynamicConstantBufferView(1, sizeof(cloudRange), &cloudRange);
-	context.Dispatch2D(1, 128, 1, 8);
+	context.Dispatch2D(texPtr->GetWidth(), texPtr->GetHeight(), 1, 8);
 	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.Finish();
 }

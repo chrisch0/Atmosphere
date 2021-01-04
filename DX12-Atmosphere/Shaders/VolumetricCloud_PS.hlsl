@@ -79,13 +79,13 @@ float SampleCloudDensity(float3 p, float3 weather_data, bool simpleSample)
 	
 	//base_cloud *= density_height_gradient;
 	
-	return base_cloud * density_height_gradient;
+	return base_cloud;
 }
 
 float HenyeyGreenstein(float3 lightDir, float3 viewDir, float G)
 {
 	float cos_angle = dot(lightDir, viewDir);
-	return ((1.0f - G * G) / pow((1.0f + G * G - 2.0f * G * cos_angle), 1.5f)) / 4.0f * 3.1415926f;
+	return ((1.0f - G * G) / pow((1.0f + G * G - 2.0f * G * cos_angle), 1.5f)) / (4.0f * 3.1415926f);
 }
 
 float4 Integrate(float4 sum, float dif, float den)
@@ -96,6 +96,78 @@ float4 Integrate(float4 sum, float dif, float den)
 	col.a *= 0.4f;
 	col.rgb *= col.a;
 	return sum + col * (1.0f - sum.a);
+}
+
+float4 Render(float3 lightDir, float3 lightColor, float3 start, float3 end, float3 center, float3 scale, const int densitySampleCount, const int shadowSampleCount)
+{
+	float step_size = 1.0f / densitySampleCount;
+
+	float cur_density = 0.0f;
+	float transmittance = 1.0f;
+	float3 camera_vec = (end - start) * step_size;
+
+	float shadow_step_size = 1.0f / shadowSampleCount;
+	lightDir *= shadow_step_size;
+	float shadow_density = 8.0f * shadow_step_size;
+
+	float density = 18.0f * step_size;
+	float3 light_energy = 0.0f;
+	float shadow_thresh = -log(0.01f) / shadow_density;
+
+	float3 cur_pos = start;
+
+	for (int i = 0; i < densitySampleCount; ++i)
+	{
+		float3 uvw = LocalPositionToUVW(cur_pos - center, scale);
+		//float2 cur_sample = SampleCloudDensity(uvw, float3(1.0f, 1.0f, 1.0f), false).xx;
+		float2 cur_sample = BasicCloudShape.Sample(LinearSampler, uvw).rr;
+
+		if (cur_sample.r + cur_sample.g > 0.001f)
+		{
+			float3 light_pos = cur_pos;
+			float shadow_dist = 0.0f;
+
+			for (int s = 0; s < shadowSampleCount; ++s)
+			{
+				light_pos += lightDir;
+				float3 light_uvw = LocalPositionToUVW(light_pos - center, scale);
+				//float light_sample = SampleCloudDensity(light_uvw, float3(1.0f, 1.0f, 1.0f), false);
+				float3 shadow_box_test = floor(0.5 + (abs(0.5 - light_uvw)));
+				float exit_shadow_box = shadow_box_test.x + shadow_box_test.y + shadow_box_test.z;
+				if (shadow_dist > shadow_thresh || exit_shadow_box >= 1)
+					break;
+				
+				float light_sample = BasicCloudShape.Sample(LinearSampler, light_uvw).r;
+
+				shadow_dist += light_sample;
+			}
+
+			cur_density = saturate(cur_sample.r * density);
+			light_energy += (exp(-shadow_dist * shadow_density) * cur_density * transmittance * lightColor);
+			//light_energy += cur_sample.g * transmittance * float3(0.0f, 0.1f, 0.0f);
+
+			transmittance *= (1.0f - cur_density);
+		}
+		cur_pos += camera_vec;
+	}
+	return float4(light_energy, transmittance);
+}
+
+float4 ShowVolumeTexture(float3 start, float3 end, float3 center, float3 scale)
+{
+	float3 view_dir = (end - start) / 64.0f;
+	float3 pos = start;
+	float color = 0.0;
+	for (int i = 0; i < 64; ++i)
+	{
+		float3 uvw = LocalPositionToUVW(pos - center, scale);
+		float cur_sample = BasicCloudShape.Sample(LinearSampler, uvw).r;
+		//color = color * (cur_sample) + cur_sample * (1.0f - cur_sample);
+		color += cur_sample / 64.0f;
+		pos += view_dir;
+	}
+
+	return float4(color.xxx, 1.0);
 }
 
 float4 main(PSInput psInput) : SV_Target
@@ -109,22 +181,70 @@ float4 main(PSInput psInput) : SV_Target
 	CalculateRaymarchStartEnd(ViewerPos, dir, psInput.boxMinWorld, psInput.boxMaxWorld, start, end);
 	float step = length(end - start) / sample_count;
 
-	float density = 0.0f;
-	float3 p = start;
-	float4 sum = 0.0f;
-	float3 sun_dir = normalize(float3(0.5f, 0.5f, 0.5f));
-	float3 color = LocalPositionToUVW(p, psInput.boxScale);
+	float3 sun_dir = -normalize(float3(0.0f, -1.0f, 1.0f));
+	float3 light_color = HenyeyGreenstein(-sun_dir, dir, 0.2f) * float3(1.0, 0.875, 0.55) * 10.0f;
 
-	for (int i = 0; i < sample_count; ++i)
-	{
-		float3 uvw = LocalPositionToUVW(p, psInput.boxScale);
-		density += SampleCloudDensity(uvw, float3(1.0f, 1.0f, 1.0f), false) * step;
+	//float4 color = ShowVolumeTexture(start, end, psInput.boxCenter, psInput.boxScale);
+	//return color;
 
-		p += dir * step;
+	float4 color = Render(sun_dir, light_color, start, end, psInput.boxCenter, psInput.boxScale, 64, 16);
+	return color;
 
-	}
-	//density = exp(-density);
-	density *= 1.2f;
+	//float density = 0.0f;
+	//float3 p = start;
+	//float4 sum = 0.0f;
 
-	return float4(density, density, density, 1.0f);
+	//for (int i = 0; i < sample_count; ++i)
+	//{
+	//	float3 uvw = LocalPositionToUVW(p - psInput.boxCenter, psInput.boxScale) * 0.5f;
+	//	density += SampleCloudDensity(uvw, float3(1.0f, 1.0f, 1.0f), false) * step;
+
+	//	p += dir * step;
+
+	//}
+	//density /= length(psInput.boxScale);
+	//if (density > 1.0f)
+	//	density = exp(-density);
+	////density *= 1.2f;
+
+	//return float4(density, density, density, 1.0f);
+
 }
+
+//// PlaneAlignment 1
+//// MaxSteps 64
+//float scale = length(TransformLocalVectorToWorld(Parameters, float3(1.00000000, 0.00000000, 0.00000000)).xyz);
+//float localscenedepth = CalcSceneDepth(ScreenAlignedPosition(GetScreenPosition(Parameters)));
+//
+//float3 camerafwd = mul(float3(0.00000000, 0.00000000, 1.00000000), ResolvedView.ViewToTranslatedWorld);
+//localscenedepth /= (GetPrimitiveData(Parameters.PrimitiveId).LocalObjectBoundsMax.x * 2 * scale);
+//localscenedepth /= abs(dot(camerafwd, Parameters.CameraVector));
+//
+////bring vectors into local space to support object transforms
+//float3 localcampos = mul(float4(ResolvedView.WorldCameraOrigin, 1.00000000), (GetPrimitiveData(Parameters.PrimitiveId).WorldToLocal)).xyz;
+//float3 localcamvec = -normalize(mul(Parameters.CameraVector, GetPrimitiveData(Parameters.PrimitiveId).WorldToLocal));
+//
+////make camera position 0-1
+//localcampos = (localcampos / (GetPrimitiveData(Parameters.PrimitiveId).LocalObjectBoundsMax.x * 2)) + 0.5;
+//
+//float3 invraydir = 1 / localcamvec;
+//
+//float3 firstintersections = (0 - localcampos) * invraydir;
+//float3 secondintersections = (1 - localcampos) * invraydir;
+//float3 closest = min(firstintersections, secondintersections);
+//float3 furthest = max(firstintersections, secondintersections);
+//
+//float t0 = max(closest.x, max(closest.y, closest.z));
+//float t1 = min(furthest.x, min(furthest.y, furthest.z));
+//
+//float planeoffset = 1 - frac((t0 - length(localcampos - 0.5)) * MaxSteps);
+//
+//t0 += (planeoffset / MaxSteps) * PlaneAlignment;
+//t1 = min(t1, localscenedepth);
+//t0 = max(0, t0);
+//
+//float boxthickness = max(0, t1 - t0);
+//
+//float3 entrypos = localcampos + (max(0, t0) * localcamvec);
+//
+//return float4(entrypos, boxthickness);

@@ -51,7 +51,7 @@ void VolumetricCloud::CreatePSO()
 	m_volumetricCloudRS[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_volumetricCloudRS[1].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	m_volumetricCloudRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
-	m_volumetricCloudRS.InitStaticSampler(0, SamplerLinearClampDesc);
+	m_volumetricCloudRS.InitStaticSampler(0, SamplerLinearBorderDesc);
 	m_volumetricCloudRS.Finalize(L"VolumetricCloudRS", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	D3D12_INPUT_ELEMENT_DESC layout[] =
@@ -69,7 +69,7 @@ void VolumetricCloud::CreatePSO()
 	m_volumetricCloudPSO.SetVertexShader(g_pVolumetricCloud_VS, sizeof(g_pVolumetricCloud_VS));
 	m_volumetricCloudPSO.SetPixelShader(g_pVolumetricCloud_PS, sizeof(g_pVolumetricCloud_PS));
 	m_volumetricCloudPSO.SetInputLayout(_countof(layout), layout);
-	m_volumetricCloudPSO.SetBlendState(BlendDisable);
+	m_volumetricCloudPSO.SetBlendState(BlendPreMultiplied);
 	m_volumetricCloudPSO.SetDepthStencilState(DepthStateDisabled);
 	m_volumetricCloudPSO.SetRasterizerState(RasterizerDefault);
 	m_volumetricCloudPSO.Finalize();
