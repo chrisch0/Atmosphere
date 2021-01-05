@@ -394,6 +394,12 @@
     <FxCompile Include="Shaders\VolumetricCloud_VS.hlsl">
       <Filter>Shaders\Volumetric</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Skybox_VS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Skybox_PS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

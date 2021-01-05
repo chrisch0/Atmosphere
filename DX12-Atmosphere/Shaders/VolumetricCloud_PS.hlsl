@@ -7,6 +7,7 @@ cbuffer PassConstant : register(b0)
 	float4x4 InvProjMatrix;
 	float4x4 InvViewProjMatrix;
 	float3 ViewerPos;
+	float Time;
 }
 
 Texture3D<float4> BasicCloudShape : register(t0);
@@ -14,7 +15,7 @@ Texture2D<float4> StratusGradient : register(t1);
 Texture2D<float4> CumulusGradient : register(t2);
 Texture2D<float4> CumulonimbusGradient : register(t3);
 
-SamplerState LinearSampler : register(s0);
+SamplerState LinearRepeatSampler : register(s0);
 
 struct PSInput
 {
@@ -37,10 +38,16 @@ float GetHeightFractionForPoint(float3 position, float2 cloudMinMax)
 float GetDensityHeightGradientForPoint(float3 position) // float3 weatherData
 {
 	float height_fraction = GetHeightFractionForPoint(position, float2(0.0f, 1.0f));
-	return CumulusGradient.Sample(LinearSampler, float2(0.5f, 1.0f - height_fraction));
+	return CumulusGradient.Sample(LinearRepeatSampler, float2(0.5f, 1.0f - height_fraction));
 }
 
-void CalculateRaymarchStartEnd(float3 viewerPos, float3 dir, float3 boxMin, float3 boxMax, out float3 start, out float3 end)
+float GetDensityHeightGradientFromWorldPos(float3 posWS, float3 boxCenter, float3 boxScale)
+{
+	float height_fraction = (posWS.y - (boxCenter.y - 0.5 * boxScale.y)) / boxScale.y;
+	return CumulonimbusGradient.Sample(LinearRepeatSampler, float2(0.5f, 1.0f - height_fraction));
+}
+
+void CalculateBoxIntersectStartEnd(float3 viewerPos, float3 dir, float3 boxMin, float3 boxMax, out float3 start, out float3 end)
 {
 	float3 inv_dir = 1.0f / dir;
 	float3 p0 = (boxMin - viewerPos) * inv_dir;
@@ -69,13 +76,12 @@ float Remap(float originalValue, float originalMin, float originalMax,
 
 float SampleCloudDensity(float3 p, float3 weather_data, bool simpleSample)
 {
-	float4 low_frequency_noises = BasicCloudShape.Sample(LinearSampler, p).rgba;
+	float4 low_frequency_noises = BasicCloudShape.Sample(LinearRepeatSampler, p).rgba;
 	float low_freq_FBM = 
 		(low_frequency_noises.g * 0.625f) +
 		(low_frequency_noises.b * 0.25f) +
 		(low_frequency_noises.a * 0.125f);
 	float base_cloud = Remap(low_frequency_noises.r, -(1.0f - low_freq_FBM), 1.0, 0.0, 1.0);
-	float density_height_gradient = GetDensityHeightGradientForPoint(p);
 	
 	//base_cloud *= density_height_gradient;
 	
@@ -120,7 +126,7 @@ float4 Render(float3 lightDir, float3 lightColor, float3 start, float3 end, floa
 	{
 		float3 uvw = LocalPositionToUVW(cur_pos - center, scale);
 		//float2 cur_sample = SampleCloudDensity(uvw, float3(1.0f, 1.0f, 1.0f), false).xx;
-		float2 cur_sample = BasicCloudShape.Sample(LinearSampler, uvw).rr;
+		float2 cur_sample = BasicCloudShape.Sample(LinearRepeatSampler, uvw).rr;
 
 		if (cur_sample.r + cur_sample.g > 0.001f)
 		{
@@ -137,7 +143,7 @@ float4 Render(float3 lightDir, float3 lightColor, float3 start, float3 end, floa
 				if (shadow_dist > shadow_thresh || exit_shadow_box >= 1)
 					break;
 				
-				float light_sample = BasicCloudShape.Sample(LinearSampler, light_uvw).r;
+				float light_sample = BasicCloudShape.Sample(LinearRepeatSampler, light_uvw).r;
 
 				shadow_dist += light_sample;
 			}
@@ -161,13 +167,68 @@ float4 ShowVolumeTexture(float3 start, float3 end, float3 center, float3 scale)
 	for (int i = 0; i < 64; ++i)
 	{
 		float3 uvw = LocalPositionToUVW(pos - center, scale);
-		float cur_sample = BasicCloudShape.Sample(LinearSampler, uvw).r;
+		float cur_sample = BasicCloudShape.Sample(LinearRepeatSampler, uvw).r;
 		//color = color * (cur_sample) + cur_sample * (1.0f - cur_sample);
 		color += cur_sample / 64.0f;
 		pos += view_dir;
 	}
 
 	return float4(color.xxx, 1.0);
+}
+
+float UVRandom(float2 uv)
+{
+	float f = dot(float2(12.9898, 78.233), uv);
+	return frac(43758.5453 * sin(f));
+}
+
+float4 RenderCloud(PSInput psInput)
+{
+	float4 color = 0.0f;
+
+	float3 ray = normalize(psInput.viewDir);
+	int samples = 64;
+
+	float3 start = 0.0f;
+	float3 end = 0.0f;
+	CalculateBoxIntersectStartEnd(ViewerPos, ray, psInput.boxMinWorld, psInput.boxMaxWorld, start, end);
+	float stride = length(end - start) / samples;
+
+	float3 light = normalize(float3(0.0f, -1.0f, 1.0f));
+	float HGCoeff = 0.5f;
+	float hg = HenyeyGreenstein(light, ray, HGCoeff);
+
+	float2 uv = psInput.uv * Time;
+	float offs = UVRandom(uv) * stride;
+
+	float3 pos = start + ray * offs;
+	float3 acc = 0.0f;
+
+	float depth = 0.0;
+
+	float Scatter = 0.009f;
+	float3 LightColor = float3(1.0, 0.875, 0.55);
+	[loop]
+	for (int s = 0; s < samples; s++)
+	{
+		float density_height_gradient = GetDensityHeightGradientFromWorldPos(pos, psInput.boxCenter, psInput.boxScale);
+		if (density_height_gradient > 0.01f)
+		{
+			/*float n = SampleCloudDensity(pos, float3(1.0f, 1.0f, 1.0f), false);
+			if (n > 0.0)
+			{
+				float density = n * stride;
+				float rand = UVRandom(uv + s + 1);
+				float scatter = density * Scatter * hg * MarchLight(pos, rand * 0.5f);
+				acc += LightColor * scatter * BeerPowder(depth);
+				depth += density;
+			}*/
+		}
+	}
+
+
+
+	return color;
 }
 
 float4 main(PSInput psInput) : SV_Target
@@ -178,7 +239,7 @@ float4 main(PSInput psInput) : SV_Target
 	const int sample_count = 64;
 	float3 start = 0.0f;
 	float3 end = 0.0f;
-	CalculateRaymarchStartEnd(ViewerPos, dir, psInput.boxMinWorld, psInput.boxMaxWorld, start, end);
+	CalculateBoxIntersectStartEnd(ViewerPos, dir, psInput.boxMinWorld, psInput.boxMaxWorld, start, end);
 	float step = length(end - start) / sample_count;
 
 	float3 sun_dir = -normalize(float3(0.0f, -1.0f, 1.0f));

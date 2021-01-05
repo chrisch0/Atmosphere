@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "Mesh.h"
+#include "SkyboxMesh.h"
 
 void Mesh::CreateGpuBuffer(Mesh* mesh)
 {
-	mesh->m_vertexBuffer.Create(L"Box Vertices", (uint32_t)mesh->m_vertices.size(), (uint32_t)sizeof(Vertex), mesh->m_vertices.data());
-	mesh->m_indexBuffer.Create(L"Box Indices", (uint32_t)mesh->m_indices.size(), (uint32_t)sizeof(uint16_t), mesh->m_indices.data());
+	mesh->m_vertexBuffer.Create(L"Vertices", (uint32_t)mesh->m_vertices.size(), (uint32_t)sizeof(Vertex), mesh->m_vertices.data());
+	mesh->m_indexBuffer.Create(L"Indices", (uint32_t)mesh->m_indices.size(), (uint32_t)sizeof(uint16_t), mesh->m_indices.data());
 	mesh->m_indexCount = (uint32_t)mesh->m_indices.size();
 	mesh->m_vertices.clear();
 	mesh->m_indices.clear();
@@ -396,6 +397,16 @@ Mesh* Mesh::CreateQuad(float x, float y, float w, float h, float depth)
 	CreateGpuBuffer(mesh);
 	mesh->m_topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+	return mesh;
+}
+
+Mesh* Mesh::CreateSkybox()
+{
+	Mesh* mesh = new Mesh();
+	mesh->m_vertexBuffer.Create(L"SkyboxVertices", 5040, (uint32_t)(sizeof(float) * 3), SkyboxVertices);
+	mesh->m_indexBuffer.Create(L"SkyboxIndices", 5040, (uint32_t)sizeof(uint16_t), SkyboxIndices);
+	mesh->m_topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	mesh->m_indexCount = 5040;
 	return mesh;
 }
 

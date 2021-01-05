@@ -53,6 +53,7 @@ public:
 	static Mesh* CreateQuad(float x, float y, float w, float h, float depth);
 	//static Mesh* CreateCylinder();
 	static Mesh* CreateGrid(uint16_t m, uint16_t n);
+	static Mesh* CreateSkybox();
 
 	Mesh() {}
 	~Mesh() {}
