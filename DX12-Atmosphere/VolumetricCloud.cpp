@@ -106,7 +106,7 @@ void VolumetricCloud::CreateMeshes()
 void VolumetricCloud::CreateCamera()
 {
 	m_camera = CameraController::CreateCamera<SceneCamera>("Scene Camera");
-	m_camera->SetLookAt({ 2.25, 1.75, 2.10 }, { 0, 0, 0 }, { 0, 1, 0 });
+	m_camera->SetLookAt({ 2.25f, 1.75f, 2.10f }, { 0, 0, 0 }, { 0, 1, 0 });
 	m_camera->SetNearClip(0.01f);
 	m_camera->SetFarClip(10000.0f);
 }
@@ -156,6 +156,8 @@ void VolumetricCloud::Draw(const Timer& timer)
 		graphicsContext.SetPipelineState(m_skyboxPSO);
 		graphicsContext.SetDynamicConstantBufferView(0, sizeof(skyboxConstants), &skyboxConstants);
 		graphicsContext.SetDynamicConstantBufferView(1, sizeof(passConstants), &passConstants);
+		graphicsContext.TransitionResource(*m_cloudShapeManager.GetBasicCloudShape(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext.SetDynamicDescriptor(2, 0, m_cloudShapeManager.GetBasicCloudShape()->GetSRV());
 		graphicsContext.SetVertexBuffer(0, m_skyboxMesh->VertexBufferView());
 		graphicsContext.SetIndexBuffer(m_skyboxMesh->IndexBufferView());
 		graphicsContext.SetPrimitiveTopology(m_skyboxMesh->Topology());
