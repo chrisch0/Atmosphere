@@ -12,6 +12,8 @@ namespace Global
 	D3D12_STATIC_SAMPLER_DESC SamplerPointClampDesc;
 	D3D12_STATIC_SAMPLER_DESC SamplerPointBorderDesc;
 	D3D12_STATIC_SAMPLER_DESC SamplerLinearBorderDesc;
+	D3D12_STATIC_SAMPLER_DESC SamplerLinearMirrorDesc;
+	D3D12_STATIC_SAMPLER_DESC SamplerPointWrapDesc;
 
 	//D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearWrap;
 	//D3D12_CPU_DESCRIPTOR_HANDLE SamplerAnisoWrap;
@@ -97,6 +99,12 @@ namespace Global
 		SamplerLinearBorderDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 		SetTextureAddressMode(SamplerLinearBorderDesc, D3D12_TEXTURE_ADDRESS_MODE_BORDER);
 		SamplerLinearBorderDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+
+		SamplerLinearMirrorDesc = SamplerLinearWrapDesc;
+		SetTextureAddressMode(SamplerLinearMirrorDesc, D3D12_TEXTURE_ADDRESS_MODE_MIRROR);
+
+		SamplerPointWrapDesc = SamplerPointBorderDesc;
+		SetTextureAddressMode(SamplerPointWrapDesc, D3D12_TEXTURE_ADDRESS_MODE_WRAP);
 
 		// Default rasterizer states
 		RasterizerDefault.FillMode = D3D12_FILL_MODE_SOLID;

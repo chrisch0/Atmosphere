@@ -18,8 +18,8 @@ void CloudShapeManager::Initialize()
 	m_basicShapeRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
 	m_basicShapeRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 10);
 	m_basicShapeRS[2].InitAsConstantBufferView(0);
-	m_basicShapeRS.InitStaticSampler(0, Global::SamplerPointBorderDesc);
-	m_basicShapeRS.InitStaticSampler(1, Global::SamplerLinearBorderDesc);
+	m_basicShapeRS.InitStaticSampler(0, Global::SamplerPointWrapDesc);
+	m_basicShapeRS.InitStaticSampler(1, Global::SamplerLinearWrapDesc);
 	m_basicShapeRS.Finalize(L"BasicShapeRS");
 
 	m_gradientRS.Reset(2, 0);
@@ -39,6 +39,11 @@ void CloudShapeManager::Initialize()
 
 	m_basicShapeMin = 0.5f;
 	m_basicShapeMax = 2.0f;
+	m_worleySampleFreq = 1.34f;
+	m_perlinSampleFreq = 13.57f;
+	m_worleyAmp = -8.5f;
+	m_perlinAmp = 2.49f;
+	m_noiseBias = 2.19f;
 
 	CreateBasicCloudShape();
 	CreateGradient();
@@ -120,9 +125,23 @@ void CloudShapeManager::GenerateBasicCloudShape()
 	{
 		float min;
 		float max;
-	} shape_range;
-	shape_range.min = m_basicShapeMin;
-	shape_range.max = m_basicShapeMax;
+		float perlinFreq;
+		float worleyFreq;
+		float perlinAmp;
+		float worleyAmp;
+		float noiseBias;
+		int method;
+		Vector3 textureSize;
+	} shape_setting;
+	shape_setting.min = m_basicShapeMin;
+	shape_setting.max = m_basicShapeMax;
+	shape_setting.perlinFreq = m_perlinSampleFreq;
+	shape_setting.worleyFreq = m_worleySampleFreq;
+	shape_setting.perlinAmp = m_perlinAmp;
+	shape_setting.worleyAmp = m_worleyAmp;
+	shape_setting.noiseBias = m_noiseBias;
+	shape_setting.method = m_method2;
+	shape_setting.textureSize = Vector3((float)m_basicShape->GetWidth(), (float)m_basicShape->GetHeight(), (float)m_basicShape->GetDepth());
 
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_basicShapeRS);
@@ -139,7 +158,7 @@ void CloudShapeManager::GenerateBasicCloudShape()
 	context.SetDynamicDescriptor(0, 3, m_worleyFBMHigh->GetSRV());
 	context.SetDynamicDescriptor(1, 0, m_basicShape->GetUAV());
 	context.SetDynamicDescriptor(1, 1, m_basicShapeView->GetUAV());
-	context.SetDynamicConstantBufferView(2, sizeof(shape_range), &shape_range);
+	context.SetDynamicConstantBufferView(2, sizeof(shape_setting), &shape_setting);
 	context.Dispatch3D(m_basicShape->GetWidth(), m_basicShape->GetHeight(), m_basicShape->GetDepth(), 8, 8, 8);
 	context.TransitionResource(*m_basicShape, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*m_basicShapeView, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -160,7 +179,7 @@ void CloudShapeManager::GenerateGradient(std::shared_ptr<ColorBuffer> texPtr, fl
 	cloudRange.cloudMax = cloudMax;
 	cloudRange.solidCloudMin = solidMin;
 	cloudRange.solidCloudMax = solidMax;
-	cloudRange.textureSize = Vector4(texPtr->GetWidth(), texPtr->GetHeight(), 0.0f, 0.0f);
+	cloudRange.textureSize = Vector4((float)texPtr->GetWidth(), (float)texPtr->GetHeight(), 0.0f, 0.0f);
 
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_gradientRS);
@@ -199,10 +218,24 @@ void CloudShapeManager::UpdateUI()
 	ImGui::BeginGroup();
 	{
 		ImGui::PushItemWidth(125.0f);
-		ImGui::Text("Basic Cloud Shape");
-		ImGui::Text("Basic Shape Range");
-		refresh_basic_shape |= ImGui::InputFloat("Basic Shape Min", &m_basicShapeMin, 0.01f, 0.1f);
-		refresh_basic_shape |= ImGui::InputFloat("Basic Shape Max", &m_basicShapeMax, 0.01f, 0.1f);
+		static bool use_method2 = true;
+		ImGui::Checkbox("Use Method2", &use_method2);
+		if (use_method2)
+		{
+			m_method2 = (int)use_method2;
+			refresh_basic_shape |= ImGui::InputFloat("Perlin Sample Freq", &m_perlinSampleFreq, 0.01f, 0.01f);
+			refresh_basic_shape |= ImGui::InputFloat("Worley Sample Freq", &m_worleySampleFreq, 0.01f, 0.01f);
+			refresh_basic_shape |= ImGui::InputFloat("Perlin Amp", &m_perlinAmp, 0.01f, 0.01f);
+			refresh_basic_shape |= ImGui::InputFloat("Worley Amp", &m_worleyAmp, 0.01f, 0.01f);
+			refresh_basic_shape |= ImGui::InputFloat("Noise Bias", &m_noiseBias, 0.01f, 0.01f);
+		}
+		else
+		{
+			ImGui::Text("Basic Cloud Shape");
+			ImGui::Text("Basic Shape Range");
+			refresh_basic_shape |= ImGui::InputFloat("Basic Shape Min", &m_basicShapeMin, 0.01f, 0.1f);
+			refresh_basic_shape |= ImGui::InputFloat("Basic Shape Max", &m_basicShapeMax, 0.01f, 0.1f);
+		}
 		ImGui::PopItemWidth();
 
 		if (refresh_basic_shape)

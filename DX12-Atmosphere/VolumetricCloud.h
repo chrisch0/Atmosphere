@@ -17,6 +17,7 @@ public:
 	void UpdateUI() override;
 
 private:
+	void InitCloudParameters();
 	void CreatePSO();
 	void CreateMeshes();
 	void CreateCamera();
@@ -39,4 +40,23 @@ private:
 	Matrix4 m_modelMatrix;
 
 	Matrix4 m_skyboxModelMatrix;
+
+	// Cloud Setting
+	int m_sampleCountMin;
+	int m_sampleCountMax;
+	// atmosphere setting
+	float m_extinct;
+	float m_hgCoeff;
+	float m_scatterCoeff;
+	
+	// sun light setting
+	Vector3 m_sunLightRotation;
+	Vector3 m_sunLightColor;
+	int m_lightSampleCount;
+
+	// cloud shape setting
+	// TODO: replace by weather texture and density gradient texture
+	float m_altitudeMin;
+	float m_altitudeMax;
+	float m_farDistance;
 };

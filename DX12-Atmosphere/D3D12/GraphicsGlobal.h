@@ -7,10 +7,12 @@ namespace Global
 	extern D3D12_STATIC_SAMPLER_DESC SamplerAnisoWrapDesc;
 	extern D3D12_STATIC_SAMPLER_DESC SamplerShadowDesc;
 	extern D3D12_STATIC_SAMPLER_DESC SamplerLinearClampDesc;
+	extern D3D12_STATIC_SAMPLER_DESC SamplerLinearBorderDesc;
+	extern D3D12_STATIC_SAMPLER_DESC SamplerLinearMirrorDesc;
 	extern D3D12_STATIC_SAMPLER_DESC SamplerVolumeWrapDesc;
 	extern D3D12_STATIC_SAMPLER_DESC SamplerPointClampDesc;
 	extern D3D12_STATIC_SAMPLER_DESC SamplerPointBorderDesc;
-	extern D3D12_STATIC_SAMPLER_DESC SamplerLinearBorderDesc;
+	extern D3D12_STATIC_SAMPLER_DESC SamplerPointWrapDesc;
 
 	//extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearWrap;
 	//extern D3D12_CPU_DESCRIPTOR_HANDLE SamplerAnisoWrap;

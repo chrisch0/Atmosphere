@@ -36,6 +36,7 @@ bool VolumetricCloud::Initialize()
 
 	m_cloudShapeManager.Initialize();
 
+	InitCloudParameters();
 	CreatePSO();
 	CreateMeshes();
 	CreateCamera();
@@ -47,13 +48,32 @@ bool VolumetricCloud::Initialize()
 	return true;
 }
 
+void VolumetricCloud::InitCloudParameters()
+{
+	m_sampleCountMin = 8;
+	m_sampleCountMax = 40;
+
+	m_extinct = 0.0025f;
+	m_hgCoeff = 0.5f;
+	m_scatterCoeff = 0.009f;
+
+	m_sunLightRotation = Vector3(30.0f, -180.0f, 0.0f);
+	m_sunLightColor = Vector3(1.0f, 0.9568627f, 0.8392157f);
+	m_lightSampleCount = 16;
+
+	// TODO: replace by weather texture and density gradient texture
+	m_altitudeMin = 1000.0f;
+	m_altitudeMax = 5000.0f;
+	m_farDistance = 22000.0f;
+}
+
 void VolumetricCloud::CreatePSO()
 {
 	m_volumetricCloudRS.Reset(3, 1);
 	m_volumetricCloudRS[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_volumetricCloudRS[1].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	m_volumetricCloudRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
-	m_volumetricCloudRS.InitStaticSampler(0, SamplerLinearWrapDesc);
+	m_volumetricCloudRS.InitStaticSampler(0, SamplerLinearMirrorDesc);
 	m_volumetricCloudRS.Finalize(L"VolumetricCloudRS", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	D3D12_INPUT_ELEMENT_DESC layout[] =
@@ -99,8 +119,6 @@ void VolumetricCloud::CreateMeshes()
 	auto* skybox_mesh = Mesh::CreateSkybox();
 	m_skyboxMesh = std::make_shared<Mesh>();
 	m_skyboxMesh.reset(skybox_mesh);
-
-	
 }
 
 void VolumetricCloud::CreateCamera()
@@ -144,13 +162,36 @@ void VolumetricCloud::Draw(const Timer& timer)
 		skyboxConstants.modelMatrix = m_skyboxModelMatrix;
 		skyboxConstants.mvpMatrix = m_camera->GetViewProjMatrix() * m_skyboxModelMatrix;
 
-		struct  
+		__declspec(align(16)) struct
 		{
-			Vector3 viewerPos;
+			XMFLOAT3 viewerPos;
 			float time;
+			int sampleCountMin;
+			int sampleCountMax;
+			float extinct;
+			float hgCoeff;
+			float scatterCoeff;
+			XMFLOAT3 lightDir;
+			int lightSampleCount;
+			XMFLOAT3 lightColor;
+			float altitudeMin;
+			float altitudeMax;
+			float farDistance;
 		}passConstants;
-		passConstants.viewerPos = m_camera->GetPosition();
+		XMStoreFloat3(&passConstants.viewerPos, m_camera->GetPosition());
 		passConstants.time = timer.TotalTime();
+		passConstants.sampleCountMin = m_sampleCountMin;
+		passConstants.sampleCountMax = m_sampleCountMax;
+		passConstants.extinct = m_extinct;
+		passConstants.hgCoeff = m_hgCoeff;
+		passConstants.scatterCoeff = m_scatterCoeff;
+		auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
+		XMStoreFloat3(&passConstants.lightDir, -dir);
+		passConstants.lightSampleCount = m_lightSampleCount;
+		XMStoreFloat3(&passConstants.lightColor, m_sunLightColor);
+		passConstants.altitudeMin = m_altitudeMin;
+		passConstants.altitudeMax = m_altitudeMax;
+		passConstants.farDistance = m_farDistance;
 
 		graphicsContext.SetRootSignature(m_skyboxRS);
 		graphicsContext.SetPipelineState(m_skyboxPSO);
@@ -158,6 +199,8 @@ void VolumetricCloud::Draw(const Timer& timer)
 		graphicsContext.SetDynamicConstantBufferView(1, sizeof(passConstants), &passConstants);
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetBasicCloudShape(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		graphicsContext.SetDynamicDescriptor(2, 0, m_cloudShapeManager.GetBasicCloudShape()->GetSRV());
+		graphicsContext.TransitionResource(*m_cloudShapeManager.GetPerlinNoise(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext.SetDynamicDescriptor(2, 4, m_cloudShapeManager.GetPerlinNoise()->GetSRV());
 		graphicsContext.SetVertexBuffer(0, m_skyboxMesh->VertexBufferView());
 		graphicsContext.SetIndexBuffer(m_skyboxMesh->IndexBufferView());
 		graphicsContext.SetPrimitiveTopology(m_skyboxMesh->Topology());
@@ -227,7 +270,7 @@ void VolumetricCloud::UpdateUI()
 	
 	if (ImGui::BeginTabBar("##TabBar"))
 	{
-		if (ImGui::BeginTabItem("Box"))
+		/*if (ImGui::BeginTabItem("Box"))
 		{
 			float pos[3] = { m_position.GetX(), m_position.GetY(), m_position.GetZ() };
 			float scale[3] = { m_scale.GetX(), m_scale.GetY(), m_scale.GetZ() };
@@ -240,6 +283,35 @@ void VolumetricCloud::UpdateUI()
 			m_position = Vector3(pos);
 			m_scale = Vector3(scale);
 			m_rotation = Vector3(rotate);
+
+			ImGui::EndTabItem();
+		}*/
+
+		if (ImGui::BeginTabItem("Cloud Setting"))
+		{
+			ImGui::Text("Sample Setting");
+			ImGui::InputInt("Sample Count Min", &m_sampleCountMin);
+			ImGui::InputInt("Sample Count Max", &m_sampleCountMax);
+
+			ImGui::Text("Atmosphere Setting");
+			ImGui::InputFloat("Extinct", &m_extinct, 0.0001f, 0.0f, "%.4f");
+			ImGui::InputFloat("HG Coefficient", &m_hgCoeff, 0.01f);
+			ImGui::InputFloat("Scatter Coefficient", &m_scatterCoeff, 0.001f);
+
+			ImGui::Text("Sun Light");
+			float rotate[3] = { m_sunLightRotation.GetX(), m_sunLightRotation.GetY(), m_sunLightRotation.GetZ() };
+			float color[3] = { m_sunLightColor.GetX(), m_sunLightColor.GetY(), m_sunLightColor.GetZ() };
+			ImGui::DragFloat3("Rotation", rotate, 0.05f, -FLT_MAX, FLT_MAX, "%.2f");
+			ImGui::ColorEdit3("Light Color", color);
+			m_sunLightRotation = Vector3(rotate);
+			m_sunLightColor = Vector3(color);
+			ImGui::InputInt("Light Sample Count", &m_lightSampleCount);
+
+			// TODO: replace by weather texture and density gradient texture
+			ImGui::Text("Density Height Range");
+			ImGui::InputFloat("Altitude Min", &m_altitudeMin, 100.0f);
+			ImGui::InputFloat("Altitude Max", &m_altitudeMax, 100.0f);
+			ImGui::InputFloat("Far Distance", &m_farDistance, 100.0f);
 
 			ImGui::EndTabItem();
 		}
