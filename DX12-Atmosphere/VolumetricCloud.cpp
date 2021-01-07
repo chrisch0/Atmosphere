@@ -2,6 +2,7 @@
 #include "VolumetricCloud.h"
 #include "D3D12/GraphicsGlobal.h"
 #include "D3D12/CommandContext.h"
+#include "D3D12/TextureManager.h"
 #include "Utils/CameraController.h"
 #include "Utils/Camera.h"
 #include "Mesh/Mesh.h"
@@ -65,6 +66,10 @@ void VolumetricCloud::InitCloudParameters()
 	m_altitudeMin = 1000.0f;
 	m_altitudeMax = 5000.0f;
 	m_farDistance = 22000.0f;
+
+	m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	m_erosionTexture = TextureManager::LoadTGAFromFile("NoiseErosion_Volume.TGA", 32, 1);
+	m_noiseShapeTexture = TextureManager::LoadTGAFromFile("volume_test.tga", 8, 2);
 }
 
 void VolumetricCloud::CreatePSO()
@@ -312,6 +317,41 @@ void VolumetricCloud::UpdateUI()
 			ImGui::InputFloat("Altitude Min", &m_altitudeMin, 100.0f);
 			ImGui::InputFloat("Altitude Max", &m_altitudeMax, 100.0f);
 			ImGui::InputFloat("Far Distance", &m_farDistance, 100.0f);
+
+			ImGui::Text("Weather Texture");
+			//ImGui::Image((ImTextureID)(m_weatherTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f));
+
+			ImGui::Text("Erosion Texture");
+			static bool erosion_window = false;
+			static bool erosion_window_open = false;
+			if (ImGui::VolumeImageButton((ImTextureID)(m_erosionTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_erosionTexture->GetDepth()))
+			{
+				erosion_window = !erosion_window;
+				erosion_window_open = true;
+			}
+			if (erosion_window)
+			{
+				ImGui::Begin("Erosion Texture 3D", &erosion_window);
+				Utils::AutoResizeVolumeImage(m_erosionTexture, erosion_window_open);
+				ImGui::End();
+				erosion_window_open = false;
+			}
+
+			ImGui::Text("Noise Shape 128");
+			static bool noise_shape_window = false;
+			static bool noise_shape_window_open = false;
+			if (ImGui::VolumeImageButton((ImTextureID)(m_noiseShapeTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_noiseShapeTexture->GetDepth()))
+			{
+				noise_shape_window = !noise_shape_window;
+				noise_shape_window_open = true;
+			}
+			if (noise_shape_window)
+			{
+				ImGui::Begin("Noise Shape 128 Texture 3D", &noise_shape_window);
+				Utils::AutoResizeVolumeImage(m_noiseShapeTexture, noise_shape_window_open);
+				ImGui::End();
+				noise_shape_window_open = false;
+			}
 
 			ImGui::EndTabItem();
 		}

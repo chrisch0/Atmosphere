@@ -45,6 +45,9 @@
 #include <map>
 #include <type_traits>
 
+#include <wrl.h>
+#include <ppltasks.h>
+
 #include "Utils/HelperFuncs.h"
 #include "Math/Common.h"
 #include "Math/VectorMath.h"

@@ -142,6 +142,7 @@
     <ClInclude Include="D3D12\CommandAllocatorPool.h" />
     <ClInclude Include="D3D12\CommandContext.h" />
     <ClInclude Include="D3D12\CommandListManager.h" />
+    <ClInclude Include="D3D12\dds.h" />
     <ClInclude Include="D3D12\DDSTextureLoader.h" />
     <ClInclude Include="D3D12\DepthBuffer.h" />
     <ClInclude Include="D3D12\DescriptorHeap.h" />
@@ -187,6 +188,7 @@
     <ClInclude Include="Testes\FullScreenQuad.h" />
     <ClInclude Include="Utils\Camera.h" />
     <ClInclude Include="Utils\CameraController.h" />
+    <ClInclude Include="Utils\FileUtility.h" />
     <ClInclude Include="Utils\HelperFuncs.h" />
     <ClInclude Include="Utils\Timer.h" />
     <ClInclude Include="VolumetricCloud.h" />
@@ -228,6 +230,7 @@
     <ClCompile Include="Testes\FullScreenQuad.cpp" />
     <ClCompile Include="Utils\Camera.cpp" />
     <ClCompile Include="Utils\CameraController.cpp" />
+    <ClCompile Include="Utils\FileUtility.cpp" />
     <ClCompile Include="Utils\HelperFuncs.cpp" />
     <ClCompile Include="Utils\Timer.cpp" />
     <ClCompile Include="VolumetricCloud.cpp" />
@@ -322,6 +325,7 @@
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\$(Configuration)\Asm\%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
+    <None Include="packages.config" />
     <None Include="Shaders\ColorUtils.hlsli" />
     <None Include="Shaders\Common.hlsli" />
     <None Include="Shaders\FastNoiseLite.hlsli">
@@ -621,5 +625,12 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets" Condition="Exists('..\packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>这台计算机上缺少此项目引用的 NuGet 程序包。使用“NuGet 程序包还原”可下载这些程序包。有关更多信息，请参见 http://go.microsoft.com/fwlink/?LinkID=322105。缺少的文件是 {0}。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\zlib-vc140-static-64.1.2.11\build\native\zlib-vc140-static-64.targets'))" />
+  </Target>
 </Project>

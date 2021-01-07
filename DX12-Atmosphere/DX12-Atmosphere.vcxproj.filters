@@ -214,6 +214,12 @@
       <Filter>Volumetric</Filter>
     </ClInclude>
     <ClInclude Include="VolumetricCloud.h" />
+    <ClInclude Include="D3D12\dds.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils\FileUtility.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -329,6 +335,9 @@
       <Filter>Volumetric</Filter>
     </ClCompile>
     <ClCompile Include="VolumetricCloud.cpp" />
+    <ClCompile Include="Utils\FileUtility.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
@@ -414,5 +423,6 @@
     <None Include="Shaders\Common.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

@@ -4,6 +4,8 @@
 
 class Camera;
 class Mesh;
+class Texture2D;
+class Texture3D;
 
 class VolumetricCloud : public App
 {
@@ -33,6 +35,10 @@ private:
 	std::shared_ptr<Camera> m_camera;
 	std::shared_ptr<Mesh> m_boxMesh;
 	std::shared_ptr<Mesh> m_skyboxMesh;
+
+	const Texture2D* m_weatherTexture;
+	const Texture3D* m_erosionTexture;
+	const Texture3D* m_noiseShapeTexture;
 
 	Vector3 m_position;
 	Vector3 m_scale;
