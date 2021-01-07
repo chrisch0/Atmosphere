@@ -154,37 +154,45 @@ void Texture3D::CreateTGAFromMemory(const void* _filePtr, size_t fileSize, uint1
 	uint8_t numChannels = bitCount / 8;
 	uint32_t numBytes = imageWidth * imageHeight * numChannels;
 
+	const uint8_t* fileStart = filePtr;
+	// Slice Tiled Texture
 	switch (numChannels)
 	{
 	default:
 		break;
 	case 3:
-		const uint8_t* fileStart = filePtr;
-		for (int sliceX = 0; sliceX < numSliceX; ++sliceX)
+		for (int sliceY = 0; sliceY < numSliceY; ++sliceY)
 		{
-			for (int sliceY = 0; sliceY < numSliceY; ++sliceY)
+			for (int sliceX = 0; sliceX < numSliceX; ++sliceX)
 			{
 				for (int height = 0; height < sliceHeight; ++height)
 				{
+					filePtr = fileStart + 3 * (imageWidth * (sliceY * sliceHeight + height) + sliceX * sliceWidth);
 					for (int width = 0; width < sliceWidth; ++width)
 					{
-						filePtr = fileStart + 
-						{
-							*iter++ = 0xff000000 | filePtr[0] << 16 | filePtr[1] << 8 | filePtr[2];
-							filePtr += 3;
-						}
+						*iter++ = 0xff000000 | filePtr[0] << 16 | filePtr[1] << 8 | filePtr[2];
+						filePtr += 3;
 					}
 				}
-				
 			}
 		}
 		
 		break;
 	case 4:
-		for (uint32_t byteIdx = 0; byteIdx < numBytes; byteIdx += 4)
+		for (int sliceY = 0; sliceY < numSliceY; ++sliceY)
 		{
-			*iter++ = filePtr[3] << 24 | filePtr[0] << 16 | filePtr[1] << 8 | filePtr[2];
-			filePtr += 4;
+			for (int sliceX = 0; sliceX < numSliceX; ++sliceX)
+			{
+				for (int height = 0; height < sliceHeight; ++height)
+				{
+					filePtr = fileStart + 4 * (imageWidth * (sliceY * sliceHeight + height) + sliceX * sliceWidth);
+					for (int width = 0; width < sliceWidth; ++width)
+					{
+						*iter++ = filePtr[3] << 24 | filePtr[0] << 16 | filePtr[1] << 8 | filePtr[2];
+						filePtr += 4;
+					}
+				}
+			}
 		}
 		break;
 	}

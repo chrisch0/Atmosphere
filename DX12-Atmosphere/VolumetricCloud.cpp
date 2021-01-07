@@ -67,9 +67,9 @@ void VolumetricCloud::InitCloudParameters()
 	m_altitudeMax = 5000.0f;
 	m_farDistance = 22000.0f;
 
-	m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
-	m_erosionTexture = TextureManager::LoadTGAFromFile("NoiseErosion_Volume.TGA", 32, 1);
-	m_noiseShapeTexture = TextureManager::LoadTGAFromFile("volume_test.tga", 8, 2);
+	//m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
+	m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
 }
 
 void VolumetricCloud::CreatePSO()
