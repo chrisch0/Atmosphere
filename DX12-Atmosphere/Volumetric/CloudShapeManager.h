@@ -19,16 +19,17 @@ public:
 	void CreateGradient();
 
 	void GenerateBasicCloudShape();
-	void GenerateGradient(std::shared_ptr<ColorBuffer> texPtr, float cloudMin, float cloudMax, float solidMin, float solidMax);
+	void GenerateDensityHeightGradient();
 
 	void SetShowWindow(bool val) { m_showWindow = val; }
 	void SetShowNoiseGeneratorWindow(bool val);
 
 	VolumeColorBuffer* GetBasicCloudShape() const { return m_basicShape.get(); }
 	VolumeColorBuffer* GetPerlinNoise() const { return m_perlinNoise.get(); }
-	ColorBuffer* GetStratusGradient() const { return m_stratusGradient.get(); }
-	ColorBuffer* GetCumulusGradinet() const { return m_cumulusGradient.get(); }
-	ColorBuffer* GetCumulonimbusGradient() const { return m_cumulonimbusGradient.get(); }
+
+	float GetAltitudeMin() const { return m_cloudMin; }
+	float GetAltitudeMax() const { return m_cloudMax; }
+	ColorBuffer* GetDensityHeightGradient() const { return m_densityHeightGradinet.get(); }
 
 private:
 	RootSignature m_basicShapeRS;
@@ -45,9 +46,18 @@ private:
 	std::shared_ptr<VolumeColorBuffer> m_worleyFBMHigh;
 	std::shared_ptr<VolumeColorBuffer> m_basicShape;
 	std::shared_ptr<ColorBuffer> m_basicShapeView;
-	std::shared_ptr<ColorBuffer> m_stratusGradient;
-	std::shared_ptr<ColorBuffer> m_cumulusGradient;
-	std::shared_ptr<ColorBuffer> m_cumulonimbusGradient;
+
+	float m_cloudMin;
+	float m_cloudMax;
+	std::shared_ptr<ColorBuffer> m_densityHeightGradinet;
+
+	struct
+	{
+		Vector4 stratus;
+		Vector4 cumulus;
+		Vector4 cumulonimbus;
+		Vector4 textureSize;
+	}m_cloudTypeParams;
 
 	float m_basicShapeMin;
 	float m_basicShapeMax;

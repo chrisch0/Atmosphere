@@ -61,8 +61,5 @@ private:
 	int m_lightSampleCount;
 
 	// cloud shape setting
-	// TODO: replace by weather texture and density gradient texture
-	float m_altitudeMin;
-	float m_altitudeMax;
 	float m_farDistance;
 };

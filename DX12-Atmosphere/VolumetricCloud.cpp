@@ -51,8 +51,8 @@ bool VolumetricCloud::Initialize()
 
 void VolumetricCloud::InitCloudParameters()
 {
-	m_sampleCountMin = 8;
-	m_sampleCountMax = 40;
+	m_sampleCountMin = 32;
+	m_sampleCountMax = 64;
 
 	m_extinct = 0.0025f;
 	m_hgCoeff = 0.5f;
@@ -62,14 +62,11 @@ void VolumetricCloud::InitCloudParameters()
 	m_sunLightColor = Vector3(1.0f, 0.9568627f, 0.8392157f);
 	m_lightSampleCount = 16;
 
-	// TODO: replace by weather texture and density gradient texture
-	m_altitudeMin = 1000.0f;
-	m_altitudeMax = 5000.0f;
 	m_farDistance = 22000.0f;
 
-	//m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
 	m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
-	m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
+	//m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
 }
 
 void VolumetricCloud::CreatePSO()
@@ -194,8 +191,8 @@ void VolumetricCloud::Draw(const Timer& timer)
 		XMStoreFloat3(&passConstants.lightDir, -dir);
 		passConstants.lightSampleCount = m_lightSampleCount;
 		XMStoreFloat3(&passConstants.lightColor, m_sunLightColor);
-		passConstants.altitudeMin = m_altitudeMin;
-		passConstants.altitudeMax = m_altitudeMax;
+		passConstants.altitudeMin = m_cloudShapeManager.GetAltitudeMin();
+		passConstants.altitudeMax = m_cloudShapeManager.GetAltitudeMax();
 		passConstants.farDistance = m_farDistance;
 
 		graphicsContext.SetRootSignature(m_skyboxRS);
@@ -204,65 +201,16 @@ void VolumetricCloud::Draw(const Timer& timer)
 		graphicsContext.SetDynamicConstantBufferView(1, sizeof(passConstants), &passConstants);
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetBasicCloudShape(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		graphicsContext.SetDynamicDescriptor(2, 0, m_cloudShapeManager.GetBasicCloudShape()->GetSRV());
+		graphicsContext.TransitionResource(*m_cloudShapeManager.GetDensityHeightGradient(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext.SetDynamicDescriptor(2, 2, m_cloudShapeManager.GetDensityHeightGradient()->GetSRV());
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetPerlinNoise(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		graphicsContext.SetDynamicDescriptor(2, 4, m_cloudShapeManager.GetPerlinNoise()->GetSRV());
+		graphicsContext.SetDynamicDescriptor(2, 5, m_weatherTexture->GetSRV());
 		graphicsContext.SetVertexBuffer(0, m_skyboxMesh->VertexBufferView());
 		graphicsContext.SetIndexBuffer(m_skyboxMesh->IndexBufferView());
 		graphicsContext.SetPrimitiveTopology(m_skyboxMesh->Topology());
 		graphicsContext.DrawIndexed(m_skyboxMesh->IndexCount());
 	}
-
-	/*{
-		struct
-		{
-			Matrix4 mvpMatrix;
-			Matrix4 modelMatrix;
-			Vector3 modelScale;
-			Vector3 viewerPos;
-		} objectConstants;
-
-		struct
-		{
-			Matrix4 viewMatrix;
-			Matrix4 projMatrix;
-			Matrix4 viewProjMatrix;
-			Matrix4 invViewMatrix;
-			Matrix4 invProjMatrix;
-			Matrix4 invViewProjMatrix;
-			Vector3 viewerPos;
-			float time;
-		} passConstants;
-
-		objectConstants.mvpMatrix = m_camera->GetViewProjMatrix() * m_modelMatrix;
-		objectConstants.modelMatrix = m_modelMatrix;
-		objectConstants.modelScale = m_scale;
-		objectConstants.viewerPos = m_camera->GetPosition();
-
-		passConstants.viewMatrix = m_camera->GetViewMatrix();
-		passConstants.projMatrix = m_camera->GetProjMatrix();
-		passConstants.viewProjMatrix = m_camera->GetViewProjMatrix();
-		passConstants.invViewMatrix = Invert(m_camera->GetViewMatrix());
-		passConstants.invProjMatrix = Invert(m_camera->GetProjMatrix());
-		passConstants.invViewProjMatrix = Invert(m_camera->GetViewProjMatrix());
-		passConstants.viewerPos = m_camera->GetPosition();
-		passConstants.time = timer.TotalTime();
-		graphicsContext.SetRootSignature(m_volumetricCloudRS);
-		graphicsContext.SetPipelineState(m_volumetricCloudPSO);
-		graphicsContext.SetDynamicConstantBufferView(0, sizeof(objectConstants), &objectConstants);
-		graphicsContext.SetDynamicConstantBufferView(1, sizeof(passConstants), &passConstants);
-		graphicsContext.TransitionResource(*m_cloudShapeManager.GetBasicCloudShape(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.TransitionResource(*m_cloudShapeManager.GetStratusGradient(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.TransitionResource(*m_cloudShapeManager.GetCumulusGradinet(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.TransitionResource(*m_cloudShapeManager.GetCumulonimbusGradient(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.SetDynamicDescriptor(2, 0, m_cloudShapeManager.GetBasicCloudShape()->GetSRV());
-		graphicsContext.SetDynamicDescriptor(2, 1, m_cloudShapeManager.GetStratusGradient()->GetSRV());
-		graphicsContext.SetDynamicDescriptor(2, 2, m_cloudShapeManager.GetCumulusGradinet()->GetSRV());
-		graphicsContext.SetDynamicDescriptor(2, 3, m_cloudShapeManager.GetCumulonimbusGradient()->GetSRV());
-		graphicsContext.SetVertexBuffer(0, m_boxMesh->VertexBufferView());
-		graphicsContext.SetIndexBuffer(m_boxMesh->IndexBufferView());
-		graphicsContext.SetPrimitiveTopology(m_boxMesh->Topology());
-		graphicsContext.DrawIndexed(m_boxMesh->IndexCount());
-	}*/
 	graphicsContext.Finish();
 }
 
@@ -275,23 +223,6 @@ void VolumetricCloud::UpdateUI()
 	
 	if (ImGui::BeginTabBar("##TabBar"))
 	{
-		/*if (ImGui::BeginTabItem("Box"))
-		{
-			float pos[3] = { m_position.GetX(), m_position.GetY(), m_position.GetZ() };
-			float scale[3] = { m_scale.GetX(), m_scale.GetY(), m_scale.GetZ() };
-			float rotate[3] = { m_rotation.GetX(), m_rotation.GetY(), m_rotation.GetZ() };
-
-			ImGui::DragFloat3("Position", pos, 0.05f, -FLT_MAX, FLT_MAX, "%.2f");
-			ImGui::DragFloat3("Rotation", rotate, 0.05f, -FLT_MAX, FLT_MAX, "%.2f");
-			ImGui::DragFloat3("Scale", scale, 0.05f, 0.0f, FLT_MAX, "%.2f");
-
-			m_position = Vector3(pos);
-			m_scale = Vector3(scale);
-			m_rotation = Vector3(rotate);
-
-			ImGui::EndTabItem();
-		}*/
-
 		if (ImGui::BeginTabItem("Cloud Setting"))
 		{
 			ImGui::Text("Sample Setting");
@@ -312,14 +243,11 @@ void VolumetricCloud::UpdateUI()
 			m_sunLightColor = Vector3(color);
 			ImGui::InputInt("Light Sample Count", &m_lightSampleCount);
 
-			// TODO: replace by weather texture and density gradient texture
-			ImGui::Text("Density Height Range");
-			ImGui::InputFloat("Altitude Min", &m_altitudeMin, 100.0f);
-			ImGui::InputFloat("Altitude Max", &m_altitudeMax, 100.0f);
+			ImGui::Text("Raymarch Max Distance");
 			ImGui::InputFloat("Far Distance", &m_farDistance, 100.0f);
 
 			ImGui::Text("Weather Texture");
-			//ImGui::Image((ImTextureID)(m_weatherTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f));
+			ImGui::Image((ImTextureID)(m_weatherTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f));
 
 			ImGui::Text("Erosion Texture");
 			static bool erosion_window = false;
@@ -337,7 +265,7 @@ void VolumetricCloud::UpdateUI()
 				erosion_window_open = false;
 			}
 
-			ImGui::Text("Noise Shape 128");
+			/*ImGui::Text("Noise Shape 128");
 			static bool noise_shape_window = false;
 			static bool noise_shape_window_open = false;
 			if (ImGui::VolumeImageButton((ImTextureID)(m_noiseShapeTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_noiseShapeTexture->GetDepth()))
@@ -351,7 +279,7 @@ void VolumetricCloud::UpdateUI()
 				Utils::AutoResizeVolumeImage(m_noiseShapeTexture, noise_shape_window_open);
 				ImGui::End();
 				noise_shape_window_open = false;
-			}
+			}*/
 
 			ImGui::EndTabItem();
 		}

@@ -45,6 +45,9 @@ void CloudShapeManager::Initialize()
 	m_perlinAmp = 2.49f;
 	m_noiseBias = 2.19f;
 
+	m_cloudMin = 1500.0f;
+	m_cloudMax = 4000.0f;
+
 	CreateBasicCloudShape();
 	CreateGradient();
 }
@@ -97,26 +100,12 @@ void CloudShapeManager::CreateBasicCloudShape()
 
 void CloudShapeManager::CreateGradient()
 {
-	if (m_stratusGradient == nullptr)
+	if (m_densityHeightGradinet == nullptr)
 	{
-		m_stratusGradient = std::make_shared<ColorBuffer>();
-		m_stratusGradient->Create(L"StratusGradient", 1, 128, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		m_densityHeightGradinet = std::make_shared<ColorBuffer>();
+		m_densityHeightGradinet->Create(L"HeightDensityGradient", 6, 64, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	}
-	GenerateGradient(m_stratusGradient, 0.05f, 0.18f, 0.1168f, 0.119f);
-
-	if (m_cumulusGradient == nullptr)
-	{
-		m_cumulusGradient = std::make_shared<ColorBuffer>();
-		m_cumulusGradient->Create(L"CumulusGradient", 1, 128, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	}
-	GenerateGradient(m_cumulusGradient, 0.03f, 0.68f, 0.3f, 0.35f);
-
-	if (m_cumulonimbusGradient == nullptr)
-	{
-		m_cumulonimbusGradient = std::make_shared<ColorBuffer>();
-		m_cumulonimbusGradient->Create(L"CumulonimbusGradient", 1, 128, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	}
-	GenerateGradient(m_cumulonimbusGradient, 0.01f, 1.0f, 0.1f, 0.73f);
+	GenerateDensityHeightGradient();
 }
 
 void CloudShapeManager::GenerateBasicCloudShape()
@@ -165,30 +154,17 @@ void CloudShapeManager::GenerateBasicCloudShape()
 	context.Finish();
 }
 
-void CloudShapeManager::GenerateGradient(std::shared_ptr<ColorBuffer> texPtr, float cloudMin, float cloudMax, float solidMin, float solidMax)
+void CloudShapeManager::GenerateDensityHeightGradient()
 {
-	struct
-	{
-		float cloudMin;
-		float cloudMax;
-		float solidCloudMin;
-		float solidCloudMax;
-		Vector4 textureSize;
-	}cloudRange;
-	cloudRange.cloudMin = cloudMin;
-	cloudRange.cloudMax = cloudMax;
-	cloudRange.solidCloudMin = solidMin;
-	cloudRange.solidCloudMax = solidMax;
-	cloudRange.textureSize = Vector4((float)texPtr->GetWidth(), (float)texPtr->GetHeight(), 0.0f, 0.0f);
+	m_cloudTypeParams.textureSize = Vector4((float)m_densityHeightGradinet->GetWidth(), (float)m_densityHeightGradinet->GetHeight(), 0.0f, 0.0f);
 
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_gradientRS);
 	context.SetPipelineState(m_gradientPSO);
-	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	context.SetDynamicDescriptor(0, 0, texPtr->GetUAV());
-	context.SetDynamicConstantBufferView(1, sizeof(cloudRange), &cloudRange);
-	context.Dispatch2D(texPtr->GetWidth(), texPtr->GetHeight(), 1, 8);
-	context.TransitionResource(*texPtr, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*m_densityHeightGradinet, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(0, 0, m_densityHeightGradinet->GetUAV());
+	context.SetDynamicConstantBufferView(1, sizeof(m_cloudTypeParams), &m_cloudTypeParams);
+	context.Dispatch2D(m_densityHeightGradinet->GetWidth(), m_densityHeightGradinet->GetHeight(), 1, 8);
 	context.Finish();
 }
 
@@ -219,7 +195,7 @@ void CloudShapeManager::UpdateUI()
 	{
 		ImGui::PushItemWidth(125.0f);
 		static bool use_method2 = true;
-		ImGui::Checkbox("Use Method2", &use_method2);
+		refresh_basic_shape |= ImGui::Checkbox("Use Method2", &use_method2);
 		if (use_method2)
 		{
 			m_method2 = (int)use_method2;
@@ -231,6 +207,7 @@ void CloudShapeManager::UpdateUI()
 		}
 		else
 		{
+			m_method2 = (int)use_method2;
 			ImGui::Text("Basic Cloud Shape");
 			ImGui::Text("Basic Shape Range");
 			refresh_basic_shape |= ImGui::InputFloat("Basic Shape Min", &m_basicShapeMin, 0.01f, 0.1f);
@@ -283,35 +260,35 @@ void CloudShapeManager::UpdateUI()
 	ImGui::Separator();
 
 	// Cloud Density Gradient
-	ImGui::SetNextItemWidth(125.0f);
+	ImGui::PushItemWidth(125.0f);
 	ImGui::Text("Cloud Density Gradient");
-	ImGui::SetNextItemWidth(125.0f);
-	ImGui::Text("Thickness of Troposphere: 10km");
+	ImGui::InputFloat("Cloud Altitude Min", &m_cloudMin, 10.0f, 10.0f, "%.1f");
+	ImGui::InputFloat("Cloud Altitude Max", &m_cloudMax, 10.0f, 10.0f, "%.1f");
 
+	static bool dirty_flag = false;
 	// Stratus Gradient
 	{
-		static bool stratus_dirty_flag = false;
 		ImGui::BeginGroup();
 		{
-			static float stratus_range[4] = { 0.5f, 1.8f, 1.168f, 1.19f };
-			ImGui::PushItemWidth(125.0f);
+			static float stratus_range[4] = { 0.0f, 0.668f, 0.69f, 0.13f};
 			ImGui::Text("Stratus Gradient");
 			ImGui::PushID(10000);
-			stratus_dirty_flag |= ImGui::InputFloat("Cloud Bottom(km)", stratus_range, 0.01f);
-			stratus_dirty_flag |= ImGui::InputFloat("Cloud Top(km)", stratus_range + 1, 0.01f, 10.0f);
-			stratus_dirty_flag |= ImGui::InputFloat("Solid Bottom(km)", stratus_range + 2, 0.01f);
-			stratus_dirty_flag |= ImGui::InputFloat("Solid Top(km)", stratus_range + 3, 0.01f);
+			dirty_flag |= ImGui::InputFloat("Cloud Bottom", stratus_range, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Fade-in", stratus_range + 1, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Fade-out", stratus_range + 2, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Top", stratus_range + 3, 0.001f);
 			ImGui::PopID();
-			Utils::Clamp(stratus_range[0], 0.01f, stratus_range[1] - 0.02f);
-			Utils::Clamp(stratus_range[1], 0.52f, 10.0f);
-			Utils::Clamp(stratus_range[2], stratus_range[0] + 0.01f, stratus_range[3]);
-			Utils::Clamp(stratus_range[3], stratus_range[2], stratus_range[1] - 0.01f);
 
-			if (stratus_dirty_flag)
-				GenerateGradient(m_stratusGradient, stratus_range[0] / 10.0f, stratus_range[1] / 10.0f, stratus_range[2] / 10.0f, stratus_range[3] / 10.0f);
+			Utils::Clamp(stratus_range[0], 0.0f, stratus_range[3] - 0.03f);
+			Utils::Clamp(stratus_range[1], stratus_range[0] + 0.01f, stratus_range[2] - 0.01f);
+			Utils::Clamp(stratus_range[2], stratus_range[1] + 0.01f, stratus_range[3] - 0.01f);
+			Utils::Clamp(stratus_range[3], stratus_range[0] + 0.03f, 1.0f);
+
+			m_cloudTypeParams.stratus = Vector4(stratus_range);
+
 		}
 		ImGui::EndGroup(); ImGui::SameLine(300.0f);
-		ImGui::ImageButton((ImTextureID)(m_stratusGradient->GetSRV().ptr), ImVec2(128.0f, 128.0f));
+		ImGui::ImageButton((ImTextureID)(m_densityHeightGradinet->GetSRV().ptr), ImVec2(128.0f, 128.0f), ImVec2(0.125f, 0.0f), ImVec2(0.125f, 1.0f));
 	}
 
 	// Cumulus Gradient
@@ -319,25 +296,24 @@ void CloudShapeManager::UpdateUI()
 		static bool cumulus_dirty_flag = false;
 		ImGui::BeginGroup();
 		{
-			static float cumulus_range[4] = { 0.3f, 6.8f, 3.0f, 3.5f };
-			ImGui::PushItemWidth(125.0f);
+			static float cumulus_range[4] = { 0.0f, 0.27f, 0.32f, 0.65f };
 			ImGui::Text("Cumulus Gradient");
 			ImGui::PushID(10001);
-			cumulus_dirty_flag |= ImGui::InputFloat("Cloud Bottom(km)", cumulus_range, 0.01f);
-			cumulus_dirty_flag |= ImGui::InputFloat("Cloud Top(km)", cumulus_range + 1, 0.01f);
-			cumulus_dirty_flag |= ImGui::InputFloat("Solid Bottom(km)", cumulus_range + 2, 0.01f);
-			cumulus_dirty_flag |= ImGui::InputFloat("Solid Top(km)", cumulus_range + 3, 0.01f);
+			dirty_flag |= ImGui::InputFloat("Cloud Bottom", cumulus_range, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Fade-in", cumulus_range + 1, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Fade-out", cumulus_range + 2, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Top", cumulus_range + 3, 0.001f);
 			ImGui::PopID();
-			Utils::Clamp(cumulus_range[0], 0.01f, cumulus_range[1] - 0.02f);
-			Utils::Clamp(cumulus_range[1], 0.52f, 10.0f);
-			Utils::Clamp(cumulus_range[2], cumulus_range[0] + 0.01f, cumulus_range[3]);
-			Utils::Clamp(cumulus_range[3], cumulus_range[2], cumulus_range[1] - 0.01f);
 
-			if (cumulus_dirty_flag)
-				GenerateGradient(m_cumulusGradient, cumulus_range[0] / 10.0f, cumulus_range[1] / 10.0f, cumulus_range[2] / 10.0f, cumulus_range[3] / 10.0f);
+			Utils::Clamp(cumulus_range[0], 0.0f, cumulus_range[3] - 0.03f);
+			Utils::Clamp(cumulus_range[1], cumulus_range[0] + 0.01f, cumulus_range[2] - 0.01f);
+			Utils::Clamp(cumulus_range[2], cumulus_range[1] + 0.01f, cumulus_range[3]);
+			Utils::Clamp(cumulus_range[3], cumulus_range[0] + 0.03f, 1.0f);
+
+			m_cloudTypeParams.cumulus = Vector4(cumulus_range);
 		}
 		ImGui::EndGroup(); ImGui::SameLine(300.0f);
-		ImGui::ImageButton((ImTextureID)(m_cumulusGradient->GetSRV().ptr), ImVec2(128.0f, 128.0f));
+		ImGui::ImageButton((ImTextureID)(m_densityHeightGradinet->GetSRV().ptr), ImVec2(128.0f, 128.0f), ImVec2(0.5f, 0.0f), ImVec2(0.5f, 1.0f));
 	}
 
 	// Cumulonimbus Gradient
@@ -345,30 +321,31 @@ void CloudShapeManager::UpdateUI()
 		static bool cumulonimbus_dirty_flag = false;
 		ImGui::BeginGroup();
 		{
-			static float cumulonimbus_range[4] = { 0.1f, 10.0f, 1.0f, 7.3f };
-			ImGui::PushItemWidth(125.0f);
+			static float cumulonimbus_range[4] = { 0.0f, 0.09f, 0.72f, 1.0f };
 			ImGui::Text("Cumulonimbus Gradient");
 			ImGui::PushID(10002);
-			cumulonimbus_dirty_flag |= ImGui::InputFloat("Cloud Bottom(km)", cumulonimbus_range, 0.01f);
-			cumulonimbus_dirty_flag |= ImGui::InputFloat("Cloud Top(km)", cumulonimbus_range + 1, 0.01f);
-			cumulonimbus_dirty_flag |= ImGui::InputFloat("Solid Bottom(km)", cumulonimbus_range + 2, 0.01f);
-			cumulonimbus_dirty_flag |= ImGui::InputFloat("Solid Top(km)", cumulonimbus_range + 3, 0.01f);
+			dirty_flag |= ImGui::InputFloat("Cloud Bottom", cumulonimbus_range, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Fade-in", cumulonimbus_range + 1, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Fade-out", cumulonimbus_range + 2, 0.001f);
+			dirty_flag |= ImGui::InputFloat("Cloud Top", cumulonimbus_range + 3, 0.001f);
 			ImGui::PopID();
-			Utils::Clamp(cumulonimbus_range[0], 0.01f, cumulonimbus_range[1] - 0.02f);
-			Utils::Clamp(cumulonimbus_range[1], 0.52f, 10.0f);
-			Utils::Clamp(cumulonimbus_range[2], cumulonimbus_range[0] + 0.01f, cumulonimbus_range[3]);
-			Utils::Clamp(cumulonimbus_range[3], cumulonimbus_range[2], cumulonimbus_range[1] - 0.01f);
 
-			if (cumulonimbus_dirty_flag)
-				GenerateGradient(m_cumulonimbusGradient, cumulonimbus_range[0] / 10.0f, cumulonimbus_range[1] / 10.0f, cumulonimbus_range[2] / 10.0f, cumulonimbus_range[3] / 10.0f);
+			Utils::Clamp(cumulonimbus_range[0], 0.0f, cumulonimbus_range[3] - 0.03f);
+			Utils::Clamp(cumulonimbus_range[1], cumulonimbus_range[0] + 0.01f, cumulonimbus_range[2] - 0.01f);
+			Utils::Clamp(cumulonimbus_range[2], cumulonimbus_range[1] + 0.01f, cumulonimbus_range[3]);
+			Utils::Clamp(cumulonimbus_range[3], cumulonimbus_range[0] + 0.03f, 1.0f);
+
+			m_cloudTypeParams.cumulonimbus = Vector4(cumulonimbus_range);
 		}
 		ImGui::EndGroup(); ImGui::SameLine(300.0f);
-		ImGui::ImageButton((ImTextureID)(m_cumulonimbusGradient->GetSRV().ptr), ImVec2(128.0f, 128.0f));
+		ImGui::ImageButton((ImTextureID)(m_densityHeightGradinet->GetSRV().ptr), ImVec2(128.0f, 128.0f), ImVec2(0.8f, 0.0f), ImVec2(0.8f, 1.0f));
 	}
+	ImGui::PopItemWidth();
 
 	ImGui::End();
 
-
+	if (dirty_flag)
+		GenerateDensityHeightGradient();
 }
 
 void CloudShapeManager::SetShowNoiseGeneratorWindow(bool val) 
