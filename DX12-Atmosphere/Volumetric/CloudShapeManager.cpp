@@ -105,6 +105,11 @@ void CloudShapeManager::CreateGradient()
 		m_densityHeightGradinet = std::make_shared<ColorBuffer>();
 		m_densityHeightGradinet->Create(L"HeightDensityGradient", 6, 64, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	}
+	m_cloudTypeParams.stratus = Vector4(0.0f, 0.058f, 0.068f, 0.13f);
+	m_cloudTypeParams.cumulus = Vector4(0.0f, 0.27f, 0.32f, 0.65f);
+	m_cloudTypeParams.cumulonimbus = Vector4(0.0f, 0.09f, 0.72f, 1.0f);
+	m_cloudTypeParams.textureSize = Vector4((float)m_densityHeightGradinet->GetWidth(), (float)m_densityHeightGradinet->GetHeight(), 0.0f, 0.0f);
+
 	GenerateDensityHeightGradient();
 }
 
@@ -156,8 +161,6 @@ void CloudShapeManager::GenerateBasicCloudShape()
 
 void CloudShapeManager::GenerateDensityHeightGradient()
 {
-	m_cloudTypeParams.textureSize = Vector4((float)m_densityHeightGradinet->GetWidth(), (float)m_densityHeightGradinet->GetHeight(), 0.0f, 0.0f);
-
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_gradientRS);
 	context.SetPipelineState(m_gradientPSO);
@@ -270,7 +273,7 @@ void CloudShapeManager::UpdateUI()
 	{
 		ImGui::BeginGroup();
 		{
-			static float stratus_range[4] = { 0.0f, 0.668f, 0.69f, 0.13f};
+			static float stratus_range[4] = { 0.0f, 0.058f, 0.068f, 0.13f};
 			ImGui::Text("Stratus Gradient");
 			ImGui::PushID(10000);
 			dirty_flag |= ImGui::InputFloat("Cloud Bottom", stratus_range, 0.001f);

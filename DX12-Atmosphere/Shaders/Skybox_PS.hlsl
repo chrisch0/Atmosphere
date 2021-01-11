@@ -1,3 +1,5 @@
+#include "Random.hlsli"
+
 cbuffer PassConstants : register(b0)
 {
 	float3 ViewerPos;
@@ -17,10 +19,13 @@ cbuffer PassConstants : register(b0)
 
 Texture3D<float4> BasicCloudShape : register(t0);
 Texture2D<float4> DensityHeightGradient : register(t1);
+Texture3D<float4> ErosionTexture : register(t2);
 Texture3D<float> PerlinNoise : register(t4);
 Texture2D<float3> WeatherTexture : register(t5);
 
 SamplerState LinearRepeatSampler : register(s0);
+
+static int SampleCount = 0;
 
 struct PSInput
 {
@@ -63,6 +68,7 @@ float3 GetWeatherData(float3 posWS)
 {
 	//float2 uv = (posWS.xz) * 0.0005f;
 	float2 uv = (posWS.xz + 10000.0f) * 0.00005f;
+	SampleCount++;
 	return WeatherTexture.Sample(LinearRepeatSampler, uv);
 }
 
@@ -75,14 +81,16 @@ float GetHeightFractionForPoint(float3 posWS)
 float GetDensityHeightGradientForPoint(float3 posWS, float3 weatherData)
 {
 	float height_fraction = GetHeightFractionForPoint(posWS);
+	SampleCount++;
 	return DensityHeightGradient.SampleLevel(LinearRepeatSampler, float2(weatherData.g, height_fraction), 0).r;
 }
 
 float SampleNoise(float3 posWS)
 {
-	const float scale = 0.00005f;
+	const float scale = 0.0001f;
 	
-	float3 uvw = (posWS) * scale;
+	float3 uvw = (posWS + 5000) * scale;
+	SampleCount++;
 	float4 low_frequency_noises = BasicCloudShape.SampleLevel(LinearRepeatSampler, uvw, 0);
 	float low_freq_FBM =
 		(low_frequency_noises.g * 0.625f) +
@@ -94,6 +102,100 @@ float SampleNoise(float3 posWS)
 	float density_height_gradient = GetDensityHeightGradientForPoint(posWS, weather_data);
 	
 	return base_cloud * pow(weather_data.r, 2.0) * density_height_gradient;
+
+	/*base_cloud *= density_height_gradient;
+	float cloud_coverage = 0.5;
+	float base_cloud_with_coverage = Remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
+	base_cloud_with_coverage *= cloud_coverage;
+	return base_cloud_with_coverage;*/
+}
+
+float SampleCloudDensity(float3 posWS, float step, float3 weatherData, bool cheapSample)
+{
+	float density = 0.0f;
+	const float scale = 0.00005f;
+	float3 uvw = posWS * scale;
+
+	SampleCount++;
+	float4 low_frequency_noises = BasicCloudShape.SampleLevel(LinearRepeatSampler, uvw, 0);
+	float low_freq_FBM =
+		(low_frequency_noises.g * 0.625f) +
+		(low_frequency_noises.b * 0.25f) +
+		(low_frequency_noises.a * 0.125f);
+	float base_cloud = Remap(low_frequency_noises.r, -(1.0f - low_freq_FBM), 1.0, 0.0, 1.0);
+
+	float density_height_gradient = GetDensityHeightGradientForPoint(posWS, weatherData);
+
+	base_cloud *= density_height_gradient;
+
+	return density;
+}
+
+float SampleCloudDensityAlongRay(float3 posWS)
+{
+	float density_along_cone = 0.0;
+	float stride = (AltitudeMax - posWS.y) / (LightDir.y * 6.0);
+	float3 light_step = LightDir * stride;
+	float cone_spread_multiplier = stride * 0.6;
+	for (int i = 0; i <= 6; i++)
+	{
+		posWS += light_step + (cone_spread_multiplier * GetRandVec3(1234, floor(posWS)) * floor(i));
+		float3 weather_data = GetWeatherData(posWS);
+		if (density_along_cone < 0.3)
+		{
+			density_along_cone += SampleCloudDensity(posWS, stride, weather_data, false);
+		}
+		else
+		{
+			density_along_cone += SampleCloudDensity(posWS, stride, weather_data, true);
+		}
+	}
+	return density_along_cone;
+}
+
+float Raymarch(float3 startWS, float step, int sampleCount)
+{
+	float density = 0.0;
+	float cloud_test = 0.0;
+	int zero_density_sample_count = 0;
+	float3 posWS = startWS;
+
+	for (int i = 0; i < sampleCount; ++i)
+	{
+		float3 weather_data = GetWeatherData(posWS);
+		if (cloud_test > 0.0)
+		{
+			float sampled_density = SampleCloudDensity(posWS, step, weather_data, false);
+			float density_along_light_ray = 0.0;
+
+			if (sampled_density == 0.0)
+			{
+				zero_density_sample_count++;
+			}
+			
+			if (zero_density_sample_count != 6)
+			{
+				density += sampled_density;
+				if (sampled_density != 0.0)
+				{
+					density_along_light_ray = SampleCloudDensityAlongRay(posWS);
+				}
+				posWS += step;
+			}
+			else
+			{
+				cloud_test = 0.0;
+				zero_density_sample_count = 0;
+			}
+		}
+		else
+		{
+			cloud_test = SampleCloudDensity(posWS, step, weather_data, true);
+			if (cloud_test == 0.0)
+				posWS += step;
+		}
+	}
+	return density;
 }
 
 float MarchLight(float3 posWS, float rand)
@@ -155,5 +257,6 @@ float4 main(PSInput psInput) : SV_Target
 	acc = lerp(acc, psInput.skyColor, saturate(dist0 / FarDistance));
 
 	return float4(acc, 1.0);
+	return float4(SampleCount / 2000, 0,0, 1.0);
 }
 

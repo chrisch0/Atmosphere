@@ -27,6 +27,13 @@ public:
 		return LoadTGAFromFile(std::wstring(fileName.begin(), fileName.end()), numSliceX, numSliceY, sRGB);
 	}
 
+	static const Texture2D* LoadTextureFromFile(const std::wstring& fileName, bool sRGB = false);
+	static const Texture2D* LoadTextureFromFile(const std::string& fileName, bool sRGB = false)
+	{
+		return LoadTextureFromFile(std::wstring(fileName.begin(), fileName.end()), sRGB);
+	}
+
+
 	static void Shutdown();
 private:
 	static std::mutex s_mutex;

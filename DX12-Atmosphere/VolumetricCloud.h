@@ -39,6 +39,7 @@ private:
 	const Texture2D* m_weatherTexture;
 	const Texture3D* m_erosionTexture;
 	const Texture3D* m_noiseShapeTexture;
+	const Texture3D* m_curlNoiseTexture;
 
 	Vector3 m_position;
 	Vector3 m_scale;

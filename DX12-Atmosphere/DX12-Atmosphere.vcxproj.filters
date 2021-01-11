@@ -220,6 +220,9 @@
     <ClInclude Include="Utils\FileUtility.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="D3D12\FreeImage.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -424,5 +427,8 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="Shaders\Random.hlsli">
+      <Filter>Shaders\Volumetric</Filter>
+    </None>
   </ItemGroup>
 </Project>

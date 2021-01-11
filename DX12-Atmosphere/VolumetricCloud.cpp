@@ -65,6 +65,8 @@ void VolumetricCloud::InitCloudParameters()
 	m_farDistance = 22000.0f;
 
 	m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	m_curlNoiseTexture = TextureManager::LoadTGAFromFile("CurlNoise_Volume.TGA", 16, 16);
+	//m_curlNoiseTexture = TextureManager::LoadTGAFromFile("T_CurlNoise_16by8_128res_Tiling_9.tga", 16, 8);
 	m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
 	//m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
 }
@@ -202,7 +204,7 @@ void VolumetricCloud::Draw(const Timer& timer)
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetBasicCloudShape(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		graphicsContext.SetDynamicDescriptor(2, 0, m_cloudShapeManager.GetBasicCloudShape()->GetSRV());
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetDensityHeightGradient(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.SetDynamicDescriptor(2, 2, m_cloudShapeManager.GetDensityHeightGradient()->GetSRV());
+		graphicsContext.SetDynamicDescriptor(2, 1, m_cloudShapeManager.GetDensityHeightGradient()->GetSRV());
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetPerlinNoise(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		graphicsContext.SetDynamicDescriptor(2, 4, m_cloudShapeManager.GetPerlinNoise()->GetSRV());
 		graphicsContext.SetDynamicDescriptor(2, 5, m_weatherTexture->GetSRV());
@@ -280,6 +282,22 @@ void VolumetricCloud::UpdateUI()
 				ImGui::End();
 				noise_shape_window_open = false;
 			}*/
+
+			ImGui::Text("Curl Noise");
+			static bool curl_noise_window = false;
+			static bool curl_noise_window_open = false;
+			if (ImGui::VolumeImageButton((ImTextureID)(m_curlNoiseTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_curlNoiseTexture->GetDepth()))
+			{
+				curl_noise_window = !curl_noise_window;
+				curl_noise_window_open = true;
+			}
+			if (curl_noise_window)
+			{
+				ImGui::Begin("Curl Noise Texture 3D", &curl_noise_window);
+				Utils::AutoResizeVolumeImage(m_curlNoiseTexture, curl_noise_window_open);
+				ImGui::End();
+				curl_noise_window_open = false;
+			}
 
 			ImGui::EndTabItem();
 		}
