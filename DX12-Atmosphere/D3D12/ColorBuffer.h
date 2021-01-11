@@ -39,6 +39,8 @@ public:
 
 	Color GetClearColor() const { return m_clearColor; }
 
+	void GenerateMinMaps(CommandContext& context);
+
 protected:
 
 	D3D12_RESOURCE_FLAGS CombineResourceFlags() const

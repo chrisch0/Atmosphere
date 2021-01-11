@@ -45,6 +45,12 @@ void ColorBuffer::CreateArray(const std::wstring& name, uint32_t width, uint32_t
 	CreateDerivedViews(g_Device, format, arrayCount, 1);
 }
 
+void ColorBuffer::GenerateMinMaps(CommandContext& context)
+{
+	if (m_numMipMaps == 0)
+		return;
+}
+
 void ColorBuffer::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, uint32_t arraySize, uint32_t numMips)
 {
 	assert(arraySize == 1 || numMips == 1);

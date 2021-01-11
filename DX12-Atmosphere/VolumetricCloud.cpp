@@ -64,7 +64,8 @@ void VolumetricCloud::InitCloudParameters()
 
 	m_farDistance = 22000.0f;
 
-	m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	//m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	m_weatherTexture = TextureManager::LoadDDSFromFile("RT_Perlin_Worley_sRGB.DDS");
 	m_curlNoiseTexture = TextureManager::LoadTGAFromFile("CurlNoise_Volume.TGA", 16, 16);
 	//m_curlNoiseTexture = TextureManager::LoadTGAFromFile("T_CurlNoise_16by8_128res_Tiling_9.tga", 16, 8);
 	m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);

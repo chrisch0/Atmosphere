@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "TextureManager.h"
-#include "FreeImage.h"
 #include "Utils/FileUtility.h"
 
 std::mutex TextureManager::s_mutex;
@@ -51,6 +50,35 @@ const Texture2D* TextureManager::CreateTexture2D(const std::wstring& name, uint3
 	return texPtr;
 }
 
+const Texture2D* TextureManager::LoadTexture2DFromFile(const std::wstring& fileName, bool sRGB /* = false */)
+{
+	std::wstring catPath = fileName;
+
+	const Texture2D* texPtr = LoadDDSFromFile(catPath + L".dds", sRGB);
+	if (!texPtr->isValid())
+		texPtr = LoadTGAFromFile(catPath + L".tga", sRGB);
+
+	return texPtr;
+}
+
+const Texture2D* TextureManager::LoadDDSFromFile(const std::wstring& fileName, bool sRGB /* = false */)
+{
+	auto tex = FindOrLoadTexture2D(fileName);
+
+	Texture2D* texPtr = tex.first;
+	bool needLoad = tex.second;
+	if (!needLoad)
+		return texPtr;
+
+	Utils::ByteArray ba = Utils::ReadFileSync(s_rootPath + fileName);
+	if (ba->size() > 0)
+	{
+		texPtr->CreateDDSFromMemory(ba->data(), ba->size(), sRGB);
+		texPtr->GetResource()->SetName(fileName.c_str());
+	}
+	return texPtr;
+}
+
 const Texture2D* TextureManager::LoadTGAFromFile(const std::wstring& fileName, bool sRGB /* = false */)
 {
 	auto tex = FindOrLoadTexture2D(fileName);
@@ -68,48 +96,6 @@ const Texture2D* TextureManager::LoadTGAFromFile(const std::wstring& fileName, b
 	}
 	
 	return texPtr;
-}
-
-const Texture2D* TextureManager::LoadTextureFromFile(const std::wstring& fileName, bool sRGB /* = false */)
-{
-	auto tex = FindOrLoadTexture2D(fileName);
-
-	Texture2D* texPtr = tex.first;
-	bool needLoad = tex.second;
-	if (!needLoad)
-		return texPtr;
-
-	//image format
-	FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
-	//pointer to the image, once loaded
-	FIBITMAP *dib(0);
-	//pointer to the image data
-	BYTE* bits(0);
-	//image width and height
-	unsigned int width(0), height(0);
-
-	std::string filename(fileName.begin(), fileName.end());
-	filename = "Textures/" + filename;
-	//check the file signature and deduce its format
-	fif = FreeImage_GetFileType(filename.c_str(), 0);
-	//if still unknown, try to guess the file format from the file extension
-	if (fif == FIF_UNKNOWN)
-		fif = FreeImage_GetFIFFromFilename(filename.c_str());
-
-	//check that the plugin has reading capabilities and load the file
-	if (FreeImage_FIFSupportsReading(fif))
-		dib = FreeImage_Load(fif, filename.c_str());
-
-	//retrieve the image data
-	bits = FreeImage_GetBits(dib);
-	//get the image width and height
-	width = FreeImage_GetWidth(dib);
-	height = FreeImage_GetHeight(dib);
-	
-	texPtr->Create(width, height, DXGI_FORMAT_R32G32B32A32_FLOAT, bits);
-	texPtr->GetResource()->SetName(fileName.c_str());
-	return texPtr;
-
 }
 
 const Texture3D* TextureManager::LoadTGAFromFile(const std::wstring& fileName, uint16_t numSliceX, uint16_t numSliceY, bool sRGB)

@@ -11,11 +11,21 @@ public:
 	static const Texture& GetSolidColorTex2D(const std::wstring& name, DXGI_FORMAT format, T color[4]);
 	static const Texture2D* CreateTexture2D(const std::wstring& name, uint32_t width, uint32_t height, DXGI_FORMAT format, const void* data);
 
-	//static const Texture2D* LoadTexture2DFromFile(const std::wstring& fileName, bool sRGB = false);
-	//static const Texture2D* LoadDDSFromFile(const std::wstring& fileName, bool sRGB = false);
+	static const Texture2D* LoadTexture2DFromFile(const std::wstring& fileName, bool sRGB = false);
+	static const Texture2D* LoadDDSFromFile(const std::wstring& fileName, bool sRGB = false);
 	static const Texture2D* LoadTGAFromFile(const std::wstring& fileName, bool sRGB = false);
 
 	static const Texture3D* LoadTGAFromFile(const std::wstring& fileName, uint16_t numSliceX, uint16_t numSliceY, bool sRGB = false);
+
+	static const Texture2D* LoadTexture2DFromFile(const std::string& fileName, bool sRGB = false)
+	{
+		return LoadTexture2DFromFile(std::wstring(fileName.begin(), fileName.end()), sRGB);
+	}
+
+	static const Texture2D* LoadDDSFromFile(const std::string& fileName, bool sRGB = false)
+	{
+		return LoadDDSFromFile(std::wstring(fileName.begin(), fileName.end()), sRGB);
+	}
 
 	static const Texture2D* LoadTGAFromFile(const std::string& fileName, bool sRGB = false)
 	{
@@ -26,13 +36,6 @@ public:
 	{
 		return LoadTGAFromFile(std::wstring(fileName.begin(), fileName.end()), numSliceX, numSliceY, sRGB);
 	}
-
-	static const Texture2D* LoadTextureFromFile(const std::wstring& fileName, bool sRGB = false);
-	static const Texture2D* LoadTextureFromFile(const std::string& fileName, bool sRGB = false)
-	{
-		return LoadTextureFromFile(std::wstring(fileName.begin(), fileName.end()), sRGB);
-	}
-
 
 	static void Shutdown();
 private:
