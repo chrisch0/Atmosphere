@@ -50,6 +50,9 @@
     <Filter Include="Shaders\Volumetric">
       <UniqueIdentifier>{79167b2e-4f84-4f8d-bb22-37e6292021e0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\HDR">
+      <UniqueIdentifier>{ceb11e6d-f8ce-423e-ae1c-759323857b94}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -429,6 +432,15 @@
     </FxCompile>
     <FxCompile Include="Shaders\GenerateErosionNoise_CS.hlsl">
       <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ExtractLuma_CS.hlsl">
+      <Filter>Shaders\HDR</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GenerateHistogram_CS.hlsl">
+      <Filter>Shaders\HDR</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\AdaptExposure_CS.hlsl">
+      <Filter>Shaders\HDR</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -181,6 +181,14 @@ void CommandContext::InitializeBuffer(GpuResource& dest, const void* bufferData,
 	initContext.Flush(true);
 }
 
+void CommandContext::WriteBuffer(GpuResource& dest, size_t destOffset, const void* data, size_t numBytes)
+{
+	assert(data != nullptr);
+	auto tempSpace = m_cpuLinearAllocator.Allocate(numBytes, L"TempSpace", 512);
+	memcpy(tempSpace.dataPtr, data, numBytes);
+	CopyBufferRegion(dest, destOffset, tempSpace.buffer, tempSpace.offset, numBytes);
+}
+
 void CommandContext::InitializeTexture(GpuResource& dest, uint32_t numSubresources, D3D12_SUBRESOURCE_DATA subData[])
 {
 	uint64_t uploadBufferSize = GetRequiredIntermediateSize(dest.GetResource(), 0, numSubresources);
@@ -550,7 +558,7 @@ void ComputeContext::ClearUAV(GpuBuffer& target)
 	// After binding a UAV, we can get a GPU handle that is required to clear it as a UAV (because it essentially runs
 	// a shader to set all of the values).
 	D3D12_GPU_DESCRIPTOR_HANDLE gpuVisibleHandle = m_dynamicViewDescriptorHeap.UploadDirect(target.GetUAV());
-	const uint32_t clearColor[4] = {};
+	const uint32_t clearColor[4] = {0, 0, 0, 0};
 	m_commandList->ClearUnorderedAccessViewUint(gpuVisibleHandle, target.GetUAV(), target.GetResource(), clearColor, 0, nullptr);
 }
 

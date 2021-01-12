@@ -32,3 +32,10 @@ float3 HSVToRGB(float3 hsv)
 	rgb += float3(m, m, m);
 	return rgb;
 }
+
+// This assumes the default color gamut found in sRGB and REC709.  The color primaries determine these
+// coefficients.  Note that this operates on linear values, not gamma space.
+float RGBToLuminance(float3 x)
+{
+	return dot(x, float3(0.212671, 0.715160, 0.072169));        // Defined by sRGB/Rec.709 gamut
+}

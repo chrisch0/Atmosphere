@@ -209,7 +209,8 @@ void App::CreateSwapChain()
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(displayPlaneBuffer.GetAddressOf())));
 			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
 		}
-		m_sceneColorBuffer.Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, DXGI_FORMAT_R11G11B10_FLOAT);
+		m_sceneColorBuffer = std::make_shared<ColorBuffer>();
+		m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, DXGI_FORMAT_R11G11B10_FLOAT);
 	}
 
 	m_screenViewport.TopLeftX = 0.0;

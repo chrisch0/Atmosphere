@@ -108,8 +108,13 @@ public:
 		return m_dynamicMemoryAllocator.Allocate(sizeInBytes);
 	}
 
+	void CopyBuffer(GpuResource& dest, GpuResource& src);
+	void CopyBufferRegion(GpuResource& dest, size_t destOffset, GpuResource& src, size_t srcOffset, size_t numBytes);
+
 	static void InitializeBuffer(GpuResource& dest, const void* bufferData, size_t numBytes, size_t offset = 0, const std::wstring& name = L"");
 	static void InitializeTexture(GpuResource& dest, uint32_t numSubresources, D3D12_SUBRESOURCE_DATA subData[]);
+
+	void WriteBuffer(GpuResource& dest, size_t destOffset, const void* data, size_t numBytes);
 
 	void TransitionResource(GpuResource& resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
 	void InsertUAVBarrier(GpuResource& resource, bool flushImmediate = false);
@@ -248,6 +253,21 @@ public:
 	//void DispatchIndirect(GpuBuffer& argumentBuffer, uint64_t argumentBufferOffset = 0);
 	//void ExecuteIndirect(CommandSignature& commandSig, GpuBuff)
 };
+
+inline void CommandContext::CopyBuffer(GpuResource& dest, GpuResource& src)
+{
+	TransitionResource(dest, D3D12_RESOURCE_STATE_COPY_DEST);
+	TransitionResource(src, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	FlushResourceBarriers();
+	m_commandList->CopyResource(dest.GetResource(), src.GetResource());
+}
+
+inline void CommandContext::CopyBufferRegion(GpuResource& dest, size_t destOffset, GpuResource& src, size_t srcOffset, size_t numBytes)
+{
+	TransitionResource(dest, D3D12_RESOURCE_STATE_COPY_DEST);
+	TransitionResource(src, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	m_commandList->CopyBufferRegion(dest.GetResource(), destOffset, src.GetResource(), srcOffset, numBytes);
+}
 
 inline void ComputeContext::SetRootSignature(const RootSignature& rootSig)
 {
