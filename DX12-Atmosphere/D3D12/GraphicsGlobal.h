@@ -1,6 +1,9 @@
 #pragma once
 #include "stdafx.h"
 
+class RootSignature;
+class ComputePSO;
+
 namespace Global
 {
 	extern D3D12_STATIC_SAMPLER_DESC SamplerLinearWrapDesc;
@@ -45,6 +48,9 @@ namespace Global
 	extern D3D12_DEPTH_STENCIL_DESC DepthStateReadOnly;
 	extern D3D12_DEPTH_STENCIL_DESC DepthStateReadOnlyReversed;
 	extern D3D12_DEPTH_STENCIL_DESC DepthStateTestEqual;
+
+	extern RootSignature CreateVolumeTextureRS;
+	extern ComputePSO CreateVolumeTexturePSO;
 
 	void InitializeGlobalStates();
 	void DestroyGlobalStates();

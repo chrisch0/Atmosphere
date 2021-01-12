@@ -290,18 +290,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 		bool image_view = m_imageWindow[i];
 		static bool window_open = false;
 		auto volume_tex = std::dynamic_pointer_cast<VolumeColorBuffer>(iter->second);
-		if (ImGui::VolumeImageButton((ImTextureID)(volume_tex->GetSRV().ptr), ImVec2(256.0f, 256.0f), volume_tex->GetDepth()))
-		{
-			image_view = !image_view;
-			window_open = true;
-		}
-		if (image_view)
-		{
-			ImGui::Begin(name.c_str(), &image_view);
-			Utils::AutoResizeVolumeImage(volume_tex.get(), window_open);
-			ImGui::End();
-			window_open = false;
-		}
+		ImGui::PreviewVolumeImageButton(volume_tex.get(), ImVec2(256.0f, 256.0f), name.c_str(), &image_view, &window_open);
 		m_imageWindow[i] = image_view;
 	}
 	else
@@ -309,18 +298,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 		bool image_view = m_imageWindow[i];
 		static bool window_open = false;
 		auto tex = std::dynamic_pointer_cast<ColorBuffer>(iter->second);
-		if (ImGui::ImageButton((ImTextureID)(tex->GetSRV().ptr), ImVec2(256.0f, 256.0f)))
-		{
-			image_view = !image_view;
-			window_open = true;
-		}
-		if (image_view)
-		{
-			ImGui::Begin(name.c_str(), &image_view);
-			Utils::AutoResizeImage(tex.get(), window_open);
-			ImGui::End();
-			window_open = false;
-		}
+		ImGui::PreviewImageButton(tex.get(), ImVec2(256.0f, 256.0f), name.c_str(), &image_view, &window_open);
 		m_imageWindow[i] = image_view;
 	}
 	m_dirtyFlags[i] = dirty_flag;

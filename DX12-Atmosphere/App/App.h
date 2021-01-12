@@ -106,6 +106,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_depthStencilBuffer;
 
 	ColorBuffer m_displayBuffer[c_swapChainBufferCount];
+	ColorBuffer m_sceneColorBuffer;
 
 	int m_frameIndex = 0;
 

@@ -1,5 +1,8 @@
 #include "stdafx.h"
 #include "ColorBuffer.h"
+#include "Texture.h"
+#include "CommandContext.h"
+#include "PipelineState.h"
 
 void ColorBuffer::CreateFromSwapChain(const std::wstring& name, ID3D12Resource* baseResource)
 {
@@ -144,6 +147,24 @@ void VolumeColorBuffer::Create(const std::wstring& name, uint32_t width, uint32_
 
 	CreateTextureResource(g_Device, name, resourceDesc, clearValue, vidMemPtr);
 	CreateDerivedViews(g_Device, format, numMips);
+}
+
+void VolumeColorBuffer::CreateFromTexture2D(const std::wstring& name, const Texture2D* tex, uint32_t numSliceX, uint32_t numSliceY, uint32_t numMips, DXGI_FORMAT format, D3D12_GPU_VIRTUAL_ADDRESS vidMemPtr /* = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN */)
+{
+	uint32_t width = tex->GetWidth() / numSliceX;
+	uint32_t height = tex->GetHeight() / numSliceY;
+	uint32_t depth = numSliceX * numSliceY;
+	Create(name, width, height, depth, numMips, format, vidMemPtr);
+
+	ComputeContext& context = ComputeContext::Begin();
+	context.SetRootSignature(Global::CreateVolumeTextureRS);
+	context.SetPipelineState(Global::CreateVolumeTexturePSO);
+	context.TransitionResource(*this, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetConstants(0, width, height, numSliceX, numSliceY);
+	context.SetDynamicDescriptor(1, 0, tex->GetSRV());
+	context.SetDynamicDescriptor(2, 0, GetUAV());
+	context.Dispatch3D(width, height, depth, 8, 8, 8);
+	context.Finish();
 }
 
 void VolumeColorBuffer::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, uint32_t numMips)

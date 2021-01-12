@@ -27,7 +27,7 @@ cbuffer CloudShapeSetting : register(b0)
 float Remap(float originalValue, float originalMin, float originalMax,
 	float newMin, float newMax)
 {
-	return newMin + (((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin));
+	return newMin + (saturate((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin));
 }
 
 [numthreads(8, 8, 8)]
@@ -50,11 +50,12 @@ void main( uint3 globalID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex
 	}
 	else
 	{
-		float w = basic_shape.y;
-		//basic_shape.x = (p - w) / max(0.1, (1.0 - w));
-
+		/*float w = basic_shape.y;
 		basic_shape.x = w - p * (1.0 - w);
-		basic_shape.x = saturate(basic_shape.x + MinValue);
+		basic_shape.x = saturate(basic_shape.x + MinValue);*/
+
+		float w = 1.0f - basic_shape.y;
+		basic_shape.x = Remap(p, w, 1.0, 0.0, 1.0);
 
 		//basic_shape.x = (basic_shape.x - MinValue) / (MaxValue - MinValue);
 		/*basic_shape.x = (p + basic_shape.y);

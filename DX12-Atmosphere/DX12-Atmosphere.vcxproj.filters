@@ -223,6 +223,12 @@
     <ClInclude Include="D3D12\FreeImage.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="imgui\imgui_custom.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D12\PostProcess.h">
+      <Filter>D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -341,6 +347,12 @@
     <ClCompile Include="Utils\FileUtility.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+    <ClCompile Include="imgui\imgui_custom.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D12\PostProcess.cpp">
+      <Filter>D3D12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
@@ -410,6 +422,12 @@
       <Filter>Shaders\Volumetric</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Skybox_PS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\CreateVolumeTexture_CS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GenerateErosionNoise_CS.hlsl">
       <Filter>Shaders\Volumetric</Filter>
     </FxCompile>
   </ItemGroup>

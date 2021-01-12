@@ -6,6 +6,7 @@ class Camera;
 class Mesh;
 class Texture2D;
 class Texture3D;
+class VolumeColorBuffer;
 
 class VolumetricCloud : public App
 {
@@ -23,6 +24,7 @@ private:
 	void CreatePSO();
 	void CreateMeshes();
 	void CreateCamera();
+	void SwitchBasicCloudShape(int idx);
 
 	CloudShapeManager m_cloudShapeManager;
 
@@ -37,9 +39,10 @@ private:
 	std::shared_ptr<Mesh> m_skyboxMesh;
 
 	const Texture2D* m_weatherTexture;
-	const Texture3D* m_erosionTexture;
-	const Texture3D* m_noiseShapeTexture;
-	const Texture3D* m_curlNoiseTexture;
+	std::shared_ptr<VolumeColorBuffer> m_curlNoiseTexture;
+	std::shared_ptr<VolumeColorBuffer> m_perlinWorleyUE;
+	VolumeColorBuffer* m_basicCloudShape;
+	std::shared_ptr<VolumeColorBuffer> m_erosionTexture;
 
 	Vector3 m_position;
 	Vector3 m_scale;

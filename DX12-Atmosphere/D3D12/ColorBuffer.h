@@ -3,6 +3,8 @@
 #include "PixelBuffer.h"
 #include "Color.h"
 
+class Texture2D;
+
 class ColorBuffer : public PixelBuffer
 {
 public:
@@ -81,6 +83,8 @@ public:
 
 	void Create(const std::wstring& name, uint32_t width, uint32_t height, uint32_t depth, uint32_t numMips,
 		DXGI_FORMAT format, D3D12_GPU_VIRTUAL_ADDRESS vidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
+
+	void CreateFromTexture2D(const std::wstring& name, const Texture2D* tex, uint32_t numSliceX, uint32_t numSliceY, uint32_t numMips, DXGI_FORMAT format, D3D12_GPU_VIRTUAL_ADDRESS vidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 
 	void CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, uint32_t numMips);
 

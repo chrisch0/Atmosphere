@@ -20,12 +20,14 @@ public:
 
 	void GenerateBasicCloudShape();
 	void GenerateDensityHeightGradient();
+	void GenerateErosion();
 
 	void SetShowWindow(bool val) { m_showWindow = val; }
 	void SetShowNoiseGeneratorWindow(bool val);
 
 	VolumeColorBuffer* GetBasicCloudShape() const { return m_basicShape.get(); }
 	VolumeColorBuffer* GetPerlinNoise() const { return m_perlinNoise.get(); }
+	VolumeColorBuffer* GetErosion() const { return m_erosion.get(); }
 
 	float GetAltitudeMin() const { return m_cloudMin; }
 	float GetAltitudeMax() const { return m_cloudMax; }
@@ -34,9 +36,11 @@ public:
 private:
 	RootSignature m_basicShapeRS;
 	RootSignature m_gradientRS;
+	RootSignature m_erosionRS;
 
 	ComputePSO m_basicShapePSO;
 	ComputePSO m_gradientPSO;
+	ComputePSO m_erosionPSO;
 
 	std::shared_ptr<NoiseGenerator> m_noiseGenerator;
 
@@ -46,6 +50,11 @@ private:
 	std::shared_ptr<VolumeColorBuffer> m_worleyFBMHigh;
 	std::shared_ptr<VolumeColorBuffer> m_basicShape;
 	std::shared_ptr<ColorBuffer> m_basicShapeView;
+
+	std::shared_ptr<VolumeColorBuffer> m_worleyFBMLow32;
+	std::shared_ptr<VolumeColorBuffer> m_worleyFBMMid32;
+	std::shared_ptr<VolumeColorBuffer> m_worleyFBMHigh32;
+	std::shared_ptr<VolumeColorBuffer> m_erosion;
 
 	float m_cloudMin;
 	float m_cloudMax;

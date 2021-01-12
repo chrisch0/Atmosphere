@@ -26,6 +26,7 @@
 #include "d3dx12.h"
 
 #include "imgui/imgui.h"
+#include "imgui/imgui_custom.h"
 
 #include <string>
 #include <sstream>
@@ -56,5 +57,6 @@
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
 #include "D3D12/GraphicsCore.h"
+#include "D3D12/GraphicsGlobal.h"
 
 using namespace Math;

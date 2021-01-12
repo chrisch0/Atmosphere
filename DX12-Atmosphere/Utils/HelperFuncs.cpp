@@ -56,14 +56,5 @@ namespace Utils
 
 		return defaultBuffer;
 	}
-
-	ImVec2 GetTiledVolumeTextureSize(uint32_t width, uint32_t height, uint32_t depth)
-	{
-		uint32_t y = (uint32_t)std::sqrt(depth);
-		y = 1 << ((uint32_t)std::log2(y));
-		uint32_t x = depth / y;
-
-		return ImVec2((float)width * x, (float)height * y);
-	}
 }
 

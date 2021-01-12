@@ -3,6 +3,7 @@
 #include "D3D12/GraphicsGlobal.h"
 #include "D3D12/CommandContext.h"
 #include "D3D12/TextureManager.h"
+#include "D3D12/ColorBuffer.h"
 #include "Utils/CameraController.h"
 #include "Utils/Camera.h"
 #include "Mesh/Mesh.h"
@@ -60,15 +61,18 @@ void VolumetricCloud::InitCloudParameters()
 
 	m_sunLightRotation = Vector3(30.0f, -180.0f, 0.0f);
 	m_sunLightColor = Vector3(1.0f, 0.9568627f, 0.8392157f);
-	m_lightSampleCount = 16;
+	m_lightSampleCount = 6;
 
 	m_farDistance = 22000.0f;
 
-	//m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
-	m_weatherTexture = TextureManager::LoadDDSFromFile("RT_Perlin_Worley_sRGB.DDS");
-	m_curlNoiseTexture = TextureManager::LoadTGAFromFile("CurlNoise_Volume.TGA", 16, 16);
-	//m_curlNoiseTexture = TextureManager::LoadTGAFromFile("T_CurlNoise_16by8_128res_Tiling_9.tga", 16, 8);
-	m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
+	m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	auto* curl_2d = TextureManager::LoadDDSFromFile("CurlNoise_Volume_16by8.DDS");
+	m_curlNoiseTexture = std::make_shared<VolumeColorBuffer>();
+	m_curlNoiseTexture->CreateFromTexture2D(L"CurlVolumeNoise", curl_2d, 16, 8, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	auto* perlin_worley = TextureManager::LoadDDSFromFile("PerlinWorley.DDS");
+	m_perlinWorleyUE = std::make_shared<VolumeColorBuffer>();
+	m_perlinWorleyUE->CreateFromTexture2D(L"PerlinWorleyUE", perlin_worley, 16, 8, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	//m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
 	//m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
 }
 
@@ -132,6 +136,21 @@ void VolumetricCloud::CreateCamera()
 	m_camera->SetLookAt({ 2.25f, 1.75f, 2.10f }, { 0, 0, 0 }, { 0, 1, 0 });
 	m_camera->SetNearClip(0.01f);
 	m_camera->SetFarClip(10000.0f);
+}
+
+void VolumetricCloud::SwitchBasicCloudShape(int idx)
+{
+	switch (idx)
+	{
+	default:
+		break;
+	case 0:
+		m_basicCloudShape = m_cloudShapeManager.GetBasicCloudShape();
+		break;
+	case 1:
+		m_basicCloudShape = m_perlinWorleyUE.get();
+		break;
+	}
 }
 
 void VolumetricCloud::Update(const Timer& timer)
@@ -202,8 +221,8 @@ void VolumetricCloud::Draw(const Timer& timer)
 		graphicsContext.SetPipelineState(m_skyboxPSO);
 		graphicsContext.SetDynamicConstantBufferView(0, sizeof(skyboxConstants), &skyboxConstants);
 		graphicsContext.SetDynamicConstantBufferView(1, sizeof(passConstants), &passConstants);
-		graphicsContext.TransitionResource(*m_cloudShapeManager.GetBasicCloudShape(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.SetDynamicDescriptor(2, 0, m_cloudShapeManager.GetBasicCloudShape()->GetSRV());
+		graphicsContext.TransitionResource(*m_basicCloudShape, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext.SetDynamicDescriptor(2, 0, m_basicCloudShape->GetSRV());
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetDensityHeightGradient(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		graphicsContext.SetDynamicDescriptor(2, 1, m_cloudShapeManager.GetDensityHeightGradient()->GetSRV());
 		graphicsContext.TransitionResource(*m_cloudShapeManager.GetPerlinNoise(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -249,56 +268,33 @@ void VolumetricCloud::UpdateUI()
 			ImGui::Text("Raymarch Max Distance");
 			ImGui::InputFloat("Far Distance", &m_farDistance, 100.0f);
 
-			ImGui::Text("Weather Texture");
-			ImGui::Image((ImTextureID)(m_weatherTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f));
-
+			ImGui::Text("Basic Cloud Shape Texture");
+			ImGui::SetNextItemWidth(150.0f);
+			const char* cloud_shape_texture[] = { "Perlin-Worley", "Perlin-Worley_UE" };
+			static int cur_basic_shape = 0;
+			ImGui::Combo("Basic Cloud Shape", &cur_basic_shape, cloud_shape_texture, IM_ARRAYSIZE(cloud_shape_texture));
+			SwitchBasicCloudShape(cur_basic_shape);
+			static bool basic_cloud_shape_detail;
+			static bool basic_cloud_shapw_window_opening;
+			ImGui::SameLine(400.0);
+			ImGui::PreviewVolumeImageButton(m_basicCloudShape, ImVec2(128.0f, 128.0f), "Basic Cloud Shape", &basic_cloud_shape_detail, &basic_cloud_shapw_window_opening);
+			
 			ImGui::Text("Erosion Texture");
 			static bool erosion_window = false;
 			static bool erosion_window_open = false;
-			if (ImGui::VolumeImageButton((ImTextureID)(m_erosionTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_erosionTexture->GetDepth()))
-			{
-				erosion_window = !erosion_window;
-				erosion_window_open = true;
-			}
-			if (erosion_window)
-			{
-				ImGui::Begin("Erosion Texture 3D", &erosion_window);
-				Utils::AutoResizeVolumeImage(m_erosionTexture, erosion_window_open);
-				ImGui::End();
-				erosion_window_open = false;
-			}
+			
 
-			/*ImGui::Text("Noise Shape 128");
-			static bool noise_shape_window = false;
-			static bool noise_shape_window_open = false;
-			if (ImGui::VolumeImageButton((ImTextureID)(m_noiseShapeTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_noiseShapeTexture->GetDepth()))
-			{
-				noise_shape_window = !noise_shape_window;
-				noise_shape_window_open = true;
-			}
-			if (noise_shape_window)
-			{
-				ImGui::Begin("Noise Shape 128 Texture 3D", &noise_shape_window);
-				Utils::AutoResizeVolumeImage(m_noiseShapeTexture, noise_shape_window_open);
-				ImGui::End();
-				noise_shape_window_open = false;
-			}*/
+			ImGui::Text("Weather Texture");
+			static bool weather_detail;
+			static bool weather_window_opening;
+			ImGui::SameLine(400.0f);
+			ImGui::PreviewImageButton(m_weatherTexture, ImVec2(128.0f, 128.0f), "Weather Texture", &weather_detail, &weather_window_opening);
 
 			ImGui::Text("Curl Noise");
 			static bool curl_noise_window = false;
 			static bool curl_noise_window_open = false;
-			if (ImGui::VolumeImageButton((ImTextureID)(m_curlNoiseTexture->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_curlNoiseTexture->GetDepth()))
-			{
-				curl_noise_window = !curl_noise_window;
-				curl_noise_window_open = true;
-			}
-			if (curl_noise_window)
-			{
-				ImGui::Begin("Curl Noise Texture 3D", &curl_noise_window);
-				Utils::AutoResizeVolumeImage(m_curlNoiseTexture, curl_noise_window_open);
-				ImGui::End();
-				curl_noise_window_open = false;
-			}
+			ImGui::SameLine(400.0f);
+			ImGui::PreviewVolumeImageButton(m_curlNoiseTexture.get(), ImVec2(128.0f, 128.0f), "Curl Noise", &curl_noise_window, &curl_noise_window_open);
 
 			ImGui::EndTabItem();
 		}

@@ -1,5 +1,9 @@
 #include "stdafx.h"
 #include "GraphicsGlobal.h"
+#include "RootSignature.h"
+#include "PipelineState.h"
+
+#include "CompiledShaders/CreateVolumeTexture_CS.h"
 
 namespace Global
 {
@@ -46,6 +50,9 @@ namespace Global
 	D3D12_DEPTH_STENCIL_DESC DepthStateReadOnly;
 	D3D12_DEPTH_STENCIL_DESC DepthStateReadOnlyReversed;
 	D3D12_DEPTH_STENCIL_DESC DepthStateTestEqual;
+
+	RootSignature CreateVolumeTextureRS;
+	ComputePSO CreateVolumeTexturePSO;
 
 	void SetTextureAddressMode(D3D12_STATIC_SAMPLER_DESC& desc, D3D12_TEXTURE_ADDRESS_MODE mode)
 	{
@@ -198,6 +205,16 @@ namespace Global
 
 		alphaBlend.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
 		BlendTraditionalAdditive = alphaBlend;
+
+		CreateVolumeTextureRS.Reset(3);
+		CreateVolumeTextureRS[0].InitAsConstants(4, 0);
+		CreateVolumeTextureRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1);
+		CreateVolumeTextureRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+		CreateVolumeTextureRS.Finalize(L"CreateVolumeTextureRS");
+
+		CreateVolumeTexturePSO.SetRootSignature(CreateVolumeTextureRS);
+		CreateVolumeTexturePSO.SetComputeShader(g_pCreateVolumeTexture_CS, sizeof(g_pCreateVolumeTexture_CS));
+		CreateVolumeTexturePSO.Finalize();
 	}
 
 	void DestroyGlobalStates()

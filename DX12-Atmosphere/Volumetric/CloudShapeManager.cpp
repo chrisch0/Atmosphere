@@ -7,6 +7,7 @@
 
 #include "CompiledShaders/GenerateBasicShape_CS.h"
 #include "CompiledShaders/GenerateGradient_CS.h"
+#include "CompiledShaders/GenerateErosionNoise_CS.h"
 
 void CloudShapeManager::Initialize()
 {
@@ -27,6 +28,11 @@ void CloudShapeManager::Initialize()
 	m_gradientRS[1].InitAsConstantBufferView(0);
 	m_gradientRS.Finalize(L"GradientRS");
 
+	m_erosionRS.Reset(2, 0);
+	m_erosionRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 3);
+	m_erosionRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+	m_erosionRS.Finalize(L"ErosionRS");
+
 	m_basicShapePSO.SetRootSignature(m_basicShapeRS);
 	m_basicShapePSO.SetComputeShader(g_pGenerateBasicShape_CS, sizeof(g_pGenerateBasicShape_CS));
 	m_basicShapePSO.Finalize();
@@ -34,6 +40,10 @@ void CloudShapeManager::Initialize()
 	m_gradientPSO.SetRootSignature(m_gradientRS);
 	m_gradientPSO.SetComputeShader(g_pGenerateGradient_CS, sizeof(g_pGenerateGradient_CS));
 	m_gradientPSO.Finalize();
+
+	m_erosionPSO.SetRootSignature(m_erosionRS);
+	m_erosionPSO.SetComputeShader(g_pGenerateErosionNoise_CS, sizeof(g_pGenerateErosionNoise_CS));
+	m_erosionPSO.Finalize();
 
 	m_showWindow = true;
 
@@ -96,6 +106,19 @@ void CloudShapeManager::CreateBasicCloudShape()
 	}
 
 	GenerateBasicCloudShape();
+
+	NoiseState* worleyFBM_Low32 = new NoiseState(*worleyFBM_Low);
+	NoiseState* worleyFBM_Mid32 = new NoiseState(*worleyFBM_Mid);
+	NoiseState* worleyFBM_High32 = new NoiseState(*worleyFBM_High);
+	m_worleyFBMLow32 = m_noiseGenerator->CreateVolumeNoise("WorlyFBMLow32", 32, 32, 32, DXGI_FORMAT_R32_FLOAT, worleyFBM_Low32);
+	m_worleyFBMMid32 = m_noiseGenerator->CreateVolumeNoise("WorlyFBMMid32", 32, 32, 32, DXGI_FORMAT_R32_FLOAT, worleyFBM_Mid32);
+	m_worleyFBMHigh32 = m_noiseGenerator->CreateVolumeNoise("WorlyFBMHigh32", 32, 32, 32, DXGI_FORMAT_R32_FLOAT, worleyFBM_High32);
+	if (m_erosion == nullptr)
+	{
+		m_erosion = std::make_shared<VolumeColorBuffer>();
+		m_erosion->Create(L"Erosion", 32, 32, 32, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	}
+	GenerateErosion();
 }
 
 void CloudShapeManager::CreateGradient()
@@ -171,6 +194,23 @@ void CloudShapeManager::GenerateDensityHeightGradient()
 	context.Finish();
 }
 
+void CloudShapeManager::GenerateErosion()
+{
+	ComputeContext& context = ComputeContext::Begin();
+	context.SetRootSignature(m_erosionRS);
+	context.SetPipelineState(m_erosionPSO);
+	context.TransitionResource(*m_worleyFBMLow32, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*m_worleyFBMMid32, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*m_worleyFBMHigh32, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*m_erosion, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(0, 0, m_worleyFBMLow32->GetSRV());
+	context.SetDynamicDescriptor(0, 1, m_worleyFBMMid32->GetSRV());
+	context.SetDynamicDescriptor(0, 2, m_worleyFBMHigh32->GetSRV());
+	context.SetDynamicDescriptor(1, 0, m_erosion->GetUAV());
+	context.Dispatch3D(m_erosion->GetWidth(), m_erosion->GetHeight(), m_erosion->GetDepth(), 8, 8, 8);
+	context.Finish();
+}
+
 void CloudShapeManager::Update()
 {
 	bool dirty_flag = m_noiseGenerator->IsDirty("PerlinNoise");
@@ -230,35 +270,21 @@ void CloudShapeManager::UpdateUI()
 	{
 		static bool tiled_basic_shape_window = false;
 		static bool basic_shape_window_open = false;
-		if (ImGui::VolumeImageButton((ImTextureID)(m_basicShape->GetSRV().ptr), ImVec2(128.0f, 128.0f), m_basicShape->GetDepth()))
-		{
-			tiled_basic_shape_window = !tiled_basic_shape_window;
-			basic_shape_window_open = true;
-		}
-		if (tiled_basic_shape_window)
-		{
-			ImGui::Begin("Basic Shape Texture 3D", &tiled_basic_shape_window);
-			Utils::AutoResizeVolumeImage(m_basicShape.get(), basic_shape_window_open);
-			ImGui::End();
-			basic_shape_window_open = false;
-		}
+		ImGui::PreviewVolumeImageButton(m_basicShape.get(), ImVec2(128.0f, 128.0f), "Basic Shape Texture 3D", &tiled_basic_shape_window, &basic_shape_window_open);
 
 		ImGui::SameLine();
 		static bool basic_shape_view = false;
-		if (ImGui::ImageButton((ImTextureID)(m_basicShapeView->GetSRV().ptr), ImVec2(128.0f, 128.0f)))
-		{
-			basic_shape_view = !basic_shape_view;
-			basic_shape_window_open = true;
-		}
-		if (basic_shape_view)
-		{
-			ImGui::Begin("Basic Shape View", &basic_shape_view);
-			Utils::AutoResizeImage(m_basicShapeView.get(), basic_shape_window_open);
-			ImGui::End();
-			basic_shape_window_open = false;
-		}
+		ImGui::PreviewImageButton(m_basicShapeView.get(), ImVec2(128.0f, 128.0f), "Basic Shape View", &basic_shape_view, &basic_shape_window_open);
 	}
 	ImGui::EndGroup();
+
+	ImGui::Text("Erosion");
+	ImGui::SameLine(300.0f);
+	{
+		static bool erosion_detail = false;
+		static bool erosion_window_opening = false;
+		ImGui::PreviewVolumeImageButton(m_erosion.get(), ImVec2(128.0f, 128.0f), "Erosion", &erosion_detail, &erosion_window_opening);
+	}
 
 	ImGui::Separator();
 

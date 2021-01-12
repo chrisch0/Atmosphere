@@ -15,6 +15,8 @@ public:
 	static const Texture2D* LoadDDSFromFile(const std::wstring& fileName, bool sRGB = false);
 	static const Texture2D* LoadTGAFromFile(const std::wstring& fileName, bool sRGB = false);
 
+	//static const Texture3D* LoadTexture3DFromFile(const std::wstring& fileName, uint16_t numSliceX, uint16_t numSliceY, bool sRGB = false);
+	//static const Texture3D* LoadDDSFromFile(const std::wstring& fileName, uint16_t numSliceX, uint16_t numSliceY, bool sRGB = false);
 	static const Texture3D* LoadTGAFromFile(const std::wstring& fileName, uint16_t numSliceX, uint16_t numSliceY, bool sRGB = false);
 
 	static const Texture2D* LoadTexture2DFromFile(const std::string& fileName, bool sRGB = false)

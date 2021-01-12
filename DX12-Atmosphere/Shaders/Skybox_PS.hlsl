@@ -20,6 +20,7 @@ cbuffer PassConstants : register(b0)
 Texture3D<float4> BasicCloudShape : register(t0);
 Texture2D<float4> DensityHeightGradient : register(t1);
 Texture3D<float4> ErosionTexture : register(t2);
+Texture3D<float4> CurlNoise : register(t3);
 Texture3D<float> PerlinNoise : register(t4);
 Texture2D<float3> WeatherTexture : register(t5);
 
@@ -61,7 +62,7 @@ float BeerPowder(float depth)
 float Remap(float originalValue, float originalMin, float originalMax,
 	float newMin, float newMax)
 {
-	return newMin + (((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin));
+	return newMin + (saturate((originalValue - originalMin) / (originalMax - originalMin)) * (newMax - newMin));
 }
 
 float3 GetWeatherData(float3 posWS)
@@ -101,13 +102,14 @@ float SampleNoise(float3 posWS)
 	float3 weather_data = GetWeatherData(posWS);
 	float density_height_gradient = GetDensityHeightGradientForPoint(posWS, weather_data);
 	
-	return base_cloud * pow(weather_data.r, 2.0) * density_height_gradient;
+	return base_cloud * density_height_gradient;
 
-	/*base_cloud *= density_height_gradient;
-	float cloud_coverage = 0.5;
-	float base_cloud_with_coverage = Remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0);
-	base_cloud_with_coverage *= cloud_coverage;
-	return base_cloud_with_coverage;*/
+	base_cloud *= density_height_gradient;
+	float cloud_coverage = 0.9;
+	float base_cloud_with_coverage = max(0, Remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0));
+	//base_cloud_with_coverage *= cloud_coverage;
+	
+	return base_cloud_with_coverage;
 }
 
 float SampleCloudDensity(float3 posWS, float step, float3 weatherData, bool cheapSample)

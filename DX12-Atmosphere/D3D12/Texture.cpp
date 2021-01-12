@@ -2,6 +2,7 @@
 #include "Texture.h"
 #include "DDSTextureLoader.h"
 #include "CommandContext.h"
+#include "dds.h"
 
 uint32_t BytesPerPixel(DXGI_FORMAT format)
 {
@@ -89,6 +90,10 @@ bool Texture2D::CreateDDSFromMemory(const void* filePtr, size_t fileSize, bool s
 {
 	if (m_cpuHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
 		m_cpuHandle = AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	
+	auto header = reinterpret_cast<const DDS_HEADER*>((const uint8_t*)filePtr + sizeof(uint32_t));
+	m_height = header->height;
+	m_width = header->width;
 
 	HRESULT hr = CreateDDSTextureFromMemory(g_Device, (const uint8_t*)filePtr, fileSize, 0, sRGB, &m_pResource, m_cpuHandle);
 
