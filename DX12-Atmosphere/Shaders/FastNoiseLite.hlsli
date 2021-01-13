@@ -1,3 +1,6 @@
+#ifndef __FAST_NOISE_LITE_HLSLI__
+#define __FAST_NOISE_LITE_HLSLI__
+
 // MIT License
 //
 // Copyright(c) 2020 Jordan Peck (jordan.me2@gmail.com)
@@ -2313,3 +2316,5 @@ void fnlDomainWarp3D(fnl_state state, inout FNLfloat x, inout FNLfloat y, inout 
         break;
     }
 }
+
+#endif

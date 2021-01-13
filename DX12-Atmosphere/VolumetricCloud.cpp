@@ -96,7 +96,7 @@ void VolumetricCloud::CreatePSO()
 	m_volumetricCloudPSO.SetRootSignature(m_volumetricCloudRS);
 	m_volumetricCloudPSO.SetSampleMask(UINT_MAX);
 	m_volumetricCloudPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	m_volumetricCloudPSO.SetRenderTargetFormat(m_backBufferFormat, DXGI_FORMAT_UNKNOWN);
+	m_volumetricCloudPSO.SetRenderTargetFormat(m_sceneBufferFormat, DXGI_FORMAT_UNKNOWN);
 	m_volumetricCloudPSO.SetVertexShader(g_pVolumetricCloud_VS, sizeof(g_pVolumetricCloud_VS));
 	m_volumetricCloudPSO.SetPixelShader(g_pVolumetricCloud_PS, sizeof(g_pVolumetricCloud_PS));
 	m_volumetricCloudPSO.SetInputLayout(_countof(layout), layout);
@@ -171,10 +171,9 @@ void VolumetricCloud::Update(const Timer& timer)
 void VolumetricCloud::Draw(const Timer& timer)
 {
 	GraphicsContext& graphicsContext = GraphicsContext::Begin();
-	graphicsContext.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	m_displayBuffer[m_currBackBuffer].SetClearColor({0.0f, 0.0f, 0.0f, 1.0f});
-	graphicsContext.ClearColor(m_displayBuffer[m_currBackBuffer]);
-	graphicsContext.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
+	graphicsContext.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	graphicsContext.ClearColor(*m_sceneColorBuffer);
+	graphicsContext.SetRenderTarget(m_sceneColorBuffer->GetRTV());
 	graphicsContext.SetViewportAndScissor(m_screenViewport, m_scissorRect);
 
 	{

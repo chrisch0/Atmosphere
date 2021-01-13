@@ -216,7 +216,11 @@ void CommandContext::TransitionResource(GpuResource& resource, D3D12_RESOURCE_ST
 		assert(m_numBarriersToFlush < 16);
 		auto& barrierDesc = m_resourceBarrierBuffer[m_numBarriersToFlush++];
 
-		barrierDesc = CD3DX12_RESOURCE_BARRIER::Transition(resource.GetResource(), oldState, newState);
+		barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrierDesc.Transition.pResource = resource.GetResource();
+		barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrierDesc.Transition.StateBefore = oldState;
+		barrierDesc.Transition.StateAfter = newState;
 
 		// Check to see if we already started the transition
 		if (newState == resource.m_transitioningState)

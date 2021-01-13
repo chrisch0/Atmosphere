@@ -7,7 +7,7 @@ StructuredBuffer<float> Exposure : register(t1);
 
 RWTexture2D<uint> LumaResult : register(u0);
 
-cbuffer cb0
+cbuffer cb0 : register(b0)
 {
 	float2 InverseOutputSize;
 };

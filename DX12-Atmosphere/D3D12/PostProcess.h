@@ -19,7 +19,11 @@ namespace PostProcess
 	extern bool EnableAdaptation;  // Automatically adjust brightness based on perceived luminance
 	extern float Exposure;
 
+	extern bool DrawHistogram;
+
 	extern ExposureConstants ExposureCB;
+
+	extern ColorBuffer HistogramColorBuffer;
 
 	void Initialize(ColorBuffer* sceneBuffer);
 	void Render();

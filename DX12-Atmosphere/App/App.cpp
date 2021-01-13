@@ -4,6 +4,8 @@
 #include "D3D12/CommandListManager.h"
 #include "D3D12/CommandContext.h"
 #include "D3D12/TextureManager.h"
+#include "D3D12/PostProcess.h"
+#include "Mesh/Mesh.h"
 
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_internal.h"
@@ -11,6 +13,8 @@
 #include "CompiledShaders/imgui_pixel.h"
 #include "CompiledShaders/TileTexture3D_PS.h"
 #include "CompiledShaders/PreviewTexture3D_PS.h"
+#include "CompiledShaders/DrawQuad_VS.h"
+#include "CompiledShaders/PresentSDR_PS.h"
 
 using namespace Microsoft::WRL;
 
@@ -35,6 +39,7 @@ App::~App()
 	ShutdownWindow();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+	PostProcess::Shutdown();
 
 	CommandContext::DestroyAllContexts();
 	g_CommandManager.Shutdown();
@@ -92,10 +97,13 @@ bool App::Initialize()
 
 	InitImgui();
 
+	Global::InitializeGlobalStates();
 	CreateAppRootSignature();
 	CreateAppPipelineState();
 	CreateFontTexture();
-	Global::InitializeGlobalStates();
+
+	m_fullScreenQuad.reset(Mesh::CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f));
+	PostProcess::Initialize(m_sceneColorBuffer.get());
 
 	return true;
 }
@@ -210,7 +218,7 @@ void App::CreateSwapChain()
 			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
 		}
 		m_sceneColorBuffer = std::make_shared<ColorBuffer>();
-		m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, DXGI_FORMAT_R11G11B10_FLOAT);
+		m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 	}
 
 	m_screenViewport.TopLeftX = 0.0;
@@ -296,12 +304,16 @@ void App::CreateAppRootSignature()
 	staticSampler.RegisterSpace = 0;
 	staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	m_displayRootSignature.Reset(3, 1);
-	m_displayRootSignature[0].InitAsConstants(16, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-	m_displayRootSignature[1].InitAsConstants(1, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-	m_displayRootSignature[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
-	m_displayRootSignature.InitStaticSampler(0, staticSampler);
-	m_displayRootSignature.Finalize(L"Display", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	m_renderUIRS.Reset(3, 1);
+	m_renderUIRS[0].InitAsConstants(16, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+	m_renderUIRS[1].InitAsConstants(1, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_renderUIRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_renderUIRS.InitStaticSampler(0, staticSampler);
+	m_renderUIRS.Finalize(L"RenderUIRS", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	m_presentRS.Reset(1, 0);
+	m_presentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_presentRS.Finalize(L"PresentRS", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 }
 
 void App::CreateAppPipelineState()
@@ -311,6 +323,14 @@ void App::CreateAppPipelineState()
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+
+	D3D12_INPUT_ELEMENT_DESC present_layout[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 	};
 
 	D3D12_BLEND_DESC blendDesc;
@@ -338,25 +358,35 @@ void App::CreateAppPipelineState()
 	depthDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 	depthDesc.BackFace = depthDesc.FrontFace;
 
-	m_displayPSO.SetRootSignature(m_displayRootSignature);
-	m_displayPSO.SetSampleMask(UINT_MAX);
-	m_displayPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	m_displayPSO.SetRenderTargetFormat(m_backBufferFormat, DXGI_FORMAT_UNKNOWN);
-	m_displayPSO.SetVertexShader(g_pimgui_vert, sizeof(g_pimgui_vert));
-	m_displayPSO.SetPixelShader(g_pimgui_pixel, sizeof(g_pimgui_pixel));
-	m_displayPSO.SetInputLayout(_countof(local_layout), local_layout);
-	m_displayPSO.SetBlendState(blendDesc);
-	m_displayPSO.SetRasterizerState(rasterDesc);
-	m_displayPSO.SetDepthStencilState(depthDesc);
-	m_displayPSO.Finalize();
+	m_renderUIPSO.SetRootSignature(m_renderUIRS);
+	m_renderUIPSO.SetSampleMask(UINT_MAX);
+	m_renderUIPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	m_renderUIPSO.SetRenderTargetFormat(m_backBufferFormat, DXGI_FORMAT_UNKNOWN);
+	m_renderUIPSO.SetVertexShader(g_pimgui_vert, sizeof(g_pimgui_vert));
+	m_renderUIPSO.SetPixelShader(g_pimgui_pixel, sizeof(g_pimgui_pixel));
+	m_renderUIPSO.SetInputLayout(_countof(local_layout), local_layout);
+	m_renderUIPSO.SetBlendState(blendDesc);
+	m_renderUIPSO.SetRasterizerState(rasterDesc);
+	m_renderUIPSO.SetDepthStencilState(depthDesc);
+	m_renderUIPSO.Finalize();
 
-	m_tiledVolumeTexturePSO = m_displayPSO;
+	m_tiledVolumeTexturePSO = m_renderUIPSO;
 	m_tiledVolumeTexturePSO.SetPixelShader(g_pTileTexture3D_PS, sizeof(g_pTileTexture3D_PS));
 	m_tiledVolumeTexturePSO.Finalize();
 
 	m_previewVolumeTexturePSO = m_tiledVolumeTexturePSO;
 	m_previewVolumeTexturePSO.SetPixelShader(g_pPreviewTexture3D_PS, sizeof(g_pPreviewTexture3D_PS));
 	m_previewVolumeTexturePSO.Finalize();
+
+	m_presentLDRPSO = m_renderUIPSO;
+	m_presentLDRPSO.SetRootSignature(m_presentRS);
+	m_presentLDRPSO.SetVertexShader(g_pDrawQuad_VS, sizeof(g_pDrawQuad_VS));
+	m_presentLDRPSO.SetPixelShader(g_pPresentSDR_PS, sizeof(g_pPresentSDR_PS));
+	m_presentLDRPSO.SetBlendState(Global::BlendDisable);
+	m_presentLDRPSO.SetDepthStencilState(Global::DepthStateDisabled);
+	m_presentLDRPSO.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	m_presentLDRPSO.SetInputLayout(_countof(present_layout), present_layout);
+	m_presentLDRPSO.Finalize();
 }
 
 void App::CreateFontTexture()
@@ -396,11 +426,12 @@ int App::Run()
 			if (m_renderUI)
 			{
 				UpdateUI();
-				UpdateImGuiDemo();
+				UpdateAppUI();
 			}
 
 			Update(m_timer);
 			Draw(m_timer);
+			PostProcess::Render();
 
 			Display();
 
@@ -458,7 +489,7 @@ void App::UpdateUI()
 
 }
 
-void App::UpdateImGuiDemo()
+void App::UpdateAppUI()
 {
 	m_clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -499,6 +530,50 @@ void App::UpdateImGuiDemo()
 			m_showAnotherDemoWindow = false;
 		ImGui::End();
 	}
+
+	static bool show_hdr_setting = false;
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("HDR"))
+		{
+			show_hdr_setting = true;
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
+
+	// HDR setting
+	if (show_hdr_setting)
+	{
+		ImGui::Begin("HDR Setting", &show_hdr_setting);
+		ImGui::Checkbox("Enable HDR", &PostProcess::EnableHDR);
+		if (PostProcess::EnableHDR)
+		{
+			ImGui::Checkbox("Enable Adapt Exposure", &PostProcess::EnableAdaptation);
+			static float exposure_min = 0.00390625f;
+			static float exposure_max = 256.0f;
+			if (PostProcess::EnableAdaptation)
+			{
+				ImGui::DragFloat("Target Luminance", &PostProcess::ExposureCB.targetLuminance, 0.01f, 0.01f, 0.99f);
+				ImGui::DragFloat("Adaptation Rate", &PostProcess::ExposureCB.adaptationRate, 0.01f, 0.01f, 1.0f);
+				//ImGui::DragFloat("Min Exposure", &PostProcess::ExposureCB.minExposure, 0.25f, 0.00390625f, 1.0f);
+				ImGui::DragScalar("Min Exposure", ImGuiDataType_Float, &PostProcess::ExposureCB.minExposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
+				//ImGui::DragFloat("Max Exposure", &PostProcess::ExposureCB.maxExposure, 0.25f, 1.0f, 256.0f);
+				ImGui::DragScalar("Min Exposure", ImGuiDataType_Float, &PostProcess::ExposureCB.maxExposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
+				ImGui::Checkbox("Draw Histogram", &PostProcess::DrawHistogram);
+				if (PostProcess::DrawHistogram)
+				{
+					ImGui::Image((ImTextureID)(PostProcess::HistogramColorBuffer.GetSRV().ptr), ImVec2((float)PostProcess::HistogramColorBuffer.GetWidth(), (float)PostProcess::HistogramColorBuffer.GetHeight()));
+				}
+			}
+			else
+			{
+				ImGui::DragScalar("Exposure", ImGuiDataType_Float, &PostProcess::Exposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
+			}
+			
+		}
+		ImGui::End();
+	}
 }
 
 void App::Display()
@@ -507,8 +582,22 @@ void App::Display()
 		m_renderUI = !m_renderUI;
 
 	GraphicsContext& context = GraphicsContext::Begin(L"Display");
+	// Present LDR 
+	{
+		context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+		context.ClearColor(m_displayBuffer[m_currBackBuffer]);
+		context.SetRootSignature(m_presentRS);
+		context.SetPipelineState(m_presentLDRPSO);
+		context.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
+		context.SetDynamicDescriptor(0, 0, m_sceneColorBuffer->GetSRV());
+		context.SetPrimitiveTopology(m_fullScreenQuad->Topology());
+		context.SetViewportAndScissor(m_screenViewport, m_scissorRect);
+		context.SetVertexBuffer(0, m_fullScreenQuad->VertexBufferView());
+		context.SetIndexBuffer(m_fullScreenQuad->IndexBufferView());
+		context.DrawIndexed(m_fullScreenQuad->IndexCount(), 0, 0);
+	}
 
-	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 	//m_displayBuffer[m_currBackBuffer].SetClearColor(m_clearColor);
 	//context.ClearColor(m_displayBuffer[m_currBackBuffer]);
 
@@ -522,7 +611,6 @@ void App::Display()
 	auto drawData = ImGui::GetDrawData();
 
 	RenderUI(context, drawData);
-
 
 	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_PRESENT);
 	context.Finish();
@@ -599,7 +687,7 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 	};
 
 	context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context.SetRootSignature(m_displayRootSignature);
+	context.SetRootSignature(m_renderUIRS);
 	context.SetConstantArray(0, 16, mvp);
 	context.SetBlendFactor({ 0.0f, 0.0f, 0.0f, 0.0f });
 
@@ -638,7 +726,7 @@ void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
 				{
 					if (pcmd->TextureDisplayState == 0)
 					{
-						context.SetPipelineState(m_displayPSO);
+						context.SetPipelineState(m_renderUIPSO);
 					}
 					else if ((pcmd->TextureDisplayState & 1))
 					{

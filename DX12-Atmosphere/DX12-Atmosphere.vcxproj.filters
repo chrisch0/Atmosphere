@@ -442,6 +442,15 @@
     <FxCompile Include="Shaders\AdaptExposure_CS.hlsl">
       <Filter>Shaders\HDR</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ToneMap_CS.hlsl">
+      <Filter>Shaders\HDR</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\DrawHistogram_CS.hlsl">
+      <Filter>Shaders\HDR</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PresentSDR_PS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

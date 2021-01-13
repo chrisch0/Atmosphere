@@ -144,7 +144,7 @@ protected:
 	ID3D12DescriptorHeap* m_curDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 	uint32_t m_numBarriersToFlush;
-	CD3DX12_RESOURCE_BARRIER m_resourceBarrierBuffer[16];
+	D3D12_RESOURCE_BARRIER m_resourceBarrierBuffer[16];
 
 	LinearAllocator m_cpuLinearAllocator;
 	LinearAllocator m_gpuLinearAllocator;
@@ -265,7 +265,8 @@ inline void CommandContext::CopyBuffer(GpuResource& dest, GpuResource& src)
 inline void CommandContext::CopyBufferRegion(GpuResource& dest, size_t destOffset, GpuResource& src, size_t srcOffset, size_t numBytes)
 {
 	TransitionResource(dest, D3D12_RESOURCE_STATE_COPY_DEST);
-	TransitionResource(src, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	//TransitionResource(src, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	FlushResourceBarriers();
 	m_commandList->CopyBufferRegion(dest.GetResource(), destOffset, src.GetResource(), srcOffset, numBytes);
 }
 

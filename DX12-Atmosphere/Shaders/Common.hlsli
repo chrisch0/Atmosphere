@@ -1,3 +1,6 @@
+#ifndef __COMMON_HLSLI__
+#define __COMMON_HLSLI__
+
 uint ToComparableUint(float f)
 {
 	uint val = asuint(f);
@@ -11,3 +14,5 @@ float ComparableUintToFloat(uint ui)
 	val ^= (((val >> 31) - 1) | 0x80000000);
 	return asfloat(val);
 }
+
+#endif

@@ -7,10 +7,8 @@
 #include "D3D12/Texture.h"
 #include "D3D12/GraphicsGlobal.h"
 
-struct ImGui_RenderBuffers;
-struct ImGui_FrameContext;
-struct ImGuiViewportDataDx12;
 class GraphicsContext;
+class Mesh;
 
 class App
 {
@@ -57,7 +55,7 @@ protected:
 	void CreateAppPipelineState();
 	void CreateFontTexture();
 
-	void UpdateImGuiDemo();
+	void UpdateAppUI();
 	void Display();
 
 	void SwapBackBuffer();
@@ -116,17 +114,23 @@ protected:
 	std::wstring m_mainWndCaption = L"Atmosphere";
 	D3D_DRIVER_TYPE m_d3dDriverType = D3D_DRIVER_TYPE_HARDWARE;
 	DXGI_FORMAT m_backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
+	DXGI_FORMAT m_sceneBufferFormat = DXGI_FORMAT_R11G11B10_FLOAT;
 	DXGI_FORMAT m_depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	int m_clientWidth = 1280;
 	int m_clientHeight = 800;
 
 	// Imgui
-	RootSignature m_displayRootSignature;
-	GraphicsPSO m_displayPSO;
+	RootSignature m_renderUIRS;
+	GraphicsPSO m_renderUIPSO;
 	GraphicsPSO m_tiledVolumeTexturePSO;
 	GraphicsPSO m_previewVolumeTexturePSO;
 
+	RootSignature m_presentRS;
+	GraphicsPSO m_presentLDRPSO;
+
 	const Texture2D* m_fontColorBuffer;
+
+	std::shared_ptr<Mesh> m_fullScreenQuad;
 
 	bool m_showDemoWindow = true;
 	bool m_showAnotherDemoWindow = false;
