@@ -451,6 +451,9 @@
     <FxCompile Include="Shaders\PresentSDR_PS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeCloud_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

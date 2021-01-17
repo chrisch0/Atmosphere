@@ -90,7 +90,10 @@ float SampleNoise(float3 posWS)
 {
 	const float scale = 0.0001f;
 	
-	float3 uvw = (posWS + 5000) * scale;
+	float height_fraction = GetHeightFractionForPoint(posWS);
+	float2 uv = posWS.xz / 1500.0f + 0.5;
+	//float3 uvw = (posWS + 5000) * scale;
+	float3 uvw = (uv * 40.0f, height_fraction);
 	SampleCount++;
 	float4 low_frequency_noises = BasicCloudShape.SampleLevel(LinearRepeatSampler, uvw, 0);
 	float low_freq_FBM =
@@ -102,12 +105,12 @@ float SampleNoise(float3 posWS)
 	float3 weather_data = GetWeatherData(posWS);
 	float density_height_gradient = GetDensityHeightGradientForPoint(posWS, weather_data);
 	
-	return base_cloud * density_height_gradient;
+	//return base_cloud;// *density_height_gradient;
 
-	base_cloud *= density_height_gradient;
-	float cloud_coverage = 0.9;
+	//base_cloud *= density_height_gradient;
+	float cloud_coverage = weather_data.r * 0.5;
 	float base_cloud_with_coverage = max(0, Remap(base_cloud, cloud_coverage, 1.0, 0.0, 1.0));
-	//base_cloud_with_coverage *= cloud_coverage;
+	base_cloud_with_coverage *= cloud_coverage;
 	
 	return base_cloud_with_coverage;
 }
@@ -129,6 +132,11 @@ float SampleCloudDensity(float3 posWS, float step, float3 weatherData, bool chea
 	float density_height_gradient = GetDensityHeightGradientForPoint(posWS, weatherData);
 
 	base_cloud *= density_height_gradient;
+
+	if (cheapSample)
+		return base_cloud;
+
+
 
 	return density;
 }

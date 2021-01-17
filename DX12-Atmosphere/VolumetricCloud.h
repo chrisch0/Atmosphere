@@ -26,6 +26,9 @@ private:
 	void CreateCamera();
 	void SwitchBasicCloudShape(int idx);
 
+	void DrawOnSkybox(const Timer& timer);
+	void DrawOnQuad(const Timer& timer);
+
 	CloudShapeManager m_cloudShapeManager;
 
 	RootSignature m_skyboxRS;
@@ -34,9 +37,15 @@ private:
 	RootSignature m_volumetricCloudRS;
 	GraphicsPSO m_volumetricCloudPSO;
 
+	RootSignature m_computeCloudOnQuadRS;
+	ComputePSO m_computeCloudOnQuadPSO;
+
+	//GraphicsPSO m_renderCloudOnQuadPSO;
+
 	std::shared_ptr<Camera> m_camera;
 	std::shared_ptr<Mesh> m_boxMesh;
 	std::shared_ptr<Mesh> m_skyboxMesh;
+	std::shared_ptr<Mesh> m_quadMesh;
 
 	const Texture2D* m_weatherTexture;
 	std::shared_ptr<VolumeColorBuffer> m_curlNoiseTexture;
@@ -66,4 +75,29 @@ private:
 
 	// cloud shape setting
 	float m_farDistance;
+
+	struct
+	{
+		Matrix4 invView;
+		Matrix4 invProj;
+		float lightColor[3] = { 1.0f, 0.99995f, 0.90193f };
+		float time = 0.0f;
+		XMFLOAT3 lightDir;
+		int sampleCount = 64;
+		XMFLOAT3 cameraPosition;
+		float cloudCoverage = 0.45f;
+		float cloudBottomColor[3] = {0.38235f, 0.41176f, 0.47059f};
+		float crispiness = 40.0f;
+		float curliness = 0.1f;
+		float earthRadius = 600000.0f;
+		float cloudBottomRadius = 5000.0f;
+		float cloudTopRadius = 17000.0f;
+		XMFLOAT4 resolution;
+		float cloudSpeed = 0.0f;
+		float densityFactor = 0.02f;
+		float absorption = 0.0035f;
+		float hg0 = -0.08f;
+		float hg1 = 0.08f;
+		int enablePowder = 1;
+	}m_cloudOnQuadCB;
 };

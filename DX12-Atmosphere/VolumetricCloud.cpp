@@ -12,6 +12,7 @@
 #include "CompiledShaders/VolumetricCloud_PS.h"
 #include "CompiledShaders/Skybox_VS.h"
 #include "CompiledShaders/Skybox_PS.h"
+#include "CompiledShaders/ComputeCloud_CS.h"
 
 using namespace Global;
 
@@ -65,7 +66,8 @@ void VolumetricCloud::InitCloudParameters()
 
 	m_farDistance = 22000.0f;
 
-	m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	//m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
+	m_weatherTexture = TextureManager::LoadDDSFromFile("Weather_Texture.dds");
 	auto* curl_2d = TextureManager::LoadDDSFromFile("CurlNoise_Volume_16by8.DDS");
 	m_curlNoiseTexture = std::make_shared<VolumeColorBuffer>();
 	m_curlNoiseTexture->CreateFromTexture2D(L"CurlVolumeNoise", curl_2d, 16, 8, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
@@ -74,6 +76,7 @@ void VolumetricCloud::InitCloudParameters()
 	m_perlinWorleyUE->CreateFromTexture2D(L"PerlinWorleyUE", perlin_worley, 16, 8, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	//m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
 	//m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
+
 }
 
 void VolumetricCloud::CreatePSO()
@@ -117,6 +120,17 @@ void VolumetricCloud::CreatePSO()
 	m_skyboxPSO.SetVertexShader(g_pSkybox_VS, sizeof(g_pSkybox_VS));
 	m_skyboxPSO.SetPixelShader(g_pSkybox_PS, sizeof(g_pSkybox_PS));
 	m_skyboxPSO.Finalize();
+
+	m_computeCloudOnQuadRS.Reset(3, 1);
+	m_computeCloudOnQuadRS[0].InitAsConstantBufferView(0);
+	m_computeCloudOnQuadRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
+	m_computeCloudOnQuadRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 10);
+	m_computeCloudOnQuadRS.InitStaticSampler(0, SamplerLinearWrapDesc);
+	m_computeCloudOnQuadRS.Finalize(L"ComputeCloudOnQuadRS");
+
+	m_computeCloudOnQuadPSO.SetRootSignature(m_computeCloudOnQuadRS);
+	m_computeCloudOnQuadPSO.SetComputeShader(g_pComputeCloud_CS, sizeof(g_pComputeCloud_CS));
+	m_computeCloudOnQuadPSO.Finalize();
 }
 
 void VolumetricCloud::CreateMeshes()
@@ -170,69 +184,7 @@ void VolumetricCloud::Update(const Timer& timer)
 
 void VolumetricCloud::Draw(const Timer& timer)
 {
-	GraphicsContext& graphicsContext = GraphicsContext::Begin();
-	graphicsContext.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	graphicsContext.ClearColor(*m_sceneColorBuffer);
-	graphicsContext.SetRenderTarget(m_sceneColorBuffer->GetRTV());
-	graphicsContext.SetViewportAndScissor(m_screenViewport, m_scissorRect);
-
-	{
-		struct
-		{
-			Matrix4 modelMatrix;
-			Matrix4 mvpMatrix;
-		}skyboxConstants;
-		skyboxConstants.modelMatrix = m_skyboxModelMatrix;
-		skyboxConstants.mvpMatrix = m_camera->GetViewProjMatrix() * m_skyboxModelMatrix;
-
-		__declspec(align(16)) struct
-		{
-			XMFLOAT3 viewerPos;
-			float time;
-			int sampleCountMin;
-			int sampleCountMax;
-			float extinct;
-			float hgCoeff;
-			float scatterCoeff;
-			XMFLOAT3 lightDir;
-			int lightSampleCount;
-			XMFLOAT3 lightColor;
-			float altitudeMin;
-			float altitudeMax;
-			float farDistance;
-		}passConstants;
-		XMStoreFloat3(&passConstants.viewerPos, m_camera->GetPosition());
-		passConstants.time = timer.TotalTime();
-		passConstants.sampleCountMin = m_sampleCountMin;
-		passConstants.sampleCountMax = m_sampleCountMax;
-		passConstants.extinct = m_extinct;
-		passConstants.hgCoeff = m_hgCoeff;
-		passConstants.scatterCoeff = m_scatterCoeff;
-		auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
-		XMStoreFloat3(&passConstants.lightDir, -dir);
-		passConstants.lightSampleCount = m_lightSampleCount;
-		XMStoreFloat3(&passConstants.lightColor, m_sunLightColor);
-		passConstants.altitudeMin = m_cloudShapeManager.GetAltitudeMin();
-		passConstants.altitudeMax = m_cloudShapeManager.GetAltitudeMax();
-		passConstants.farDistance = m_farDistance;
-
-		graphicsContext.SetRootSignature(m_skyboxRS);
-		graphicsContext.SetPipelineState(m_skyboxPSO);
-		graphicsContext.SetDynamicConstantBufferView(0, sizeof(skyboxConstants), &skyboxConstants);
-		graphicsContext.SetDynamicConstantBufferView(1, sizeof(passConstants), &passConstants);
-		graphicsContext.TransitionResource(*m_basicCloudShape, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.SetDynamicDescriptor(2, 0, m_basicCloudShape->GetSRV());
-		graphicsContext.TransitionResource(*m_cloudShapeManager.GetDensityHeightGradient(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.SetDynamicDescriptor(2, 1, m_cloudShapeManager.GetDensityHeightGradient()->GetSRV());
-		graphicsContext.TransitionResource(*m_cloudShapeManager.GetPerlinNoise(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		graphicsContext.SetDynamicDescriptor(2, 4, m_cloudShapeManager.GetPerlinNoise()->GetSRV());
-		graphicsContext.SetDynamicDescriptor(2, 5, m_weatherTexture->GetSRV());
-		graphicsContext.SetVertexBuffer(0, m_skyboxMesh->VertexBufferView());
-		graphicsContext.SetIndexBuffer(m_skyboxMesh->IndexBufferView());
-		graphicsContext.SetPrimitiveTopology(m_skyboxMesh->Topology());
-		graphicsContext.DrawIndexed(m_skyboxMesh->IndexCount());
-	}
-	graphicsContext.Finish();
+	DrawOnQuad(timer);
 }
 
 void VolumetricCloud::UpdateUI()
@@ -301,4 +253,97 @@ void VolumetricCloud::UpdateUI()
 	}
 
 	ImGui::End();
+}
+
+void VolumetricCloud::DrawOnSkybox(const Timer& timer)
+{
+	GraphicsContext& graphicsContext = GraphicsContext::Begin();
+	graphicsContext.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	graphicsContext.ClearColor(*m_sceneColorBuffer);
+	graphicsContext.SetRenderTarget(m_sceneColorBuffer->GetRTV());
+	graphicsContext.SetViewportAndScissor(m_screenViewport, m_scissorRect);
+
+	{
+		struct
+		{
+			Matrix4 modelMatrix;
+			Matrix4 mvpMatrix;
+		}skyboxConstants;
+		skyboxConstants.modelMatrix = m_skyboxModelMatrix;
+		skyboxConstants.mvpMatrix = m_camera->GetViewProjMatrix() * m_skyboxModelMatrix;
+
+		__declspec(align(16)) struct
+		{
+			XMFLOAT3 viewerPos;
+			float time;
+			int sampleCountMin;
+			int sampleCountMax;
+			float extinct;
+			float hgCoeff;
+			float scatterCoeff;
+			XMFLOAT3 lightDir;
+			int lightSampleCount;
+			XMFLOAT3 lightColor;
+			float altitudeMin;
+			float altitudeMax;
+			float farDistance;
+		}passConstants;
+		XMStoreFloat3(&passConstants.viewerPos, m_camera->GetPosition());
+		passConstants.time = timer.TotalTime();
+		passConstants.sampleCountMin = m_sampleCountMin;
+		passConstants.sampleCountMax = m_sampleCountMax;
+		passConstants.extinct = m_extinct;
+		passConstants.hgCoeff = m_hgCoeff;
+		passConstants.scatterCoeff = m_scatterCoeff;
+		auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
+		XMStoreFloat3(&passConstants.lightDir, -dir);
+		passConstants.lightSampleCount = m_lightSampleCount;
+		XMStoreFloat3(&passConstants.lightColor, m_sunLightColor);
+		passConstants.altitudeMin = m_cloudShapeManager.GetAltitudeMin();
+		passConstants.altitudeMax = m_cloudShapeManager.GetAltitudeMax();
+		passConstants.farDistance = m_farDistance;
+
+		graphicsContext.SetRootSignature(m_skyboxRS);
+		graphicsContext.SetPipelineState(m_skyboxPSO);
+		graphicsContext.SetDynamicConstantBufferView(0, sizeof(skyboxConstants), &skyboxConstants);
+		graphicsContext.SetDynamicConstantBufferView(1, sizeof(passConstants), &passConstants);
+		graphicsContext.TransitionResource(*m_basicCloudShape, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext.SetDynamicDescriptor(2, 0, m_basicCloudShape->GetSRV());
+		graphicsContext.TransitionResource(*m_cloudShapeManager.GetDensityHeightGradient(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext.SetDynamicDescriptor(2, 1, m_cloudShapeManager.GetDensityHeightGradient()->GetSRV());
+		graphicsContext.TransitionResource(*m_cloudShapeManager.GetPerlinNoise(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		graphicsContext.SetDynamicDescriptor(2, 4, m_cloudShapeManager.GetPerlinNoise()->GetSRV());
+		graphicsContext.SetDynamicDescriptor(2, 5, m_weatherTexture->GetSRV());
+		graphicsContext.SetVertexBuffer(0, m_skyboxMesh->VertexBufferView());
+		graphicsContext.SetIndexBuffer(m_skyboxMesh->IndexBufferView());
+		graphicsContext.SetPrimitiveTopology(m_skyboxMesh->Topology());
+		graphicsContext.DrawIndexed(m_skyboxMesh->IndexCount());
+	}
+	graphicsContext.Finish();
+}
+
+void VolumetricCloud::DrawOnQuad(const Timer& timer)
+{
+	m_cloudOnQuadCB.invView = Invert(m_camera->GetViewMatrix());
+	m_cloudOnQuadCB.invProj = Invert(m_camera->GetProjMatrix());
+	auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
+	XMStoreFloat3(&m_cloudOnQuadCB.lightDir, -dir);
+	XMStoreFloat3(&m_cloudOnQuadCB.cameraPosition, m_camera->GetPosition());
+	Vector4 res{ (float)m_sceneColorBuffer->GetWidth(), (float)m_sceneColorBuffer->GetHeight(), 1.0f / m_sceneColorBuffer->GetWidth(), 1.0f / m_sceneColorBuffer->GetHeight() };
+	XMStoreFloat4(&m_cloudOnQuadCB.resolution, res);
+
+	ComputeContext& context = ComputeContext::Begin();
+	context.SetRootSignature(m_computeCloudOnQuadRS);
+	context.SetPipelineState(m_computeCloudOnQuadPSO);
+	context.TransitionResource(*m_basicCloudShape, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*m_cloudShapeManager.GetErosion(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*const_cast<Texture2D*>(m_weatherTexture), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicConstantBufferView(0, sizeof(m_cloudOnQuadCB), &m_cloudOnQuadCB);
+	context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
+	context.SetDynamicDescriptor(1, 1, m_cloudShapeManager.GetErosion()->GetSRV());
+	context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
+	context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+	context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
+	context.Finish();
 }
