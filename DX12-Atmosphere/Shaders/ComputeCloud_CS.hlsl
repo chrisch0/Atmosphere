@@ -44,6 +44,8 @@ SamplerState LinearRepeatSampler : register(s0);
 #define INNER_RADIUS (EarthRadius + CloudBottomRadius)
 #define OUTER_RADIUS (INNER_RADIUS + CloudTopRadius)
 #define CLOUDS_MIN_TRANSMITTANCE 1e-1
+#define LIGHT_DIR float3(-0.40825, 0.40825, 0.8165)
+#define SUN_COLOR LightColor * float3(1.1, 1.1, 0.95)
 
 static const float3 NoiseKernel[] = 
 {
@@ -162,7 +164,7 @@ float SampleCloudDensity(float3 p, bool expensive, float lod)
 	float base_cloud = Remap(low_frequency_noise.r, -(1.0 - low_freq_FBM), 1.0, 0.0, 1.0);
 
 	float density = GetHeightDensityForCloud(height_fraction, 1.0);
-	base_cloud *= density / height_fraction;
+	base_cloud *= (density / height_fraction);
 
 	float3 weather_data = WeatherTexture.SampleLevel(LinearRepeatSampler, moving_uv, 0.0).rgb;
 	float cloud_coverage = weather_data.r * CloudCoverage;
@@ -195,7 +197,8 @@ float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDen
 	float inv_depth = 1.0 / ds;
 	float sigma_ds = -ds * Absorption;
 	float3 pos;
-	float T = 1.0;
+	//float T = 1.0;
+	float T = 0.0;
 
 	for (int i = 0; i < 6; ++i)
 	{
@@ -206,15 +209,17 @@ float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDen
 			float cloud_density = SampleCloudDensity(pos, density > 0.3, 0.0);
 			if (cloud_density > 0.0)
 			{
-				float Ti = exp(cloud_density * sigma_ds);
-				T *= Ti;
+				//float Ti = exp(cloud_density * sigma_ds);
+				//T *= Ti;
+				T += cloud_density * sigma_ds;
 				density += cloud_density;
 			}
 		}
 		start_pos += ray_step;
 		cone_radius += CONE_STEP;
 	}
-	return T;
+	//return T;
+	return exp(T);
 }
 
 float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg, out float4 cloudPos)
@@ -234,7 +239,7 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	float3 pos = startPos;
 
 	float density = 0.0;
-	float light_dot_eye = dot(normalize(LightDir), normalize(dir));
+	float light_dot_eye = dot(normalize(LIGHT_DIR), normalize(dir));
 	float T = 1.0;
 	float sigma_ds = -ds * DensityFactor;
 	bool expensive = true;
@@ -252,13 +257,12 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 			}
 			float height = GetHeightFraction(pos);
 			float3 ambient_light = CloudBottomColor;
-			float light_density = RaymarchLight(pos, ds * 0.1, LightDir, density_sample, light_dot_eye);
-			float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5));
+			float light_density = RaymarchLight(pos, ds * 0.1, LIGHT_DIR, density_sample, light_dot_eye);
+			float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
 			scattering = max(scattering, 1.0);
-			float powder_term = Powder(density_sample);
-			if (!EnablePowder)
-				powder_term = 1.0;
-			float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * LightColor, powder_term * light_density)) * density_sample;
+			float powder_term = EnablePowder ? Powder(density_sample) : 1.0f;
+
+			float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * SUN_COLOR, powder_term * light_density)) * density_sample;
 			float dTrans = exp(density_sample * sigma_ds);
 			float3 Sint = (S - S * dTrans) * (1.0 / density_sample);
 			color.rgb += T * Sint;
@@ -269,6 +273,7 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 
 		pos += dir;
 	}
+	color.a = 1.0 - T;
 	return color;
 }
 
@@ -279,7 +284,8 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	float2 pixel_coord = float2(globalID.xy) + 0.5f;
 	float3 clip_coord = ScreenToClip(pixel_coord * Resolution.zw);
 	float4 view_coord = mul(InvProj, float4(clip_coord, 1.0));
-	view_coord /= view_coord.w;
+	view_coord = float4(view_coord.xy, -1.0, 0.0);
+	//view_coord /= view_coord.w;
 	float3 world_dir = mul(InvView, float4(view_coord.xyz, 0.0)).xyz;
 	world_dir = normalize(world_dir);
 
@@ -293,6 +299,14 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	RaySphereIntersection(CameraPosition, world_dir, OUTER_RADIUS, end_pos);
 	fogRay = start_pos;
 
+	float3 ground_pos;
+	bool ground = RaySphereIntersection(CameraPosition, world_dir, EarthRadius, ground_pos);
+	if (ground)
+	{
+		CloudColor[globalID.xy] = float4(0.0, 0.2, 0.87, 1.0);
+		return;
+	}
+
 	v = RaymarchCloud(globalID.xy, start_pos, end_pos, bg.rgb, cloud_distance);
 
 	float cloud_alphaness = Threshold(v.a, 0.2);
@@ -305,7 +319,7 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	alphaness = float4(cloud_alphaness, 0.0, 0.0, 1.0);
 
 	frag_color.a = alphaness.r;
-	
+	//frag_color.a = 1.0;
 	/*float3 dir = normalize(world_dir);
 	float3 cam_to_center = -CameraPosition;
 	float a = dot(dir, cam_to_center);

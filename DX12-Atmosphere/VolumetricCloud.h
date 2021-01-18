@@ -24,6 +24,7 @@ private:
 	void CreatePSO();
 	void CreateMeshes();
 	void CreateCamera();
+	void CreateNoise();
 	void SwitchBasicCloudShape(int idx);
 
 	void DrawOnSkybox(const Timer& timer);
@@ -40,6 +41,10 @@ private:
 	RootSignature m_computeCloudOnQuadRS;
 	ComputePSO m_computeCloudOnQuadPSO;
 
+	RootSignature m_generateNoiseRS;
+	ComputePSO m_generateWorleyPSO;
+	ComputePSO m_generatePerlinWorleyPSO;
+
 	//GraphicsPSO m_renderCloudOnQuadPSO;
 
 	std::shared_ptr<Camera> m_camera;
@@ -52,6 +57,9 @@ private:
 	std::shared_ptr<VolumeColorBuffer> m_perlinWorleyUE;
 	VolumeColorBuffer* m_basicCloudShape;
 	std::shared_ptr<VolumeColorBuffer> m_erosionTexture;
+
+	std::shared_ptr<VolumeColorBuffer> m_perlinWorley;
+	std::shared_ptr<VolumeColorBuffer> m_worley;
 
 	Vector3 m_position;
 	Vector3 m_scale;

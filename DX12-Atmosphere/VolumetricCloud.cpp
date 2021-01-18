@@ -13,6 +13,8 @@
 #include "CompiledShaders/Skybox_VS.h"
 #include "CompiledShaders/Skybox_PS.h"
 #include "CompiledShaders/ComputeCloud_CS.h"
+#include "CompiledShaders/PerlinWorley_CS.h"
+#include "CompiledShaders/Worley_CS.h"
 
 using namespace Global;
 
@@ -43,6 +45,7 @@ bool VolumetricCloud::Initialize()
 	CreatePSO();
 	CreateMeshes();
 	CreateCamera();
+	CreateNoise();
 
 	m_position = Vector3(0.0f, 0.0f, 0.0f);
 	m_rotation = Vector3(0.0f, 0.0f, 0.0f);
@@ -131,6 +134,18 @@ void VolumetricCloud::CreatePSO()
 	m_computeCloudOnQuadPSO.SetRootSignature(m_computeCloudOnQuadRS);
 	m_computeCloudOnQuadPSO.SetComputeShader(g_pComputeCloud_CS, sizeof(g_pComputeCloud_CS));
 	m_computeCloudOnQuadPSO.Finalize();
+
+	m_generateNoiseRS.Reset(1, 0);
+	m_generateNoiseRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+	m_generateNoiseRS.Finalize(L"GenerateNoiseRS");
+
+	m_generateWorleyPSO.SetRootSignature(m_generateNoiseRS);
+	m_generateWorleyPSO.SetComputeShader(g_pWorley_CS, sizeof(g_pWorley_CS));
+	m_generateWorleyPSO.Finalize();
+
+	m_generatePerlinWorleyPSO.SetRootSignature(m_generateNoiseRS);
+	m_generatePerlinWorleyPSO.SetComputeShader(g_pPerlinWorley_CS, sizeof(g_pPerlinWorley_CS));
+	m_generatePerlinWorleyPSO.Finalize();
 }
 
 void VolumetricCloud::CreateMeshes()
@@ -150,6 +165,27 @@ void VolumetricCloud::CreateCamera()
 	m_camera->SetLookAt({ 2.25f, 1.75f, 2.10f }, { 0, 0, 0 }, { 0, 1, 0 });
 	m_camera->SetNearClip(0.01f);
 	m_camera->SetFarClip(10000.0f);
+}
+
+void VolumetricCloud::CreateNoise()
+{
+	m_perlinWorley = std::make_shared<VolumeColorBuffer>();
+	m_perlinWorley->Create(L"Perlin Worley", 128, 128, 128, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_worley = std::make_shared<VolumeColorBuffer>();
+	m_worley->Create(L"Worley", 32, 32, 32, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+	ComputeContext& context = ComputeContext::Begin();
+	context.SetRootSignature(m_generateNoiseRS);
+	context.SetPipelineState(m_generatePerlinWorleyPSO);
+	context.TransitionResource(*m_perlinWorley, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(0, 0, m_perlinWorley->GetUAV());
+	context.Dispatch3D(m_perlinWorley->GetWidth(), m_perlinWorley->GetHeight(), m_perlinWorley->GetDepth(), 8, 8, 8);
+
+	context.SetPipelineState(m_generateWorleyPSO);
+	context.TransitionResource(*m_worley, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(0, 0, m_worley->GetUAV());
+	context.Dispatch3D(m_worley->GetWidth(), m_worley->GetHeight(), m_worley->GetDepth(), 8, 8, 8);
+	context.Finish();
 }
 
 void VolumetricCloud::SwitchBasicCloudShape(int idx)
@@ -184,6 +220,7 @@ void VolumetricCloud::Update(const Timer& timer)
 
 void VolumetricCloud::Draw(const Timer& timer)
 {
+	//DrawOnSkybox(timer);
 	DrawOnQuad(timer);
 }
 
@@ -221,10 +258,12 @@ void VolumetricCloud::UpdateUI()
 
 			ImGui::Text("Basic Cloud Shape Texture");
 			ImGui::SetNextItemWidth(150.0f);
-			const char* cloud_shape_texture[] = { "Perlin-Worley", "Perlin-Worley_UE" };
+			const char* cloud_shape_texture[] = { "Perlin-Worley", "Perlin-Worley_UE", "Perlin-Worley-New" };
+			static VolumeColorBuffer* cloud_shape_texture_ptr[] = { m_cloudShapeManager.GetBasicCloudShape(), m_perlinWorleyUE.get(), m_perlinWorley.get() };
 			static int cur_basic_shape = 0;
 			ImGui::Combo("Basic Cloud Shape", &cur_basic_shape, cloud_shape_texture, IM_ARRAYSIZE(cloud_shape_texture));
-			SwitchBasicCloudShape(cur_basic_shape);
+			//SwitchBasicCloudShape(cur_basic_shape);
+			m_basicCloudShape = cloud_shape_texture_ptr[cur_basic_shape];
 			static bool basic_cloud_shape_detail;
 			static bool basic_cloud_shapw_window_opening;
 			ImGui::SameLine(400.0);
@@ -249,6 +288,34 @@ void VolumetricCloud::UpdateUI()
 
 			ImGui::EndTabItem();
 		}
+
+		if (ImGui::BeginTabItem("Compute Cloud Setting"))
+		{
+			ImGui::InputInt("Sample Count", &m_cloudOnQuadCB.sampleCount);
+			ImGui::Separator();
+			ImGui::Text("Cloud Rendering");
+			ImGui::SliderFloat("Cloud Coverage", &m_cloudOnQuadCB.cloudCoverage, 0.0f, 1.0f);
+			ImGui::SliderFloat("Cloud Speed", &m_cloudOnQuadCB.cloudSpeed, 0.0f, 5.0e3f);
+			ImGui::SliderFloat("Crispiness", &m_cloudOnQuadCB.crispiness, 0.0f, 120.0f);
+			ImGui::SliderFloat("Curliness", &m_cloudOnQuadCB.curliness, 0.0f, 3.0f);
+			ImGui::SliderFloat("Density Factor", &m_cloudOnQuadCB.densityFactor, 0.0f, 0.1f);
+			ImGui::DragFloat("Light Absorption", &m_cloudOnQuadCB.absorption, 0.0001f, 0.0f, 1.5f, "%.4f");
+			ImGui::DragFloat("HG Coeff0", &m_cloudOnQuadCB.hg0, 0.0005f);
+			ImGui::DragFloat("HG Coeff1", &m_cloudOnQuadCB.hg1, 0.0005f);
+			ImGui::ColorEdit3("Cloud Bottom Color", m_cloudOnQuadCB.cloudBottomColor);
+			ImGui::ColorEdit3("Light Color", m_cloudOnQuadCB.lightColor);
+			bool enable_powder = (bool)m_cloudOnQuadCB.enablePowder;
+			ImGui::Checkbox("Enable Powder", &enable_powder);
+			m_cloudOnQuadCB.enablePowder = (int)enable_powder;
+
+			ImGui::Separator();
+			ImGui::Text("Cloud Distribution");
+			ImGui::SliderFloat("Earth Radius", &m_cloudOnQuadCB.earthRadius, 10000.0f, 5000000.0f);
+			ImGui::SliderFloat("Cloud Bottom Altitude", &m_cloudOnQuadCB.cloudBottomRadius, 1000.0f, 15000.0f);
+			ImGui::SliderFloat("Cloud Top Altitude", &m_cloudOnQuadCB.cloudTopRadius, 1000.0f, 40000.0f);
+			ImGui::EndTabItem();
+		}
+
 		ImGui::EndTabBar();
 	}
 
@@ -326,6 +393,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 {
 	m_cloudOnQuadCB.invView = Invert(m_camera->GetViewMatrix());
 	m_cloudOnQuadCB.invProj = Invert(m_camera->GetProjMatrix());
+	m_cloudOnQuadCB.time = timer.TotalTime();
 	auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
 	XMStoreFloat3(&m_cloudOnQuadCB.lightDir, -dir);
 	XMStoreFloat3(&m_cloudOnQuadCB.cameraPosition, m_camera->GetPosition());
@@ -336,12 +404,14 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	context.SetRootSignature(m_computeCloudOnQuadRS);
 	context.SetPipelineState(m_computeCloudOnQuadPSO);
 	context.TransitionResource(*m_basicCloudShape, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	context.TransitionResource(*m_cloudShapeManager.GetErosion(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	//context.TransitionResource(*m_cloudShapeManager.GetErosion(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	context.TransitionResource(*m_worley, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*const_cast<Texture2D*>(m_weatherTexture), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	context.SetDynamicConstantBufferView(0, sizeof(m_cloudOnQuadCB), &m_cloudOnQuadCB);
 	context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
-	context.SetDynamicDescriptor(1, 1, m_cloudShapeManager.GetErosion()->GetSRV());
+	//context.SetDynamicDescriptor(1, 1, m_cloudShapeManager.GetErosion()->GetSRV());
+	context.SetDynamicDescriptor(1, 1, m_worley->GetSRV());
 	context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
 	context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
 	context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());

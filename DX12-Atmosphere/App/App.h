@@ -114,7 +114,7 @@ protected:
 	std::wstring m_mainWndCaption = L"Atmosphere";
 	D3D_DRIVER_TYPE m_d3dDriverType = D3D_DRIVER_TYPE_HARDWARE;
 	DXGI_FORMAT m_backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
-	DXGI_FORMAT m_sceneBufferFormat = DXGI_FORMAT_R11G11B10_FLOAT;
+	DXGI_FORMAT m_sceneBufferFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	DXGI_FORMAT m_depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	int m_clientWidth = 1280;
 	int m_clientHeight = 800;
@@ -127,6 +127,7 @@ protected:
 
 	RootSignature m_presentRS;
 	GraphicsPSO m_presentLDRPSO;
+	GraphicsPSO m_copyTexturePSO;
 
 	const Texture2D* m_fontColorBuffer;
 

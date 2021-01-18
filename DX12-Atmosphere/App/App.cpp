@@ -15,6 +15,7 @@
 #include "CompiledShaders/PreviewTexture3D_PS.h"
 #include "CompiledShaders/DrawQuad_VS.h"
 #include "CompiledShaders/PresentSDR_PS.h"
+#include "CompiledShaders/CopyTexture_PS.h"
 
 using namespace Microsoft::WRL;
 
@@ -387,6 +388,10 @@ void App::CreateAppPipelineState()
 	m_presentLDRPSO.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 	m_presentLDRPSO.SetInputLayout(_countof(present_layout), present_layout);
 	m_presentLDRPSO.Finalize();
+
+	m_copyTexturePSO = m_presentLDRPSO;
+	m_copyTexturePSO.SetPixelShader(g_pCopyTexture_PS, sizeof(g_pCopyTexture_PS));
+	m_copyTexturePSO.Finalize();
 }
 
 void App::CreateFontTexture()
@@ -556,10 +561,8 @@ void App::UpdateAppUI()
 			{
 				ImGui::DragFloat("Target Luminance", &PostProcess::ExposureCB.targetLuminance, 0.01f, 0.01f, 0.99f);
 				ImGui::DragFloat("Adaptation Rate", &PostProcess::ExposureCB.adaptationRate, 0.01f, 0.01f, 1.0f);
-				//ImGui::DragFloat("Min Exposure", &PostProcess::ExposureCB.minExposure, 0.25f, 0.00390625f, 1.0f);
 				ImGui::DragScalar("Min Exposure", ImGuiDataType_Float, &PostProcess::ExposureCB.minExposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
-				//ImGui::DragFloat("Max Exposure", &PostProcess::ExposureCB.maxExposure, 0.25f, 1.0f, 256.0f);
-				ImGui::DragScalar("Min Exposure", ImGuiDataType_Float, &PostProcess::ExposureCB.maxExposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
+				ImGui::DragScalar("Max Exposure", ImGuiDataType_Float, &PostProcess::ExposureCB.maxExposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
 				ImGui::Checkbox("Draw Histogram", &PostProcess::DrawHistogram);
 				if (PostProcess::DrawHistogram)
 				{
@@ -588,7 +591,10 @@ void App::Display()
 		context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 		context.ClearColor(m_displayBuffer[m_currBackBuffer]);
 		context.SetRootSignature(m_presentRS);
-		context.SetPipelineState(m_presentLDRPSO);
+		if (PostProcess::EnableHDR)
+			context.SetPipelineState(m_presentLDRPSO);
+		else
+			context.SetPipelineState(m_copyTexturePSO);
 		context.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
 		context.SetDynamicDescriptor(0, 0, m_sceneColorBuffer->GetSRV());
 		context.SetPrimitiveTopology(m_fullScreenQuad->Topology());

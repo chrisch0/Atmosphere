@@ -454,6 +454,15 @@
     <FxCompile Include="Shaders\ComputeCloud_CS.hlsl">
       <Filter>Shaders\Volumetric</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PerlinWorley_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Worley_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\CopyTexture_PS.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
