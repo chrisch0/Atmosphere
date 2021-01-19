@@ -18,6 +18,7 @@ public:
 	void Draw(const Timer& timer) override;
 	void Update(const Timer& timer) override;
 	void UpdateUI() override;
+	void OnResize() override;
 
 private:
 	void InitCloudParameters();
@@ -60,6 +61,9 @@ private:
 
 	std::shared_ptr<VolumeColorBuffer> m_perlinWorley;
 	std::shared_ptr<VolumeColorBuffer> m_worley;
+	
+	std::shared_ptr<ColorBuffer> m_quarterBuffer;
+	std::shared_ptr<ColorBuffer> m_cloudTempBuffer;
 
 	Vector3 m_position;
 	Vector3 m_scale;
@@ -107,5 +111,8 @@ private:
 		float hg0 = -0.08f;
 		float hg1 = 0.08f;
 		int enablePowder = 1;
+		int enableBeer = 1;
+		float rainAbsorption = 1.0f;
+		int frameIndex = 0;
 	}m_cloudOnQuadCB;
 };

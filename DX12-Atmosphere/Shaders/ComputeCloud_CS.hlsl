@@ -28,6 +28,12 @@ cbuffer cb : register(b0)
 
 	float HG1;
 	int EnablePowder;
+	int EnableBeer;
+	float RainAbsorption;
+
+	int FrameIndex;
+
+	//float4x4 PreViewProj;
 }
 
 Texture3D<float4> CloudShapeTexture : register(t0);
@@ -35,6 +41,7 @@ Texture3D<float4> ErosionTexture : register(t1);
 Texture2D<float4> WeatherTexture : register(t2);
 
 RWTexture2D<float4> CloudColor : register(u0);
+RWTexture2D<float4> CloudPosition : register(u1);
 //RWTexture2D<float4> Bloom : register(u1);
 //RWTexture2D<float4> Alphaness : register(u2);
 //RWTexture2D<float4> CloudDistance : register(u3);
@@ -113,12 +120,12 @@ float Remap(float originalValue, float originalMin, float originalMax, float new
 float HG(float cosTheta, float g)
 {
 	float g_sqrt = g * g;
-	return (1.0 - g_sqrt) / pow(1.0 + g_sqrt - 2.0 * g * cosTheta, 1.5);
+	return (1.0 - g_sqrt) / pow(1.0 + g_sqrt - 2.0 * g * cosTheta, 1.5) * 0.079577471f;
 }
 
 float Beer(float d)
 {
-	return exp(-d);
+	return exp(-d * RainAbsorption);
 }
 
 float Powder(float d)
@@ -195,7 +202,7 @@ float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDen
 	float density = 0.0;
 	float cone_density = 0.0;
 	float inv_depth = 1.0 / ds;
-	float sigma_ds = -ds * Absorption;
+	float sigma_ds = ds * Absorption;
 	float3 pos;
 	//float T = 1.0;
 	float T = 0.0;
@@ -218,8 +225,8 @@ float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDen
 		start_pos += ray_step;
 		cone_radius += CONE_STEP;
 	}
-	//return T;
-	return exp(T);
+	return T;
+	//return exp(T);
 }
 
 float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg, out float4 cloudPos)
@@ -260,9 +267,10 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 			float light_density = RaymarchLight(pos, ds * 0.1, LIGHT_DIR, density_sample, light_dot_eye);
 			float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
 			scattering = max(scattering, 1.0);
-			float powder_term = EnablePowder ? Powder(density_sample) : 1.0f;
+			float powder_term = EnablePowder ? Powder(light_density) : 1.0f;
+			float beer_term = EnableBeer ? 2.0f * Beer(light_density) : 1.0f;
 
-			float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * SUN_COLOR, powder_term * light_density)) * density_sample;
+			float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * SUN_COLOR, beer_term * powder_term * exp(-light_density))) * density_sample;
 			float dTrans = exp(density_sample * sigma_ds);
 			float3 Sint = (S - S * dTrans) * (1.0 / density_sample);
 			color.rgb += T * Sint;

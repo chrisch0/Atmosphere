@@ -51,6 +51,9 @@ bool VolumetricCloud::Initialize()
 	m_rotation = Vector3(0.0f, 0.0f, 0.0f);
 	m_scale = Vector3(1.0f, 1.0f, 1.0f);
 
+	m_quarterBuffer = std::make_shared<ColorBuffer>();
+	m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
+
 	return true;
 }
 
@@ -307,6 +310,10 @@ void VolumetricCloud::UpdateUI()
 			bool enable_powder = (bool)m_cloudOnQuadCB.enablePowder;
 			ImGui::Checkbox("Enable Powder", &enable_powder);
 			m_cloudOnQuadCB.enablePowder = (int)enable_powder;
+			static bool enable_beer = (bool)m_cloudOnQuadCB.enableBeer;
+			ImGui::Checkbox("Enable Beer", &enable_beer);
+			m_cloudOnQuadCB.enableBeer = enable_beer;
+			ImGui::DragFloat("Rain Absorption", &m_cloudOnQuadCB.rainAbsorption, 0.01f, 0.01f, 20.0f);
 
 			ImGui::Separator();
 			ImGui::Text("Cloud Distribution");
@@ -399,6 +406,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	XMStoreFloat3(&m_cloudOnQuadCB.cameraPosition, m_camera->GetPosition());
 	Vector4 res{ (float)m_sceneColorBuffer->GetWidth(), (float)m_sceneColorBuffer->GetHeight(), 1.0f / m_sceneColorBuffer->GetWidth(), 1.0f / m_sceneColorBuffer->GetHeight() };
 	XMStoreFloat4(&m_cloudOnQuadCB.resolution, res);
+	m_cloudOnQuadCB.frameIndex = m_frameIndex;
 
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_computeCloudOnQuadRS);
@@ -416,4 +424,13 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
 	context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 	context.Finish();
+}
+
+void VolumetricCloud::OnResize()
+{
+	App::OnResize();
+	m_quarterBuffer->Destroy();
+	m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
+	m_cloudTempBuffer->Destroy();
+	m_cloudTempBuffer->Create(L"Cloud Temp Buffer", m_clientWidth, m_clientHeight, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 }

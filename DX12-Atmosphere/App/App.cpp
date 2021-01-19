@@ -468,6 +468,9 @@ void App::OnResize()
 		m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
 	}
 
+	m_sceneColorBuffer->Destroy();
+	m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+
 	m_screenViewport.TopLeftX = 0.0;
 	m_screenViewport.TopLeftY = 0.0;
 	m_screenViewport.Width = static_cast<float>(m_clientWidth);
@@ -637,6 +640,7 @@ void App::SwapBackBuffer()
 	m_swapChain->Present(0, 0); // Present without vsync
 	m_currBackBuffer = (m_currBackBuffer + 1) % c_swapChainBufferCount;
 	g_CommandManager.IdleGPU();
+	++m_frameIndex;
 }
 
 void App::RenderUI(GraphicsContext& context, ImDrawData* drawData)
