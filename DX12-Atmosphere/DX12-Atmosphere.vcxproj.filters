@@ -463,6 +463,9 @@
     <FxCompile Include="Shaders\CopyTexture_PS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeQuarterCloud_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
@@ -479,6 +482,9 @@
     </None>
     <None Include="packages.config" />
     <None Include="Shaders\Random.hlsli">
+      <Filter>Shaders\Volumetric</Filter>
+    </None>
+    <None Include="Shaders\VolumetricCloudCommon.hlsli">
       <Filter>Shaders\Volumetric</Filter>
     </None>
   </ItemGroup>

@@ -346,6 +346,22 @@
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\$(Configuration)\Asm\%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeQuarterCloud_CS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ObjectFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_p%(Filename)</VariableName>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\bin\$(Configuration)\CompiledShaders\%(Filename).h</HeaderFileOutput>
+      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
+      <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\$(Configuration)\Asm\%(Filename).asm</AssemblerOutputFile>
+    </FxCompile>
     <FxCompile Include="Shaders\CopyTexture_PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -820,6 +836,7 @@
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\$(Configuration)\Asm\%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
     <None Include="Shaders\Random.hlsli" />
+    <None Include="Shaders\VolumetricCloudCommon.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl" />

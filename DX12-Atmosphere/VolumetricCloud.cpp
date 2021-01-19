@@ -314,6 +314,7 @@ void VolumetricCloud::UpdateUI()
 			ImGui::Checkbox("Enable Beer", &enable_beer);
 			m_cloudOnQuadCB.enableBeer = enable_beer;
 			ImGui::DragFloat("Rain Absorption", &m_cloudOnQuadCB.rainAbsorption, 0.01f, 0.01f, 20.0f);
+			ImGui::Checkbox("Enable Temporal", &m_useTamporal);
 
 			ImGui::Separator();
 			ImGui::Text("Cloud Distribution");
