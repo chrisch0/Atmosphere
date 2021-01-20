@@ -4,7 +4,7 @@
 
 class Texture : public GpuResource
 {
-	friend class TextureManager;
+	//friend class TextureManager;
 public:
 	Texture(const std::wstring& name) 
 		: m_textureName(name), m_isValid(true), m_width(0), m_height(0), m_depth(1)
@@ -34,7 +34,7 @@ protected:
 class Texture2D : public Texture
 {
 	friend class CommandContext;
-	friend class TextureManager;
+	//friend class TextureManager;
 public:
 	Texture2D(const std::wstring& name) : Texture(name) { }
 	Texture2D(D3D12_CPU_DESCRIPTOR_HANDLE handle) : Texture(L"") { m_cpuHandle = handle; }
@@ -43,7 +43,6 @@ public:
 	uint32_t GetWidth() const { return m_width; }
 	uint32_t GetHeight() const { return m_height; }
 
-protected:
 	void Create(size_t pitch, size_t width, size_t height, DXGI_FORMAT format, const void* initData);
 	void Create(size_t width, size_t height, DXGI_FORMAT format, const void* initData)
 	{
@@ -60,7 +59,7 @@ protected:
 class Texture3D : public Texture
 {
 	friend class CommandContext;
-	friend class TextureManager;
+	//friend class TextureManager;
 public:
 	Texture3D(const std::wstring& name) : Texture(name) {}
 
@@ -68,7 +67,6 @@ public:
 	uint32_t GetHeight() const { return m_height; }
 	uint32_t GetDepth() const { return m_depth; }
 
-protected:
 	void Create(size_t pitch, size_t width, size_t height, size_t depth, DXGI_FORMAT format, const void* initData);
 	void Create(size_t width, size_t height, size_t depth, DXGI_FORMAT format, const void* initData)
 	{
