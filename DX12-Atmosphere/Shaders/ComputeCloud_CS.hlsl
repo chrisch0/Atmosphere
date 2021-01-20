@@ -1,5 +1,3 @@
-#include "VolumetricCloudCommon.hlsli"
-
 Texture3D<float4> CloudShapeTexture : register(t0);
 Texture3D<float4> ErosionTexture : register(t1);
 Texture2D<float4> WeatherTexture : register(t2);
@@ -10,6 +8,9 @@ RWTexture2D<float4> CloudColor : register(u0);
 //RWTexture2D<float4> CloudDistance : register(u3);
 
 SamplerState LinearRepeatSampler : register(s0);
+
+#include "VolumetricCloudCommon.hlsli"
+
 
 [numthreads(8, 8, 1)]
 void main( uint3 globalID : SV_DispatchThreadID )
@@ -48,19 +49,6 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	alphaness = float4(cloud_alphaness, 0.0, 0.0, 1.0);
 
 	frag_color.a = alphaness.r;
-	//frag_color.a = 1.0;
-	/*float3 dir = normalize(world_dir);
-	float3 cam_to_center = -CameraPosition;
-	float a = dot(dir, cam_to_center);
-	float r = 0.5;
-	float rr = r * r;
-	float3 col = 0;
-	float bb = dot(cam_to_center, cam_to_center) - a * a;
-	float dd = rr - bb;
-	float dis = a - sqrt(dd);
-	if (dot(cam_to_center, cam_to_center) - a * a < rr)
-		col = CameraPosition + dir * dis;
-	CloudColor[globalID.xy] = float4(col, 1.0);*/
 
 	CloudColor[globalID.xy] = frag_color;
 }

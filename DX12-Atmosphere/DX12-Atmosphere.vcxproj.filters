@@ -53,6 +53,9 @@
     <Filter Include="Shaders\HDR">
       <UniqueIdentifier>{ceb11e6d-f8ce-423e-ae1c-759323857b94}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\PostProcess">
+      <UniqueIdentifier>{defaed07-6620-4480-973a-667793e73b2d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -465,6 +468,12 @@
     </FxCompile>
     <FxCompile Include="Shaders\ComputeQuarterCloud_CS.hlsl">
       <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\CombineSky_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GuassianBlur_CS.hlsl">
+      <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

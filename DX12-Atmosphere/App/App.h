@@ -106,7 +106,7 @@ protected:
 	ColorBuffer m_displayBuffer[c_swapChainBufferCount];
 	std::shared_ptr<ColorBuffer> m_sceneColorBuffer;
 
-	int m_frameIndex = 0;
+	uint32_t m_frameIndex = 0;
 
 	D3D12_VIEWPORT m_screenViewport;
 	D3D12_RECT m_scissorRect;

@@ -78,7 +78,7 @@ public:
 	uint64_t Flush(bool waitForCompletion = false);
 
 	// Flush existing commands and release the current context
-	uint64_t CommandContext::Finish(bool waitForCompletion = false);
+	uint64_t Finish(bool waitForCompletion = false);
 
 	void Initialize();
 
@@ -110,6 +110,7 @@ public:
 
 	void CopyBuffer(GpuResource& dest, GpuResource& src);
 	void CopyBufferRegion(GpuResource& dest, size_t destOffset, GpuResource& src, size_t srcOffset, size_t numBytes);
+	void CopySubresource(GpuResource& dest, uint32_t destSubIndex, GpuResource& src, uint32_t srcSubIndex);
 
 	static void InitializeBuffer(GpuResource& dest, const void* bufferData, size_t numBytes, size_t offset = 0, const std::wstring& name = L"");
 	static void InitializeTexture(GpuResource& dest, uint32_t numSubresources, D3D12_SUBRESOURCE_DATA subData[]);

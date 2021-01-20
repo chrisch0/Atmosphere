@@ -201,6 +201,25 @@ void CommandContext::InitializeTexture(GpuResource& dest, uint32_t numSubresourc
 	initContext.Finish(true);
 }
 
+void CommandContext::CopySubresource(GpuResource& dest, uint32_t destSubIndex, GpuResource& src, uint32_t srcSubIndex)
+{
+	FlushResourceBarriers();
+	D3D12_TEXTURE_COPY_LOCATION destLocation =
+	{
+		dest.GetResource(),
+		D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+		destSubIndex
+	};
+
+	D3D12_TEXTURE_COPY_LOCATION srcLocation =
+	{
+		src.GetResource(),
+		D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+		srcSubIndex
+	};
+	m_commandList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, nullptr);
+}
+
 void CommandContext::TransitionResource(GpuResource& resource, D3D12_RESOURCE_STATES newState, bool flushImmediate /* = false */)
 {
 	D3D12_RESOURCE_STATES oldState = resource.m_usageState;

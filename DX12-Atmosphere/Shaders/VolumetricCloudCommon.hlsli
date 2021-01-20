@@ -31,9 +31,9 @@ cbuffer cb : register(b0)
 	int EnableBeer;
 	float RainAbsorption;
 
-	int FrameIndex;
+	uint FrameIndex;
 
-	//float4x4 PreViewProj;
+	float4x4 PrevViewProj;
 }
 
 #define INNER_RADIUS (EarthRadius + CloudBottomRadius)
@@ -76,6 +76,13 @@ float3 ComputeWorldViewDir(float2 pixelCoord)
 	float3 world_dir = mul(InvView, float4(view_coord.xyz, 0.0)).xyz;
 	world_dir = normalize(world_dir);
 	return world_dir;
+}
+
+float2 WorldViewDirToUV(float3 worldDir, float4x4 ViewProj)
+{
+	float4 ndc = mul(ViewProj, float4(worldDir, 0.0));
+	ndc /= ndc.w;
+	return ndc.xy * float2(0.5, -0.5) + 0.5;
 }
 
 bool RaySphereIntersection(float3 ro, float3 rd, float radius, out float3 startPos)

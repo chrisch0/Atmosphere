@@ -46,7 +46,7 @@ private:
 	ComputePSO m_generateWorleyPSO;
 	ComputePSO m_generatePerlinWorleyPSO;
 
-	ComputePSO m_quaterCloudPSO;
+	ComputePSO m_quarterCloudPSO;
 	ComputePSO m_combineSkyPSO;
 
 	//GraphicsPSO m_renderCloudOnQuadPSO;
@@ -116,9 +116,9 @@ private:
 		int enablePowder = 1;
 		int enableBeer = 1;
 		float rainAbsorption = 1.0f;
-		int frameIndex = 0;
+		uint32_t frameIndex = 0;
 		Matrix4 prevViewProj;
 	}m_cloudOnQuadCB;
 
-	bool m_useTamporal;
+	bool m_useTemporal;
 };

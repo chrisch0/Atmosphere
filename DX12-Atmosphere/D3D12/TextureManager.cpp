@@ -41,7 +41,7 @@ const Texture2D* TextureManager::CreateTexture2D(const std::wstring& name, uint3
 	auto tex = FindOrLoadTexture2D(name);
 
 	Texture2D* texPtr = tex.first;
-	bool needLoad = tex.second;
+	const bool needLoad = tex.second;
 
 	if (!needLoad)
 		return texPtr;
@@ -66,8 +66,7 @@ const Texture2D* TextureManager::LoadDDSFromFile(const std::wstring& fileName, b
 	auto tex = FindOrLoadTexture2D(fileName);
 
 	Texture2D* texPtr = tex.first;
-	bool needLoad = tex.second;
-	if (!needLoad)
+	if (!tex.second)
 		return texPtr;
 
 	Utils::ByteArray ba = Utils::ReadFileSync(s_rootPath + fileName);
@@ -84,7 +83,7 @@ const Texture2D* TextureManager::LoadTGAFromFile(const std::wstring& fileName, b
 	auto tex = FindOrLoadTexture2D(fileName);
 
 	Texture2D* texPtr = tex.first;
-	bool needLoad = tex.second;
+	const bool needLoad = tex.second;
 	if (!needLoad)
 		return texPtr;
 
@@ -103,7 +102,7 @@ const Texture3D* TextureManager::LoadTGAFromFile(const std::wstring& fileName, u
 	auto tex = FindOrLoadTexture3D(fileName);
 
 	Texture3D* texPtr = tex.first;
-	bool needLoad = tex.second;
+	const bool needLoad = tex.second;
 	if (!needLoad)
 		return texPtr;
 	

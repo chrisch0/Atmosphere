@@ -129,7 +129,7 @@ void NoiseGenerator::UpdateUI()
 		ImGui::InputText("New Texture Name", new_texture_name, 64); ImGui::SameLine();
 		
 		ImGui::SetNextItemWidth(200);
-		static char* format[] = { "R32_FLOAT", "R16_FLOAT", "R32G32B32A32_FLOAT", "R16G16B16A16_FLOAT" };
+		static const char* format[] = { "R32_FLOAT", "R16_FLOAT", "R32G32B32A32_FLOAT", "R16G16B16A16_FLOAT" };
 		//static char* format[] = { "R32G32B32A32_FLOAT", "R16G16B16A16_FLOAT" };
 		static DXGI_FORMAT dxgi_format[] = { DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R16_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT };
 		//static DXGI_FORMAT dxgi_format[] = { DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT };

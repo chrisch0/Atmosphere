@@ -36,6 +36,7 @@ public:
 	const Matrix4& GetViewMatrix() const { return m_viewMatrix; }
 	const Matrix4& GetProjMatrix() const { return m_projMatrix; }
 	const Matrix4& GetViewProjMatrix() const { return m_viewProjMatrix; }
+	const Matrix4& GetPrevViewProjMatrix() const { return m_previousViewProjMatrix; }
 	const Matrix4& GetReprojectionMatrix() const { return m_reprojectMatrix; }
 	const Frustum& GetViewSpaceFrustum() const { return m_frustumVS; }
 	const Frustum& GetWorldSpaceFrustum() const { return m_frustumWS; }
