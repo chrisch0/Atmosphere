@@ -116,8 +116,8 @@ protected:
 	DXGI_FORMAT m_backBufferFormat = DXGI_FORMAT_R10G10B10A2_UNORM;
 	DXGI_FORMAT m_sceneBufferFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	DXGI_FORMAT m_depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	int m_clientWidth = 1280;
-	int m_clientHeight = 800;
+	int m_clientWidth = 1920;
+	int m_clientHeight = 1080;
 
 	// Imgui
 	RootSignature m_renderUIRS;

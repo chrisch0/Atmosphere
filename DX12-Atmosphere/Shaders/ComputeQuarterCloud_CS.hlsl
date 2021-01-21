@@ -19,7 +19,7 @@ void main( uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupT
 	float2 uv = WorldViewDirToUV(world_dir, PrevViewProj);
 
 	uint frame_index = FrameIndex % 16;
-	uint2 quarter_group_id = groupThreadID % uint2(4, 4);
+	uint2 quarter_group_id = groupThreadID.xy % uint2(4, 4);
 	uint quarter_group_index = quarter_group_id.y * 4 + quarter_group_id.x;
 	
 	// do raymarch

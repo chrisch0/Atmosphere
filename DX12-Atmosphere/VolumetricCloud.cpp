@@ -80,10 +80,10 @@ void VolumetricCloud::InitCloudParameters()
 	m_weatherTexture = TextureManager::LoadDDSFromFile("Weather_Texture.dds");
 	auto* curl_2d = TextureManager::LoadDDSFromFile("CurlNoise_Volume_16by8.DDS");
 	m_curlNoiseTexture = std::make_shared<VolumeColorBuffer>();
-	m_curlNoiseTexture->CreateFromTexture2D(L"CurlVolumeNoise", curl_2d, 16, 8, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_curlNoiseTexture->CreateFromTexture2D(L"CurlVolumeNoise", curl_2d, 16, 8, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	auto* perlin_worley = TextureManager::LoadDDSFromFile("PerlinWorley.DDS");
 	m_perlinWorleyUE = std::make_shared<VolumeColorBuffer>();
-	m_perlinWorleyUE->CreateFromTexture2D(L"PerlinWorleyUE", perlin_worley, 16, 8, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_perlinWorleyUE->CreateFromTexture2D(L"PerlinWorleyUE", perlin_worley, 16, 8, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	//m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
 	//m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
 
@@ -185,9 +185,9 @@ void VolumetricCloud::CreateCamera()
 void VolumetricCloud::CreateNoise()
 {
 	m_perlinWorley = std::make_shared<VolumeColorBuffer>();
-	m_perlinWorley->Create(L"Perlin Worley", 128, 128, 128, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_perlinWorley->Create(L"Perlin Worley", 128, 128, 128, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_worley = std::make_shared<VolumeColorBuffer>();
-	m_worley->Create(L"Worley", 32, 32, 32, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_worley->Create(L"Worley", 32, 32, 32, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_generateNoiseRS);
@@ -465,5 +465,5 @@ void VolumetricCloud::OnResize()
 	//m_quarterBuffer->Destroy();
 	//m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
 	m_cloudTempBuffer->Destroy();
-	m_cloudTempBuffer->Create(L"Cloud Temp Buffer", m_clientWidth, m_clientHeight, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	m_cloudTempBuffer->Create(L"Cloud Temp Buffer", m_clientWidth, m_clientHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 }
