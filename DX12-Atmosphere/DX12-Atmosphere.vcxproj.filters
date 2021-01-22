@@ -241,6 +241,9 @@
     <ClInclude Include="D3D12\PostProcess.h">
       <Filter>D3D12</Filter>
     </ClInclude>
+    <ClInclude Include="Atmosphere\Atmosphere.h">
+      <Filter>Atmosphere</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -365,6 +368,9 @@
     <ClCompile Include="D3D12\PostProcess.cpp">
       <Filter>D3D12</Filter>
     </ClCompile>
+    <ClCompile Include="Atmosphere\Atmosphere.cpp">
+      <Filter>Atmosphere</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="imgui\imgui_vert.hlsl">
@@ -481,6 +487,18 @@
     <FxCompile Include="Shaders\GuassianBlur_CS.hlsl">
       <Filter>Shaders\PostProcess</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeTransmittance_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeSingleScattering_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeMultipleScattering_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeIrradiance_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
@@ -501,6 +519,9 @@
     </None>
     <None Include="Shaders\VolumetricCloudCommon.hlsli">
       <Filter>Shaders\Volumetric</Filter>
+    </None>
+    <None Include="Shaders\AtmosphereCommon.hlsli">
+      <Filter>Shaders\Atmosphere</Filter>
     </None>
   </ItemGroup>
 </Project>
