@@ -244,6 +244,9 @@
     <ClInclude Include="Atmosphere\Atmosphere.h">
       <Filter>Atmosphere</Filter>
     </ClInclude>
+    <ClInclude Include="Atmosphere\AtmosphereConstants.h">
+      <Filter>Atmosphere</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -496,7 +499,10 @@
     <FxCompile Include="Shaders\ComputeMultipleScattering_CS.hlsl">
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\ComputeIrradiance_CS.hlsl">
+    <FxCompile Include="Shaders\ComputeDirectIrradiance_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeIndirectIrradiance_CS.hlsl">
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
   </ItemGroup>

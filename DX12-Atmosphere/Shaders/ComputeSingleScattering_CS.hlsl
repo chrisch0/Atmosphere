@@ -8,7 +8,7 @@ RWTexture3D<float4> SingleMieScattering : register(u3);
 cbuffer cb : register(b0)
 {
 	float4x4 LuminanceFromRadiance;
-	int Layer;
+	int ScatteringOrder;
 };
 
 Texture2D<float4> Transmittance : register(t0);
