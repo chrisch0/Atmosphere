@@ -1,4 +1,5 @@
 #pragma once
+
 namespace Atmosphere
 {
 	constexpr double kPi = 3.1415926;
@@ -137,9 +138,9 @@ namespace Atmosphere
 
 	// The conversion matrix from XYZ to linear sRGB color spaces.
 	// Values from https://en.wikipedia.org/wiki/SRGB.
-	constexpr double XYZ_TO_SRGB[9] = {
-	  +3.2406, -1.5372, -0.4986,
-	  -0.9689, +1.8758, +0.0415,
-	  +0.0557, -0.2040, +1.0570
+	constexpr float XYZ_TO_SRGB[9] = {
+	  +3.24097f, -1.53738f, -0.498611f,
+	  -0.96924f, +1.87597f, +0.041556f,
+	  +0.05563f, -0.20398f, +1.056972f
 	};
 }

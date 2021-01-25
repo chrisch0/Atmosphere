@@ -247,6 +247,9 @@
     <ClInclude Include="Atmosphere\AtmosphereConstants.h">
       <Filter>Atmosphere</Filter>
     </ClInclude>
+    <ClInclude Include="Atmosphere\AtmosphereModel.h">
+      <Filter>Atmosphere</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -372,6 +375,9 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="Atmosphere\Atmosphere.cpp">
+      <Filter>Atmosphere</Filter>
+    </ClCompile>
+    <ClCompile Include="Atmosphere\AtmosphereModel.cpp">
       <Filter>Atmosphere</Filter>
     </ClCompile>
   </ItemGroup>

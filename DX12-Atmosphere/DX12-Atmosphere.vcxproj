@@ -142,6 +142,7 @@
     <ClInclude Include="App\MultiViewport.h" />
     <ClInclude Include="Atmosphere\Atmosphere.h" />
     <ClInclude Include="Atmosphere\AtmosphereConstants.h" />
+    <ClInclude Include="Atmosphere\AtmosphereModel.h" />
     <ClInclude Include="D3D12\Color.h" />
     <ClInclude Include="D3D12\ColorBuffer.h" />
     <ClInclude Include="D3D12\CommandAllocatorPool.h" />
@@ -205,6 +206,7 @@
   <ItemGroup>
     <ClCompile Include="App\App.cpp" />
     <ClCompile Include="Atmosphere\Atmosphere.cpp" />
+    <ClCompile Include="Atmosphere\AtmosphereModel.cpp" />
     <ClCompile Include="D3D12\ColorBuffer.cpp" />
     <ClCompile Include="D3D12\CommandAllocatorPool.cpp" />
     <ClCompile Include="D3D12\CommandContext.cpp" />
