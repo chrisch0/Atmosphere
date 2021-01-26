@@ -542,44 +542,19 @@ void App::UpdateAppUI()
 	static bool show_hdr_setting = false;
 	if (ImGui::BeginMainMenuBar())
 	{
-		if (ImGui::BeginMenu("HDR"))
+		if (ImGui::BeginMenu("Passes"))
 		{
-			show_hdr_setting = true;
+			if (ImGui::MenuItem("HDR"))
+			{
+				show_hdr_setting = true;
+			}
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
 	}
 
 	// HDR setting
-	if (show_hdr_setting)
-	{
-		ImGui::Begin("HDR Setting", &show_hdr_setting);
-		ImGui::Checkbox("Enable HDR", &PostProcess::EnableHDR);
-		if (PostProcess::EnableHDR)
-		{
-			ImGui::Checkbox("Enable Adapt Exposure", &PostProcess::EnableAdaptation);
-			static float exposure_min = 0.00390625f;
-			static float exposure_max = 256.0f;
-			if (PostProcess::EnableAdaptation)
-			{
-				ImGui::DragFloat("Target Luminance", &PostProcess::ExposureCB.targetLuminance, 0.01f, 0.01f, 0.99f);
-				ImGui::DragFloat("Adaptation Rate", &PostProcess::ExposureCB.adaptationRate, 0.01f, 0.01f, 1.0f);
-				ImGui::DragScalar("Min Exposure", ImGuiDataType_Float, &PostProcess::ExposureCB.minExposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
-				ImGui::DragScalar("Max Exposure", ImGuiDataType_Float, &PostProcess::ExposureCB.maxExposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
-				ImGui::Checkbox("Draw Histogram", &PostProcess::DrawHistogram);
-				if (PostProcess::DrawHistogram)
-				{
-					ImGui::Image((ImTextureID)(PostProcess::HistogramColorBuffer.GetSRV().ptr), ImVec2((float)PostProcess::HistogramColorBuffer.GetWidth(), (float)PostProcess::HistogramColorBuffer.GetHeight()));
-				}
-			}
-			else
-			{
-				ImGui::DragScalar("Exposure", ImGuiDataType_Float, &PostProcess::Exposure, 0.25f, &exposure_min, &exposure_max, "%f", ImGuiSliderFlags_Logarithmic);
-			}
-			
-		}
-		ImGui::End();
-	}
+	PostProcess::UpdateUI(show_hdr_setting);
 }
 
 void App::Display()

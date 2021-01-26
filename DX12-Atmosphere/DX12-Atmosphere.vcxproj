@@ -142,7 +142,6 @@
     <ClInclude Include="App\MultiViewport.h" />
     <ClInclude Include="Atmosphere\Atmosphere.h" />
     <ClInclude Include="Atmosphere\AtmosphereConstants.h" />
-    <ClInclude Include="Atmosphere\AtmosphereModel.h" />
     <ClInclude Include="D3D12\Color.h" />
     <ClInclude Include="D3D12\ColorBuffer.h" />
     <ClInclude Include="D3D12\CommandAllocatorPool.h" />
@@ -206,7 +205,6 @@
   <ItemGroup>
     <ClCompile Include="App\App.cpp" />
     <ClCompile Include="Atmosphere\Atmosphere.cpp" />
-    <ClCompile Include="Atmosphere\AtmosphereModel.cpp" />
     <ClCompile Include="D3D12\ColorBuffer.cpp" />
     <ClCompile Include="D3D12\CommandAllocatorPool.cpp" />
     <ClCompile Include="D3D12\CommandContext.cpp" />
@@ -481,6 +479,22 @@
       </ObjectFileOutput>
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)$(ProjectName)\Shaders\$(Configuration)\Asm\%(Filename).asm</AssemblerOutputFile>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeScatteringDensity_CS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ObjectFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_p%(Filename)</VariableName>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\bin\$(Configuration)\CompiledShaders\%(Filename).h</HeaderFileOutput>
+      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AssemblyCode</AssemblerOutput>
+      <AssemblerOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)$(ProjectName)\Shaders\$(Configuration)\Asm\%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
     <FxCompile Include="Shaders\ComputeSingleScattering_CS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>

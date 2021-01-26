@@ -7,7 +7,7 @@ RWTexture3D<float4> SingleMieScattering : register(u3);
 
 cbuffer cb : register(b0)
 {
-	float4x4 LuminanceFromRadiance;
+	float3x3 LuminanceFromRadiance;
 	int ScatteringOrder;
 };
 
@@ -20,8 +20,8 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	float3 inter_rayleigh;
 	float3 inter_mie;
 	ComputeSingleScatteringTexture(Atmosphere, Transmittance, pixel_coord, inter_rayleigh, inter_mie);
-	float4 scattering = float4(mul(LuminanceFromRadiance, float4(inter_rayleigh, 0.0)).rgb, mul(LuminanceFromRadiance, float4(inter_mie, 0.0)).r);
-	float3 single_mie_scattering = mul(LuminanceFromRadiance, float4(inter_mie, 0.0)).rgb;
+	float4 scattering = float4(mul(LuminanceFromRadiance, inter_rayleigh), mul(LuminanceFromRadiance, inter_mie).r);
+	float3 single_mie_scattering = mul(LuminanceFromRadiance, inter_mie);
 	
 	InterRayleigh[globalID] = float4(inter_rayleigh, 1.0);
 	InterMie[globalID] = float4(inter_mie, 1.0);

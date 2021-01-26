@@ -247,9 +247,6 @@
     <ClInclude Include="Atmosphere\AtmosphereConstants.h">
       <Filter>Atmosphere</Filter>
     </ClInclude>
-    <ClInclude Include="Atmosphere\AtmosphereModel.h">
-      <Filter>Atmosphere</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -375,9 +372,6 @@
       <Filter>D3D12</Filter>
     </ClCompile>
     <ClCompile Include="Atmosphere\Atmosphere.cpp">
-      <Filter>Atmosphere</Filter>
-    </ClCompile>
-    <ClCompile Include="Atmosphere\AtmosphereModel.cpp">
       <Filter>Atmosphere</Filter>
     </ClCompile>
   </ItemGroup>
@@ -509,6 +503,9 @@
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\ComputeIndirectIrradiance_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeScatteringDensity_CS.hlsl">
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
   </ItemGroup>

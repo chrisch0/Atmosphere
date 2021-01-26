@@ -51,6 +51,12 @@ public:
 	void SetHullShader(const void* binary, size_t size) { m_psoDesc.HS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(binary), size); }
 	void SetDomainShader(const void* binary, size_t size) { m_psoDesc.DS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(binary), size); }
 
+	void SetVertexShader(const void* binary) { SetVertexShader(binary, sizeof(binary)); }
+	void SetPixelShader(const void* binary) { SetPixelShader(binary, sizeof(binary)); }
+	void SetGeometryShader(const void* binary) { SetGeometryShader(binary, sizeof(binary)); }
+	void SetHullShader(const void* binary) { SetHullShader(binary, sizeof(binary)); }
+	void SetDomainShader(const void* binary) { SetDomainShader(binary, sizeof(binary)); }
+
 	void Finalize();
 
 private:
@@ -67,6 +73,11 @@ public:
 	void SetComputeShader(const void* binary, size_t size) 
 	{
 		m_psoDesc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(binary), size);
+	}
+
+	void SetComputeShader(const void* binary)
+	{
+		SetComputeShader(binary, sizeof(binary));
 	}
 
 	void Finalize();

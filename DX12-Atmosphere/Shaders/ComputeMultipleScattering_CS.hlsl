@@ -8,7 +8,7 @@ Texture3D<float4> ScatteringDensity : register(t1);
 
 cbuffer cb : register(b0)
 {
-	float4x4 LuminanceFromRadiance;
+	float3x3 LuminanceFromRadiance;
 	int ScatteringOrder;
 };
 
@@ -18,7 +18,7 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	float nu;
 	float3 pixel_coord = float3(globalID) + 0.5;
 	float3 inter_multiple_scattering = ComputeMultipleScatteringTexture(Atmosphere, Transmittance, ScatteringDensity, pixel_coord, nu);
-	float4 scattering = float4(mul(LuminanceFromRadiance, float4(inter_multiple_scattering, 0.0)).xyz / RayleighPhaseFunction(nu), 0.0);
+	float4 scattering = float4(mul(LuminanceFromRadiance, inter_multiple_scattering) / RayleighPhaseFunction(nu), 0.0);
 
 	scattering += Scattering[globalID];
 

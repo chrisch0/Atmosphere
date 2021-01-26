@@ -9,7 +9,7 @@ Texture3D<float4> MultipleScattering : register(t2);
 
 cbuffer cb : register(b0)
 {
-	float4x4 LuminanceFromRadiance;
+	float3x3 LuminanceFromRadiance;
 	int ScatteringOrder;
 };
 
@@ -18,7 +18,7 @@ void main( uint3 globalID : SV_DispatchThreadID )
 {
 	float2 pixel_coord = float2(globalID.xy) + 0.5;
 	float3 inter_irradiance = ComputeIndirectIrradianceTexture(Atmosphere, SingleRayleighScattering, SingleMieScattering, MultipleScattering, pixel_coord, ScatteringOrder);
-	float3 irradiance = mul(LuminanceFromRadiance, float4(inter_irradiance, 0.0)).xyz;
+	float3 irradiance = mul(LuminanceFromRadiance, inter_irradiance);
 
 	irradiance += Irradiance_Texture[globalID.xy].xyz;
 

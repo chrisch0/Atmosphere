@@ -1,6 +1,16 @@
 #include "stdafx.h"
 #include "AtmosphereConstants.h"
 #include "Atmosphere.h"
+#include "D3D12/ColorBuffer.h"
+#include "D3D12/RootSignature.h"
+#include "D3D12/PipelineState.h"
+
+#include "CompiledShaders/ComputeTransmittance_CS.h"
+#include "CompiledShaders/ComputeSingleScattering_CS.h"
+#include "CompiledShaders/ComputeMultipleScattering_CS.h"
+#include "CompiledShaders/ComputeDirectIrradiance_CS.h"
+#include "CompiledShaders/ComputeIndirectIrradiance_CS.h"
+#include "CompiledShaders/ComputeScatteringDensity_CS.h"
 
 namespace Atmosphere
 {
@@ -14,7 +24,31 @@ namespace Atmosphere
 	float SunAzimuthAngleRadians = 2.9f;
 	float Exposure = 10.0f;
 
+	double GroundAlbedo = 0.1;
+
+
+	uint32_t NumPrecomputedWavelengths = 3;
+
 	ColorBuffer* SceneColorBuffer;
+
+	std::shared_ptr<ColorBuffer> Transmittance;
+	std::shared_ptr<VolumeColorBuffer> Scattering;
+	std::shared_ptr<VolumeColorBuffer> OptionalSingleMieScattering;
+	std::shared_ptr<ColorBuffer> Irradiance;
+
+	std::shared_ptr<ColorBuffer> InterIrradiance;
+	std::shared_ptr<VolumeColorBuffer> m_interRayleighScattering;
+	std::shared_ptr<VolumeColorBuffer> m_interMieScattering;
+	std::shared_ptr<VolumeColorBuffer> m_interScatteringDensity;
+
+	RootSignature PrecomputeRS;
+	ComputePSO TransmittancePSO;
+	ComputePSO ScatteringDensityPSO;
+	ComputePSO SingleScatteringPSO;
+	ComputePSO MultipleScatteringPSO;
+	ComputePSO DirectIrradiancePSO;
+	ComputePSO IndirectIrradiancePSO;
+	ComputePSO ComputeSkyPSO;
 
 	struct  
 	{
@@ -23,14 +57,26 @@ namespace Atmosphere
 		XMFLOAT3 sunSpectralRadianceToLuminance;
 	}PassConstants;
 
+	struct  
+	{
+		XMFLOAT3X3 luminanceFromRadiance;
+		int scatteringOrder;
+	}RenderPassConstants;
+
+	std::vector<double> Wavelengths;
+	std::vector<double> SolarIrradiance;
+	std::vector<double> RayleighScattering;
+	std::vector<double> MieScattering;
+	std::vector<double> MieExtinction;
+	std::vector<double> AbsorptionExtinction;
+	std::vector<double> GroundAlbedos;
+
 	float InterpolateByLambda(
-		const std::vector<double>& wavelengths,
 		const std::vector<double>& wavelengthFunction,
 		double wavelength
 	);
 
 	Vector3 InterpolateByRGBLambda(
-		const std::vector<double>& wavelengths, 
 		const std::vector<double>& wavelengthFunction,
 		const Vector3& lambda, double scale = 1.0
 	);
@@ -40,109 +86,92 @@ namespace Atmosphere
 	Vector3 LambdaTosRGB(double lambda);
 
 	Vector3 ComputeSpectralRadianceToLuminanceFactors(
-		const std::vector<double>& wavelengths,
 		const std::vector<double>& solarIrradiance,
 		float lambdaPower
 	);
 
+	template <typename T>
+	void ReleaseOrNewTexture(std::shared_ptr<T> texPtr)
+	{
+		if (texPtr == nullptr)
+			texPtr = std::make_shared<T>();
+		else
+			texPtr->Destroy();
+	}
+
+	void InitTextures();
+	void InitIntermediateTextures();
+	void InitPSO();
+
+	void Precompute(const Vector3& lambdas, uint32_t numScatteringOrders);
+
+	void UpdateLambdaDependsCB(const Vector3& lambdas);
+	void UpdatePhysicalCB(const Vector3& lambdas);
+	void UpdateModel();
+
 	void Initialize(ColorBuffer* sceneBuffer, ColorBuffer* depthBuffer /* = nullptr */)
 	{
 		SceneColorBuffer = sceneBuffer;
+		InitPSO();
 		InitModel();
+		InitTextures();
+		// TODO: do in precompute and release after precompute complete.
+		InitIntermediateTextures();
+	}
+
+	void InitPSO()
+	{
+		PrecomputeRS.Reset(4, 1);
+		PrecomputeRS[0].InitAsConstantBufferView(0);
+		PrecomputeRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 4);
+		PrecomputeRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 5);
+		PrecomputeRS[3].InitAsConstantBufferView(1);
+		PrecomputeRS.Finalize(L"PrecomputeRS");
+
+		TransmittancePSO.SetRootSignature(PrecomputeRS);
+		TransmittancePSO.SetComputeShader(g_pComputeTransmittance_CS);
+		TransmittancePSO.Finalize();
 	}
 
 	void InitModel()
 	{
-		// 太阳光谱辐照度
-		// Values from "Reference Solar Spectral Irradiance: ASTM G-173", ETR column
-		// (see http://rredc.nrel.gov/solar/spectra/am1.5/ASTMG173/ASTMG173.html),
-		// summed and averaged in each bin (e.g. the value for 360nm is the average
-		// of the ASTM G-173 values for all wavelengths between 360 and 370nm).
-		// Values in W.m^-2.
-		constexpr int kLambdaMin = 360;
-		constexpr int kLambdaMax = 830;
-		constexpr double kSolarIrradiance[48] = {
-			1.11776, 1.14259, 1.01249, 1.14716, 1.72765, 1.73054, 1.6887, 1.61253,
-			1.91198, 2.03474, 2.02042, 2.02212, 1.93377, 1.95809, 1.91686, 1.8298,
-			1.8685, 1.8931, 1.85149, 1.8504, 1.8341, 1.8345, 1.8147, 1.78158, 1.7533,
-			1.6965, 1.68194, 1.64654, 1.6048, 1.52143, 1.55622, 1.5113, 1.474, 1.4482,
-			1.41018, 1.36775, 1.34188, 1.31429, 1.28303, 1.26758, 1.2367, 1.2082,
-			1.18737, 1.14683, 1.12362, 1.1058, 1.07124, 1.04992
-		};
-		// 233K的臭氧分子的横截面积
-		// Values from http://www.iup.uni-bremen.de/gruppen/molspec/databases/referencespectra/o3spectra2011/index.html
-		// for 233K, summed and averaged in
-		// each bin (e.g. the value for 360nm is the average of the original values
-		// for all wavelengths between 360 and 370nm). Values in m^2.
-		constexpr double kOzoneCrossSection[48] = {
-			1.18e-27, 2.182e-28, 2.818e-28, 6.636e-28, 1.527e-27, 2.763e-27, 5.52e-27,
-			8.451e-27, 1.582e-26, 2.316e-26, 3.669e-26, 4.924e-26, 7.752e-26, 9.016e-26,
-			1.48e-25, 1.602e-25, 2.139e-25, 2.755e-25, 3.091e-25, 3.5e-25, 4.266e-25,
-			4.672e-25, 4.398e-25, 4.701e-25, 5.019e-25, 4.305e-25, 3.74e-25, 3.215e-25,
-			2.662e-25, 2.238e-25, 1.852e-25, 1.473e-25, 1.209e-25, 9.423e-26, 7.455e-26,
-			6.566e-26, 5.105e-26, 4.15e-26, 4.228e-26, 3.237e-26, 2.451e-26, 2.801e-26,
-			2.534e-26, 1.624e-26, 1.465e-26, 2.078e-26, 1.383e-26, 7.105e-27
-		};
-		// From https://en.wikipedia.org/wiki/Dobson_unit, in molecules.m^-2.
-		constexpr double kDobsonUnit = 2.687e20;
-		// Maximum number density of ozone molecules, in m^-3 (computed so at to get
-		// 300 Dobson units of ozone - for this we divide 300 DU by the integral of
-		// the ozone density profile defined below, which is equal to 15km).
-		constexpr double kMaxOzoneNumberDensity = 300.0 * kDobsonUnit / 15000.0;
-		// Wavelength independent solar irradiance "spectrum" (not physically
-		// realistic, but was used in the original implementation).
-		constexpr double kConstantSolarIrradiance = 1.5;
-		constexpr double kBottomRadius = 6360000.0;
-		constexpr double kTopRadius = 6420000.0;
-		constexpr double kRayleigh = 1.24062e-6;
-		constexpr double kRayleighScaleHeight = 8000.0;
-		constexpr double kMieScaleHeight = 1200.0;
-		constexpr double kMieAngstromAlpha = 0.0;
-		constexpr double kMieAngstromBeta = 5.328e-3;
-		constexpr double kMieSingleScatteringAlbedo = 0.9;
-		constexpr double kMiePhaseFunctionG = 0.8;
-		constexpr double kGroundAlbedo = 0.1;
 		const double max_sun_zenith_angle =
 			(UseHalfPrecision ? 102.0 : 120.0) / 180.0 * kPi;
 
 		DensityProfileLayer
-			rayleigh_layer(0.0, 1.0, -1.0 / kRayleighScaleHeight, 0.0, 0.0);
-		DensityProfileLayer mie_layer(0.0, 1.0, -1.0 / kMieScaleHeight, 0.0, 0.0);
+			rayleigh_layer(0.0f, 1.0f, (float)(-1.0 / kRayleighScaleHeight), 0.0f, 0.0f);
+		DensityProfileLayer mie_layer(0.0f, 1.0f, (float)(-1.0 / kMieScaleHeight), 0.0f, 0.0f);
 		// Density profile increasing linearly from 0 to 1 between 10 and 25km, and
 		// decreasing linearly from 1 to 0 between 25 and 40km. This is an approximate
 		// profile from http://www.kln.ac.lk/science/Chemistry/Teaching_Resources/
 		// Documents/Introduction%20to%20atmospheric%20chemistry.pdf (page 10).
 		std::vector<DensityProfileLayer> ozone_density;
 		ozone_density.push_back(
-			DensityProfileLayer(25000.0, 0.0, 0.0, 1.0 / 15000.0, -2.0 / 3.0));
+			DensityProfileLayer(25000.0f, 0.0f, 0.0f, 1.0f / 15000.0f, -2.0f / 3.0f));
 		ozone_density.push_back(
-			DensityProfileLayer(0.0, 0.0, 0.0, -1.0 / 15000.0, 8.0 / 3.0));
+			DensityProfileLayer(0.0f, 0.0f, 0.0f, -1.0f / 15000.0f, 8.0f / 3.0f));
 
-		std::vector<double> wavelengths;
-		std::vector<double> solar_irradiance;
-		std::vector<double> rayleigh_scattering;
-		std::vector<double> mie_scattering;
-		std::vector<double> mie_extinction;
-		std::vector<double> absorption_extinction;
-		std::vector<double> ground_albedo;
-		for (int l = kLambdaMin; l <= kLambdaMax; l += 10) {
+		for (int l = kLambdaMin; l <= kLambdaMax; l += 10) 
+		{
 			double lambda = static_cast<double>(l) * 1e-3;  // micro-meters
 			double mie =
 				kMieAngstromBeta / kMieScaleHeight * pow(lambda, -kMieAngstromAlpha);
-			wavelengths.push_back(l);
-			if (UseConstantSolarSpectrum) {
-				solar_irradiance.push_back(kConstantSolarIrradiance);
+			Wavelengths.push_back(l);
+			if (UseConstantSolarSpectrum) 
+			{
+				SolarIrradiance.push_back(kConstantSolarIrradiance);
 			}
-			else {
-				solar_irradiance.push_back(kSolarIrradiance[(l - kLambdaMin) / 10]);
+			else 
+			{
+				SolarIrradiance.push_back(kSolarIrradiance[(l - kLambdaMin) / 10]);
 			}
-			rayleigh_scattering.push_back(kRayleigh * pow(lambda, -4));
-			mie_scattering.push_back(mie * kMieSingleScatteringAlbedo);
-			mie_extinction.push_back(mie);
-			absorption_extinction.push_back(UseOzone ?
+			RayleighScattering.push_back(kRayleigh * pow(lambda, -4));
+			MieScattering.push_back(mie * kMieSingleScatteringAlbedo);
+			MieExtinction.push_back(mie);
+			AbsorptionExtinction.push_back(UseOzone ?
 				kMaxOzoneNumberDensity * kOzoneCrossSection[(l - kLambdaMin) / 10] :
 				0.0);
-			ground_albedo.push_back(kGroundAlbedo);
+			GroundAlbedos.push_back(GroundAlbedo);
 		}
 
 		int num_precomputed_wavelengths = UseLuminance == PRECOMPUTED ? 15 : 3;
@@ -161,34 +190,152 @@ namespace Atmosphere
 		}
 		else
 		{
-			sky_radiance_to_luminance = ComputeSpectralRadianceToLuminanceFactors(wavelengths, solar_irradiance, -4);
+			// Compute the values for the SUN_RADIANCE_TO_LUMINANCE constant.
+			sky_radiance_to_luminance = ComputeSpectralRadianceToLuminanceFactors(SolarIrradiance, -4);
 		}
-		// Compute the values for the SUN_RADIANCE_TO_LUMINANCE constant.
-		Vector3 sun_radiance_to_luminance = ComputeSpectralRadianceToLuminanceFactors(wavelengths, solar_irradiance, 0);
-		PassConstants.atmosphere.
+		Vector3 sun_radiance_to_luminance = ComputeSpectralRadianceToLuminanceFactors(SolarIrradiance, 0);
+		Vector3 lambda_rgb(kLambdaR, kLambdaG, kLambdaB);
+
+		// Update constant buffer
+		UpdateLambdaDependsCB(lambda_rgb);
+		PassConstants.atmosphere.sun_angular_radius = (float)kSunAngularRadius;
+		PassConstants.atmosphere.bottom_radius = (float)(kBottomRadius / kLengthUnitInMeters);
+		PassConstants.atmosphere.top_radius = (float)(kTopRadius / kLengthUnitInMeters);
+		PassConstants.atmosphere.rayleigh_density[0] = DensityProfileLayer();
+		PassConstants.atmosphere.rayleigh_density[1] = rayleigh_layer;
+		PassConstants.atmosphere.mie_density[0] = DensityProfileLayer();
+		PassConstants.atmosphere.mie_density[1] = mie_layer;
+		PassConstants.atmosphere.mie_phase_function_g = (float)kMiePhaseFunctionG;
+		PassConstants.atmosphere.absorption_density[0] = ozone_density[0];
+		PassConstants.atmosphere.absorption_density[1] = ozone_density[1];
+		PassConstants.atmosphere.mu_s_min = (float)max_sun_zenith_angle;
+		XMStoreFloat3(&PassConstants.skySpectralRadianceToLuminance, sky_radiance_to_luminance);
+		XMStoreFloat3(&PassConstants.sunSpectralRadianceToLuminance, sun_radiance_to_luminance);
 	}
 
-	float InterpolateByLambda(const std::vector<double>& wavelengths, const std::vector<double>& wavelengthFunction, double wavelength)
+	void UpdateModel()
 	{
-		assert(wavelengthFunction.size() == wavelengths.size());
-		if (wavelength < wavelengths[0])
-			return (float)wavelengthFunction[0];
-		for (uint32_t i = 0; i < wavelengths.size(); ++i)
+		constexpr double kConstantSolarIrradiance = 1.5;
+		const double max_sun_zenith_angle =
+			(UseHalfPrecision ? 102.0 : 120.0) / 180.0 * kPi;
+
+		SolarIrradiance.clear();
+		AbsorptionExtinction.clear();
+		GroundAlbedos.clear();
+
+		for (int l = kLambdaMin; l <= kLambdaMax; l += 10) 
 		{
-			if (wavelength < wavelengths[i + 1])
+			double lambda = static_cast<double>(l) * 1e-3;  // micro-meters
+			if (UseConstantSolarSpectrum) 
 			{
-				float u = (float)((wavelength - wavelengths[i]) / (wavelengths[i + 1] - wavelengths[i]));
+				SolarIrradiance.push_back(kConstantSolarIrradiance);
+			}
+			else 
+			{
+				SolarIrradiance.push_back(kSolarIrradiance[(l - kLambdaMin) / 10]);
+			}
+			AbsorptionExtinction.push_back(UseOzone ?
+				kMaxOzoneNumberDensity * kOzoneCrossSection[(l - kLambdaMin) / 10] :
+				0.0);
+			GroundAlbedos.push_back(GroundAlbedo);
+		}
+
+		int num_precomputed_wavelengths = UseLuminance == PRECOMPUTED ? 15 : 3;
+		bool precompute_illuminance = num_precomputed_wavelengths > 3;
+		Vector3 sky_radiance_to_luminance;
+		if (precompute_illuminance)
+		{
+			sky_radiance_to_luminance = Vector3((float)MAX_LUMINOUS_EFFICACY);
+		}
+		else
+		{
+			// Compute the values for the SUN_RADIANCE_TO_LUMINANCE constant.
+			sky_radiance_to_luminance = ComputeSpectralRadianceToLuminanceFactors(SolarIrradiance, -4);
+		}
+		Vector3 sun_radiance_to_luminance = ComputeSpectralRadianceToLuminanceFactors(SolarIrradiance, 0);
+
+		Vector3 lambda_rgb(kLambdaR, kLambdaG, kLambdaB);
+		XMStoreFloat3(&PassConstants.atmosphere.solar_irradiance, InterpolateByRGBLambda(SolarIrradiance, lambda_rgb, 1.0));
+		XMStoreFloat3(&PassConstants.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambda_rgb, kLengthUnitInMeters));
+		XMStoreFloat3(&PassConstants.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambda_rgb, 1.0));
+		XMStoreFloat3(&PassConstants.skySpectralRadianceToLuminance, sky_radiance_to_luminance);
+		XMStoreFloat3(&PassConstants.sunSpectralRadianceToLuminance, sun_radiance_to_luminance);
+	}
+
+	void InitTextures()
+	{
+		ReleaseOrNewTexture(Transmittance);
+		Transmittance->Create(L"Transmittance", TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+		ReleaseOrNewTexture(Scattering);
+		Scattering->Create(L"Scattering", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+		
+		if (!UseCombinedTextures)
+		{
+			ReleaseOrNewTexture(OptionalSingleMieScattering);
+			OptionalSingleMieScattering->Create(L"Optional Single Mie", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+		}
+
+		ReleaseOrNewTexture(Irradiance);
+		Irradiance->Create(L"Irradiance", TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	}
+
+	void InitIntermediateTextures()
+	{
+		ReleaseOrNewTexture(InterIrradiance);
+		InterIrradiance->Create(L"Intermediate Irradiance", IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+		ReleaseOrNewTexture(m_interRayleighScattering);
+		m_interRayleighScattering->Create(L"Intermediate Rayleigh Scattering", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+		ReleaseOrNewTexture(m_interMieScattering);
+		m_interMieScattering->Create(L"Intermediate Mie Scattering", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+		ReleaseOrNewTexture(m_interScatteringDensity);
+		m_interScatteringDensity->Create(L"Intermediate Scattering Density", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+	}
+
+	void Precompute(uint32_t numScatteringOrders)
+	{
+		if (numScatteringOrders <= 3)
+		{
+			Vector3 lambda_rgb(kLambdaR, kLambdaG, kLambdaB);
+			XMStoreFloat3x3(&RenderPassConstants.luminanceFromRadiance, Matrix3(kIdentity));
+			Precompute(lambda_rgb, numScatteringOrders);
+		}
+		else
+		{
+			int num_iterators = (NumPrecomputedWavelengths) / 3;
+
+		}
+	}
+
+	void Precompute(const Vector3& lambdas, uint32_t numScatteringOrders)
+	{
+
+	}
+
+	float InterpolateByLambda(const std::vector<double>& wavelengthFunction, double wavelength)
+	{
+		assert(wavelengthFunction.size() == Wavelengths.size());
+		if (wavelength < Wavelengths[0])
+			return (float)wavelengthFunction[0];
+		for (uint32_t i = 0; i < Wavelengths.size(); ++i)
+		{
+			if (wavelength < Wavelengths[i + 1])
+			{
+				float u = (float)((wavelength - Wavelengths[i]) / (Wavelengths[i + 1] - Wavelengths[i]));
 				return (float)(wavelengthFunction[i] * (1.0f - u) + wavelengthFunction[i + 1] * u);
 			}
 		}
 		return (float)(wavelengthFunction.back());
 	}
 
-	Vector3 InterpolateByRGBLambda(const std::vector<double>& wavelengths, const std::vector<double>& wavelengthFunction, const Vector3& lambda, double scale)
+	Vector3 InterpolateByRGBLambda(const std::vector<double>& wavelengthFunction, const Vector3& lambda, double scale)
 	{
-		float r = InterpolateByLambda(wavelengths, wavelengthFunction, lambda.GetX()) * scale;
-		float g = InterpolateByLambda(wavelengths, wavelengthFunction, lambda.GetY()) * scale;
-		float b = InterpolateByLambda(wavelengths, wavelengthFunction, lambda.GetZ()) * scale;
+		float r = (float)(InterpolateByLambda(wavelengthFunction, lambda.GetX()) * scale);
+		float g = (float)(InterpolateByLambda(wavelengthFunction, lambda.GetY()) * scale);
+		float b = (float)(InterpolateByLambda(wavelengthFunction, lambda.GetZ()) * scale);
 		return Vector3(r, g, b);
 	}
 
@@ -230,18 +377,33 @@ namespace Atmosphere
 	href="https://arxiv.org/pdf/1612.04336.pdf">A Qualitative and Quantitative
 	Evaluation of 8 Clear Sky Models</a> for their definitions):*/
 	// The returned constants are in lumen.nm / watt.
-	Vector3 ComputeSpectralRadianceToLuminanceFactors(const std::vector<double>& wavelengths, const std::vector<double>& solarIrradiance, float lambdaPower)
+	Vector3 ComputeSpectralRadianceToLuminanceFactors(const std::vector<double>& solarIrradiance, float lambdaPower)
 	{
 		Vector3 radiance_to_luminance(0.0);
-		Vector3 solar_rgb = InterpolateByRGBLambda(wavelengths, solarIrradiance, Vector3(kLambdaR, kLambdaG, kLambdaB));
+		Vector3 solar_rgb = InterpolateByRGBLambda(solarIrradiance, Vector3(kLambdaR, kLambdaG, kLambdaB));
 		int dlambda = 1;
 		for (int lambda = kLambdaMin; lambda < kLambdaMax; lambda += dlambda)
 		{
 			Vector3 rgb_lambda = LambdaTosRGB(lambda);
-			float solar_irradiance_lambda = InterpolateByLambda(wavelengths, solarIrradiance, lambda);
-			radiance_to_luminance += rgb_lambda * Pow(lambda / rgb_lambda, Vector3(lambdaPower)) * solar_irradiance_lambda / solar_rgb * dlambda;
+			float solar_irradiance_lambda = InterpolateByLambda(solarIrradiance, lambda);
+			radiance_to_luminance += rgb_lambda * Pow((float)lambda / rgb_lambda, Vector3(lambdaPower)) * solar_irradiance_lambda / solar_rgb * (float)dlambda;
 		}
 		radiance_to_luminance *= Vector3((float)MAX_LUMINOUS_EFFICACY);
 		return radiance_to_luminance;
+	}
+
+	void UpdateLambdaDependsCB(const Vector3& lambdas)
+	{
+		XMStoreFloat3(&PassConstants.atmosphere.solar_irradiance, InterpolateByRGBLambda(SolarIrradiance, lambdas, 1.0));
+		XMStoreFloat3(&PassConstants.atmosphere.rayleigh_scattering, InterpolateByRGBLambda(RayleighScattering, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&PassConstants.atmosphere.mie_scattering, InterpolateByRGBLambda(MieScattering, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&PassConstants.atmosphere.mie_extinction, InterpolateByRGBLambda(MieExtinction, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&PassConstants.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&PassConstants.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambdas, 1.0));
+	}
+
+	void UpdatePhysicalCB(const Vector3& lambdas)
+	{
+
 	}
 }

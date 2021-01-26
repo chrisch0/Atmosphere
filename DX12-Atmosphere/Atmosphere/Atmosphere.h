@@ -54,5 +54,5 @@ namespace Atmosphere
 	void InitModel();
 	void Update();
 	void UpdateUI();
-	void Precompute();
+	void Precompute(uint32_t numScatteringOrders);
 }
