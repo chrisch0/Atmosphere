@@ -3,13 +3,14 @@
 RWTexture3D<float4> InterRayleigh : register(u0);
 RWTexture3D<float4> InterMie : register(u1);
 RWTexture3D<float4> Scattering : register(u2);
+#ifndef COMBINED_SCATTERING_TEXTURE
 RWTexture3D<float4> SingleMieScattering : register(u3);
+#endif
 
-cbuffer cb : register(b0)
+cbuffer Convert : register(b2)
 {
 	float3x3 LuminanceFromRadiance;
-	int ScatteringOrder;
-};
+}
 
 Texture2D<float4> Transmittance : register(t0);
 
@@ -26,5 +27,7 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	InterRayleigh[globalID] = float4(inter_rayleigh, 1.0);
 	InterMie[globalID] = float4(inter_mie, 1.0);
 	Scattering[globalID] = scattering;
+#ifndef COMBINED_SCATTERING_TEXTURE
 	SingleMieScattering[globalID] = float4(single_mie_scattering, 0.0);
+#endif
 }

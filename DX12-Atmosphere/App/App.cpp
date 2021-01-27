@@ -5,6 +5,7 @@
 #include "D3D12/CommandContext.h"
 #include "D3D12/TextureManager.h"
 #include "D3D12/PostProcess.h"
+#include "Atmosphere/Atmosphere.h"
 #include "Mesh/Mesh.h"
 
 #include "imgui/imgui_impl_win32.h"
@@ -105,6 +106,7 @@ bool App::Initialize()
 
 	m_fullScreenQuad.reset(Mesh::CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f));
 	PostProcess::Initialize(m_sceneColorBuffer.get());
+	Atmosphere::Initialize(m_sceneColorBuffer.get());
 
 	return true;
 }
@@ -540,6 +542,7 @@ void App::UpdateAppUI()
 	}
 
 	static bool show_hdr_setting = false;
+	static bool show_atmosphere_setting = false;
 	if (ImGui::BeginMainMenuBar())
 	{
 		if (ImGui::BeginMenu("Passes"))
@@ -548,6 +551,11 @@ void App::UpdateAppUI()
 			{
 				show_hdr_setting = true;
 			}
+			if (ImGui::MenuItem("Atmosphere"))
+			{
+				show_atmosphere_setting = true;
+			}
+
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -555,6 +563,7 @@ void App::UpdateAppUI()
 
 	// HDR setting
 	PostProcess::UpdateUI(show_hdr_setting);
+	Atmosphere::UpdateUI(show_atmosphere_setting);
 }
 
 void App::Display()

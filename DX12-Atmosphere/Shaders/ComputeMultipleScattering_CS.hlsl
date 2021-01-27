@@ -6,11 +6,10 @@ RWTexture3D<float4> Scattering : register(u1);
 Texture2D<float4> Transmittance : register(t0);
 Texture3D<float4> ScatteringDensity : register(t1);
 
-cbuffer cb : register(b0)
+cbuffer Convert : register(b2)
 {
 	float3x3 LuminanceFromRadiance;
-	int ScatteringOrder;
-};
+}
 
 [numthreads(8, 8, 8)]
 void main( uint3 globalID : SV_DispatchThreadID )

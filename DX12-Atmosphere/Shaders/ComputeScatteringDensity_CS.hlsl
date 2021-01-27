@@ -8,9 +8,8 @@ Texture3D<float4> SingleMieScattering : register(t2);
 Texture3D<float4> MultipleScattering : register(t3);
 Texture2D<float4> Irradiance_Texture : register(t4);
 
-cbuffer cb : register(b0)
+cbuffer SO : register(b0)
 {
-	float3x3 LuminanceFromRadiance;
 	int ScatteringOrder;
 }
 

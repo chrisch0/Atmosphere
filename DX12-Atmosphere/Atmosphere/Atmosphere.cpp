@@ -4,9 +4,11 @@
 #include "D3D12/ColorBuffer.h"
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
+#include "D3D12/CommandContext.h"
 
 #include "CompiledShaders/ComputeTransmittance_CS.h"
 #include "CompiledShaders/ComputeSingleScattering_CS.h"
+#include "COmpiledShaders/ComputeCombinedSingleScattering_CS.h"
 #include "CompiledShaders/ComputeMultipleScattering_CS.h"
 #include "CompiledShaders/ComputeDirectIrradiance_CS.h"
 #include "CompiledShaders/ComputeIndirectIrradiance_CS.h"
@@ -18,7 +20,7 @@ namespace Atmosphere
 	bool UseOzone = true;
 	bool UseCombinedTextures = false;
 	bool UseHalfPrecision = false;
-	Luminance UseLuminance = PRECOMPUTED;
+	Luminance UseLuminance = NONE;
 	bool DoWhiteBalance = false;
 	float SunZenithAngleRadians = 1.3f;
 	float SunAzimuthAngleRadians = 2.9f;
@@ -37,31 +39,62 @@ namespace Atmosphere
 	std::shared_ptr<ColorBuffer> Irradiance;
 
 	std::shared_ptr<ColorBuffer> InterIrradiance;
-	std::shared_ptr<VolumeColorBuffer> m_interRayleighScattering;
-	std::shared_ptr<VolumeColorBuffer> m_interMieScattering;
-	std::shared_ptr<VolumeColorBuffer> m_interScatteringDensity;
+	std::shared_ptr<VolumeColorBuffer> InterRayleighScattering;
+	std::shared_ptr<VolumeColorBuffer> InterMieScattering;
+	std::shared_ptr<VolumeColorBuffer> InterScatteringDensity;
 
 	RootSignature PrecomputeRS;
 	ComputePSO TransmittancePSO;
 	ComputePSO ScatteringDensityPSO;
+	ComputePSO CombinedSingleScatteringPSO;
 	ComputePSO SingleScatteringPSO;
 	ComputePSO MultipleScatteringPSO;
 	ComputePSO DirectIrradiancePSO;
 	ComputePSO IndirectIrradiancePSO;
 	ComputePSO ComputeSkyPSO;
 
+	struct DensityProfileLayer
+	{
+		DensityProfileLayer() : DensityProfileLayer(0.0, 0.0, 0.0, 0.0, 0.0) {}
+		DensityProfileLayer(float width, float exp_term, float exp_scale, float linear_term, float constant_term)
+			: width(width), expTerm(exp_term), expScale(exp_scale), linearTerm(linear_term), constantTerm(constant_term)
+		{}
+		float width;
+		float expTerm;
+		float expScale;
+		float linearTerm;
+		float constantTerm;
+		float pad[3];
+	};
+
+	struct AtmosphereParameters {
+		XMFLOAT3 solar_irradiance;
+		float sun_angular_radius;
+		XMFLOAT3 absorption_extinction;
+		float bottom_radius;
+		XMFLOAT3 ground_albedo;
+		float top_radius;
+		XMFLOAT3 rayleigh_scattering;
+		float mie_phase_function_g;
+		XMFLOAT3 mie_scattering;
+		float mu_s_min;
+		XMFLOAT3 mie_extinction;
+		float pad;
+		DensityProfileLayer rayleigh_density[2];
+		DensityProfileLayer mie_density[2];
+		DensityProfileLayer absorption_density[2];
+	};
+
 	struct  
 	{
 		AtmosphereParameters atmosphere;
 		XMFLOAT3 skySpectralRadianceToLuminance;
+		float pad0;
 		XMFLOAT3 sunSpectralRadianceToLuminance;
+		float pad1;
 	}PassConstants;
 
-	struct  
-	{
-		XMFLOAT3X3 luminanceFromRadiance;
-		int scatteringOrder;
-	}RenderPassConstants;
+	XMFLOAT4X4 LuminanceFromRadiance;
 
 	std::vector<double> Wavelengths;
 	std::vector<double> SolarIrradiance;
@@ -91,7 +124,7 @@ namespace Atmosphere
 	);
 
 	template <typename T>
-	void ReleaseOrNewTexture(std::shared_ptr<T> texPtr)
+	void ReleaseOrNewTexture(std::shared_ptr<T>& texPtr)
 	{
 		if (texPtr == nullptr)
 			texPtr = std::make_shared<T>();
@@ -103,7 +136,7 @@ namespace Atmosphere
 	void InitIntermediateTextures();
 	void InitPSO();
 
-	void Precompute(const Vector3& lambdas, uint32_t numScatteringOrders);
+	void Precompute(ComputeContext& context, const Vector3& lambdas, uint32_t numScatteringOrders);
 
 	void UpdateLambdaDependsCB(const Vector3& lambdas);
 	void UpdatePhysicalCB(const Vector3& lambdas);
@@ -121,16 +154,42 @@ namespace Atmosphere
 
 	void InitPSO()
 	{
-		PrecomputeRS.Reset(4, 1);
+		PrecomputeRS.Reset(5, 1);
 		PrecomputeRS[0].InitAsConstantBufferView(0);
 		PrecomputeRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 4);
 		PrecomputeRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 5);
 		PrecomputeRS[3].InitAsConstantBufferView(1);
+		PrecomputeRS[4].InitAsConstantBufferView(2);
+		PrecomputeRS.InitStaticSampler(0, Global::SamplerLinearClampDesc);
 		PrecomputeRS.Finalize(L"PrecomputeRS");
 
 		TransmittancePSO.SetRootSignature(PrecomputeRS);
-		TransmittancePSO.SetComputeShader(g_pComputeTransmittance_CS);
+		TransmittancePSO.SetComputeShader(g_pComputeTransmittance_CS, sizeof(g_pComputeTransmittance_CS));
 		TransmittancePSO.Finalize();
+
+		SingleScatteringPSO.SetRootSignature(PrecomputeRS);
+		SingleScatteringPSO.SetComputeShader(g_pComputeSingleScattering_CS, sizeof(g_pComputeSingleScattering_CS));
+		SingleScatteringPSO.Finalize();
+
+		CombinedSingleScatteringPSO.SetRootSignature(PrecomputeRS);
+		CombinedSingleScatteringPSO.SetComputeShader(g_pComputeCombinedSingleScattering_CS, sizeof(g_pComputeCombinedSingleScattering_CS));
+		CombinedSingleScatteringPSO.Finalize();
+
+		ScatteringDensityPSO.SetRootSignature(PrecomputeRS);
+		ScatteringDensityPSO.SetComputeShader(g_pComputeScatteringDensity_CS, sizeof(g_pComputeScatteringDensity_CS));
+		ScatteringDensityPSO.Finalize();
+
+		MultipleScatteringPSO.SetRootSignature(PrecomputeRS);
+		MultipleScatteringPSO.SetComputeShader(g_pComputeMultipleScattering_CS, sizeof(g_pComputeMultipleScattering_CS));
+		MultipleScatteringPSO.Finalize();
+
+		DirectIrradiancePSO.SetRootSignature(PrecomputeRS);
+		DirectIrradiancePSO.SetComputeShader(g_pComputeDirectIrradiance_CS, sizeof(g_pComputeDirectIrradiance_CS));
+		DirectIrradiancePSO.Finalize();
+
+		IndirectIrradiancePSO.SetRootSignature(PrecomputeRS);
+		IndirectIrradiancePSO.SetComputeShader(g_pComputeIndirectIrradiance_CS, sizeof(g_pComputeIndirectIrradiance_CS));
+		IndirectIrradiancePSO.Finalize();
 	}
 
 	void InitModel()
@@ -139,17 +198,17 @@ namespace Atmosphere
 			(UseHalfPrecision ? 102.0 : 120.0) / 180.0 * kPi;
 
 		DensityProfileLayer
-			rayleigh_layer(0.0f, 1.0f, (float)(-1.0 / kRayleighScaleHeight), 0.0f, 0.0f);
-		DensityProfileLayer mie_layer(0.0f, 1.0f, (float)(-1.0 / kMieScaleHeight), 0.0f, 0.0f);
+			rayleigh_layer(0.0f / (float)kLengthUnitInMeters, 1.0f, (float)(-1.0 / kRayleighScaleHeight * kLengthUnitInMeters), 0.0f * (float)kLengthUnitInMeters, 0.0f);
+		DensityProfileLayer mie_layer(0.0f / (float)kLengthUnitInMeters, 1.0f, (float)(-1.0 / kMieScaleHeight * kLengthUnitInMeters), 0.0f * (float)kLengthUnitInMeters, 0.0f);
 		// Density profile increasing linearly from 0 to 1 between 10 and 25km, and
 		// decreasing linearly from 1 to 0 between 25 and 40km. This is an approximate
 		// profile from http://www.kln.ac.lk/science/Chemistry/Teaching_Resources/
 		// Documents/Introduction%20to%20atmospheric%20chemistry.pdf (page 10).
 		std::vector<DensityProfileLayer> ozone_density;
 		ozone_density.push_back(
-			DensityProfileLayer(25000.0f, 0.0f, 0.0f, 1.0f / 15000.0f, -2.0f / 3.0f));
+			DensityProfileLayer(25000.0f / (float)kLengthUnitInMeters, 0.0f, 0.0f * (float)kLengthUnitInMeters, 1.0f / 15000.0f * (float)kLengthUnitInMeters, -2.0f / 3.0f));
 		ozone_density.push_back(
-			DensityProfileLayer(0.0f, 0.0f, 0.0f, -1.0f / 15000.0f, 8.0f / 3.0f));
+			DensityProfileLayer(0.0f / (float)kLengthUnitInMeters, 0.0f, 0.0f * (float)kLengthUnitInMeters, -1.0f / 15000.0f * (float)kLengthUnitInMeters, 8.0f / 3.0f));
 
 		for (int l = kLambdaMin; l <= kLambdaMax; l += 10) 
 		{
@@ -208,7 +267,7 @@ namespace Atmosphere
 		PassConstants.atmosphere.mie_phase_function_g = (float)kMiePhaseFunctionG;
 		PassConstants.atmosphere.absorption_density[0] = ozone_density[0];
 		PassConstants.atmosphere.absorption_density[1] = ozone_density[1];
-		PassConstants.atmosphere.mu_s_min = (float)max_sun_zenith_angle;
+		PassConstants.atmosphere.mu_s_min = std::cosf((float)max_sun_zenith_angle);
 		XMStoreFloat3(&PassConstants.skySpectralRadianceToLuminance, sky_radiance_to_luminance);
 		XMStoreFloat3(&PassConstants.sunSpectralRadianceToLuminance, sun_radiance_to_luminance);
 	}
@@ -277,7 +336,7 @@ namespace Atmosphere
 		}
 
 		ReleaseOrNewTexture(Irradiance);
-		Irradiance->Create(L"Irradiance", TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+		Irradiance->Create(L"Irradiance", IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	}
 
 	void InitIntermediateTextures()
@@ -285,33 +344,128 @@ namespace Atmosphere
 		ReleaseOrNewTexture(InterIrradiance);
 		InterIrradiance->Create(L"Intermediate Irradiance", IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-		ReleaseOrNewTexture(m_interRayleighScattering);
-		m_interRayleighScattering->Create(L"Intermediate Rayleigh Scattering", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+		ReleaseOrNewTexture(InterRayleighScattering);
+		InterRayleighScattering->Create(L"Intermediate Rayleigh Scattering", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-		ReleaseOrNewTexture(m_interMieScattering);
-		m_interMieScattering->Create(L"Intermediate Mie Scattering", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+		ReleaseOrNewTexture(InterMieScattering);
+		InterMieScattering->Create(L"Intermediate Mie Scattering", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
 
-		ReleaseOrNewTexture(m_interScatteringDensity);
-		m_interScatteringDensity->Create(L"Intermediate Scattering Density", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
+		ReleaseOrNewTexture(InterScatteringDensity);
+		InterScatteringDensity->Create(L"Intermediate Scattering Density", SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 1, UseHalfPrecision ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT);
 	}
 
 	void Precompute(uint32_t numScatteringOrders)
 	{
-		if (numScatteringOrders <= 3)
+		ComputeContext& context = ComputeContext::Begin();
+		if (NumPrecomputedWavelengths <= 3)
 		{
 			Vector3 lambda_rgb(kLambdaR, kLambdaG, kLambdaB);
-			XMStoreFloat3x3(&RenderPassConstants.luminanceFromRadiance, Matrix3(kIdentity));
-			Precompute(lambda_rgb, numScatteringOrders);
+			XMStoreFloat4x4(&LuminanceFromRadiance, Matrix4(kIdentity));
+			Precompute(context, lambda_rgb, numScatteringOrders);
 		}
 		else
 		{
 			int num_iterators = (NumPrecomputedWavelengths) / 3;
-
+			double dlambda = (kLambdaMax - kLambdaMin) / (3 * num_iterators);
+			for (int i = 0; i < num_iterators; ++i)
+			{
+				
+				double lambda_r = kLambdaMin + (3.0 * i + 0.5) * dlambda;
+				double lambda_g = kLambdaMin + (3.0 * i + 1.5) * dlambda;
+				double lambda_b = kLambdaMin + (3.0 * i + 2.5) * dlambda;
+				/*Matrix4 luminance_from_radiance(
+					LambdaTosRGB(lambda_r),
+					LambdaTosRGB(lambda_g),
+					LambdaTosRGB(lambda_b)
+				);
+				XMStoreFloat3x3(&LuminanceFromRadiance, luminance_from_radiance);
+				Precompute(context, Vector3((float)lambda_r, (float)lambda_g, (float)lambda_b), numScatteringOrders);*/
+			}
 		}
+		context.Finish();
 	}
 
-	void Precompute(const Vector3& lambdas, uint32_t numScatteringOrders)
+	void Precompute(ComputeContext& context, const Vector3& lambdas, uint32_t numScatteringOrders)
 	{
+		// Precompute transmittance
+		context.TransitionResource(*Transmittance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.SetRootSignature(PrecomputeRS);
+		context.SetPipelineState(TransmittancePSO);
+		context.SetDynamicDescriptor(1, 0, Transmittance->GetUAV());
+		context.SetDynamicConstantBufferView(3, sizeof(PassConstants), &PassConstants);
+		context.Dispatch2D(Transmittance->GetWidth(), Transmittance->GetHeight());
+
+		// Precompute direct ground irradiance
+		context.TransitionResource(*InterIrradiance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.TransitionResource(*Irradiance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.SetPipelineState(DirectIrradiancePSO);
+		context.SetDynamicDescriptor(1, 0, InterIrradiance->GetUAV());
+		context.SetDynamicDescriptor(1, 1, Irradiance->GetUAV());
+		context.SetDynamicDescriptor(2, 0, Transmittance->GetSRV());
+		context.Dispatch2D(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT);
+		
+		// Precompute single rayleigh and single mie
+		context.TransitionResource(*Transmittance, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		context.TransitionResource(*InterRayleighScattering, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.TransitionResource(*InterMieScattering, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.TransitionResource(*Scattering, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		if (!UseCombinedTextures)
+			context.TransitionResource(*OptionalSingleMieScattering, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.SetPipelineState(SingleScatteringPSO);
+		context.SetDynamicConstantBufferView(4, sizeof(LuminanceFromRadiance), &LuminanceFromRadiance);
+		context.SetDynamicDescriptor(1, 0, InterRayleighScattering->GetUAV());
+		context.SetDynamicDescriptor(1, 1, InterMieScattering->GetUAV());
+		context.SetDynamicDescriptor(1, 2, Scattering->GetUAV());
+		if (!UseCombinedTextures)
+			context.SetDynamicDescriptor(1, 3, OptionalSingleMieScattering->GetUAV());
+		context.SetDynamicDescriptor(2, 0, Transmittance->GetSRV());
+		context.Dispatch3D(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, 8, 8, 8);
+
+		// Compute 2nd, 3rd, 4th... scattering
+		context.TransitionResource(*InterMieScattering, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		//context.TransitionResource(*Irradiance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		for (uint32_t scattering_order = 2; scattering_order <= numScatteringOrders; ++scattering_order)
+		{
+			// Compute scattering density, store the value in InterScatteringDensity texture
+			context.TransitionResource(*InterScatteringDensity, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.TransitionResource(*InterRayleighScattering, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			context.TransitionResource(*InterIrradiance, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			context.SetPipelineState(ScatteringDensityPSO);
+			context.SetDynamicConstantBufferView(0, sizeof(scattering_order), &scattering_order);
+			context.SetDynamicDescriptor(1, 0, InterScatteringDensity->GetUAV());
+			context.SetDynamicDescriptor(2, 0, Transmittance->GetSRV());
+			context.SetDynamicDescriptor(2, 1, InterRayleighScattering->GetSRV());
+			context.SetDynamicDescriptor(2, 2, InterMieScattering->GetSRV());
+			context.SetDynamicDescriptor(2, 3, InterRayleighScattering->GetSRV());
+			context.SetDynamicDescriptor(2, 4, InterIrradiance->GetSRV());
+			context.Dispatch3D(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH);
+
+			// Compute indirect ground irradiance
+			context.TransitionResource(*InterIrradiance, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.SetPipelineState(IndirectIrradiancePSO);
+			context.SetDynamicDescriptor(1, 0, InterIrradiance->GetUAV());
+			context.SetDynamicDescriptor(1, 1, Irradiance->GetUAV());
+			context.SetDynamicDescriptor(2, 0, InterRayleighScattering->GetSRV());
+			context.SetDynamicDescriptor(2, 1, InterMieScattering->GetSRV());
+			context.SetDynamicDescriptor(2, 2, InterRayleighScattering->GetSRV());
+			context.Dispatch2D(IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT);
+
+			// Compute multiple scattering, store in inter
+			context.TransitionResource(*InterRayleighScattering, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.TransitionResource(*Scattering, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.TransitionResource(*InterScatteringDensity, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			context.SetPipelineState(MultipleScatteringPSO);
+			context.SetDynamicDescriptor(1, 0, InterRayleighScattering->GetUAV());
+			context.SetDynamicDescriptor(1, 1, Scattering->GetUAV());
+			context.SetDynamicDescriptor(2, 0, Transmittance->GetSRV());
+			context.SetDynamicDescriptor(2, 1, InterScatteringDensity->GetSRV());
+			context.Dispatch3D(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH);
+		}	
+
+		context.TransitionResource(*Transmittance, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		context.TransitionResource(*Scattering, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		context.TransitionResource(*OptionalSingleMieScattering, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		context.TransitionResource(*Irradiance, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	}
 
@@ -380,13 +534,14 @@ namespace Atmosphere
 	Vector3 ComputeSpectralRadianceToLuminanceFactors(const std::vector<double>& solarIrradiance, float lambdaPower)
 	{
 		Vector3 radiance_to_luminance(0.0);
-		Vector3 solar_rgb = InterpolateByRGBLambda(solarIrradiance, Vector3(kLambdaR, kLambdaG, kLambdaB));
+		static const Vector3 rbg_lambda(kLambdaR, kLambdaG, kLambdaB);
+		Vector3 solar_rgb = InterpolateByRGBLambda(solarIrradiance, rbg_lambda);
 		int dlambda = 1;
 		for (int lambda = kLambdaMin; lambda < kLambdaMax; lambda += dlambda)
 		{
-			Vector3 rgb_lambda = LambdaTosRGB(lambda);
+			Vector3 lambda_color = LambdaTosRGB(lambda);
 			float solar_irradiance_lambda = InterpolateByLambda(solarIrradiance, lambda);
-			radiance_to_luminance += rgb_lambda * Pow((float)lambda / rgb_lambda, Vector3(lambdaPower)) * solar_irradiance_lambda / solar_rgb * (float)dlambda;
+			radiance_to_luminance += lambda_color * Pow((float)lambda / rbg_lambda, Vector3(lambdaPower)) * solar_irradiance_lambda / solar_rgb * (float)dlambda;
 		}
 		radiance_to_luminance *= Vector3((float)MAX_LUMINOUS_EFFICACY);
 		return radiance_to_luminance;
@@ -405,5 +560,41 @@ namespace Atmosphere
 	void UpdatePhysicalCB(const Vector3& lambdas)
 	{
 
+	}
+
+	void UpdateUI(bool ShowUI)
+	{
+		if (ShowUI)
+		{
+			ImGui::Begin("Atmosphere Setting", &ShowUI);
+			bool dirty_flag = false;
+			static bool transmittance_view_detail = false;
+			static bool transmittance_detail_opening = false;
+			ImGui::PreviewImageButton(Transmittance.get(), ImVec2((float)TRANSMITTANCE_TEXTURE_WIDTH, (float)TRANSMITTANCE_TEXTURE_HEIGHT), "Transmittance", &transmittance_view_detail, &transmittance_detail_opening);
+			
+			static bool irradiance_view_detail = false;
+			static bool irradiance_detail_opening = false;
+			ImGui::PreviewImageButton(Irradiance.get(), ImVec2((float)TRANSMITTANCE_TEXTURE_WIDTH, (float)TRANSMITTANCE_TEXTURE_HEIGHT), "Irradiance", &irradiance_view_detail, &irradiance_detail_opening);
+
+			static bool scattering_view_detail = false;
+			static bool scattering_detail_opening = false;
+			ImGui::PreviewVolumeImageButton(Scattering.get(), ImVec2((float)SCATTERING_TEXTURE_WIDTH, (float)SCATTERING_TEXTURE_HEIGHT), "Scattering", &scattering_view_detail, &scattering_detail_opening);
+			
+			if (!UseCombinedTextures)
+			{
+				static bool optional_scattering_view = false;
+				static bool optional_scattering_opening = false;
+				ImGui::PreviewVolumeImageButton(OptionalSingleMieScattering.get(), ImVec2((float)SCATTERING_TEXTURE_WIDTH, (float)SCATTERING_TEXTURE_HEIGHT), "Scattering", &optional_scattering_view, &optional_scattering_opening);
+			}
+			
+			static int i = 0;
+			//if (i == 0)
+			if (ImGui::Button("Precompute"))
+			{
+				Precompute(2);
+				++i;
+			}
+			ImGui::End();
+		}
 	}
 }

@@ -508,6 +508,9 @@
     <FxCompile Include="Shaders\ComputeScatteringDensity_CS.hlsl">
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeCombinedSingleScattering_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

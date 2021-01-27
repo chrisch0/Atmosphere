@@ -250,7 +250,7 @@ public:
 	void Dispatch(size_t groupX = 1, size_t groupY = 1, size_t groupZ = 1);
 	void Dispatch1D(size_t threadCountX, size_t groupSizeX = 64);
 	void Dispatch2D(size_t threadCountX, size_t threadCountY, size_t groupSizeX = 8, size_t groupSizeY = 8);
-	void Dispatch3D(size_t threadCountX, size_t threadCountY, size_t threadCountZ, size_t groupSizeX, size_t groupSizeY, size_t groupSizeZ);
+	void Dispatch3D(size_t threadCountX, size_t threadCountY, size_t threadCountZ, size_t groupSizeX = 8, size_t groupSizeY = 8, size_t groupSizeZ = 8);
 	//void DispatchIndirect(GpuBuffer& argumentBuffer, uint64_t argumentBufferOffset = 0);
 	//void ExecuteIndirect(CommandSignature& commandSig, GpuBuff)
 };

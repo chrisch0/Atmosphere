@@ -68,6 +68,7 @@ struct DensityParameter {
 	InverseLength exp_scale;
 	InverseLength linear_term;
 	Number constant_term;
+	float3 pad;
 };
 
 struct DensityProfile {
@@ -77,18 +78,19 @@ struct DensityProfile {
 struct AtmosphereParameters {
 	IrradianceSpectrum solar_irradiance;
 	Angle sun_angular_radius;
-	Length bottom_radius;
-	Length top_radius;
-	DensityProfile rayleigh_density;
-	ScatteringSpectrum rayleigh_scattering;
-	DensityProfile mie_density;
-	ScatteringSpectrum mie_scattering;
-	ScatteringSpectrum mie_extinction;
-	Number mie_phase_function_g;
-	DensityProfile absorption_density;
 	ScatteringSpectrum absorption_extinction;
+	Length bottom_radius;
 	DimensionlessSpectrum ground_albedo;
+	Length top_radius;
+	ScatteringSpectrum rayleigh_scattering;
+	Number mie_phase_function_g;
+	ScatteringSpectrum mie_scattering;
 	Number mu_s_min;
+	ScatteringSpectrum mie_extinction;
+	float pad;
+	DensityProfile rayleigh_density;
+	DensityProfile mie_density;
+	DensityProfile absorption_density;
 };
 
 static const int TRANSMITTANCE_TEXTURE_WIDTH = 256;
@@ -104,7 +106,9 @@ cbuffer Parameter : register(b1)
 {
 	AtmosphereParameters Atmosphere;
 	float3 SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
+	float pad0;
 	float3 SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;
+	float pad1;
 };
 
 SamplerState LinearClampSampler : register(s0);

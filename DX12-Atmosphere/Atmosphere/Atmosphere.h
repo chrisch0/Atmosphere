@@ -20,39 +20,9 @@ namespace Atmosphere
 		PRECOMPUTED
 	};
 
-	struct DensityProfileLayer
-	{
-		DensityProfileLayer() : DensityProfileLayer(0.0, 0.0, 0.0, 0.0, 0.0) {}
-		DensityProfileLayer(float width, float exp_term, float exp_scale, float linear_term, float constant_term)
-			: width(width), expTerm(exp_term), expScale(exp_scale), linearTerm(linear_term), constantTerm(constant_term)
-		{}
-		float width;
-		float expTerm;
-		float expScale;
-		float linearTerm;
-		float constantTerm;
-	};
-
-	struct AtmosphereParameters {
-		XMFLOAT3 solar_irradiance;
-		float sun_angular_radius;
-		float bottom_radius;
-		float top_radius;
-		DensityProfileLayer rayleigh_density[2];
-		XMFLOAT3 rayleigh_scattering;
-		DensityProfileLayer mie_density[2];
-		XMFLOAT3 mie_scattering;
-		XMFLOAT3 mie_extinction;
-		float mie_phase_function_g;
-		DensityProfileLayer absorption_density[2];
-		XMFLOAT3 absorption_extinction;
-		XMFLOAT3 ground_albedo;
-		float mu_s_min;
-	};
-
 	void Initialize(ColorBuffer* sceneBuffer, ColorBuffer* depthBuffer = nullptr);
 	void InitModel();
 	void Update();
-	void UpdateUI();
+	void UpdateUI(bool showUI);
 	void Precompute(uint32_t numScatteringOrders);
 }
