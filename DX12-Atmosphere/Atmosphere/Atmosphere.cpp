@@ -53,46 +53,7 @@ namespace Atmosphere
 	ComputePSO IndirectIrradiancePSO;
 	ComputePSO ComputeSkyPSO;
 
-	struct DensityProfileLayer
-	{
-		DensityProfileLayer() : DensityProfileLayer(0.0, 0.0, 0.0, 0.0, 0.0) {}
-		DensityProfileLayer(float width, float exp_term, float exp_scale, float linear_term, float constant_term)
-			: width(width), expTerm(exp_term), expScale(exp_scale), linearTerm(linear_term), constantTerm(constant_term)
-		{}
-		float width;
-		float expTerm;
-		float expScale;
-		float linearTerm;
-		float constantTerm;
-		float pad[3];
-	};
-
-	struct AtmosphereParameters {
-		XMFLOAT3 solar_irradiance;
-		float sun_angular_radius;
-		XMFLOAT3 absorption_extinction;
-		float bottom_radius;
-		XMFLOAT3 ground_albedo;
-		float top_radius;
-		XMFLOAT3 rayleigh_scattering;
-		float mie_phase_function_g;
-		XMFLOAT3 mie_scattering;
-		float mu_s_min;
-		XMFLOAT3 mie_extinction;
-		float pad;
-		DensityProfileLayer rayleigh_density[2];
-		DensityProfileLayer mie_density[2];
-		DensityProfileLayer absorption_density[2];
-	};
-
-	struct  
-	{
-		AtmosphereParameters atmosphere;
-		XMFLOAT3 skySpectralRadianceToLuminance;
-		float pad0;
-		XMFLOAT3 sunSpectralRadianceToLuminance;
-		float pad1;
-	}PassConstants;
+	AtmosphereCB AtmospherePhysicalCB;
 
 	XMFLOAT4X4 LuminanceFromRadiance;
 
@@ -103,6 +64,16 @@ namespace Atmosphere
 	std::vector<double> MieExtinction;
 	std::vector<double> AbsorptionExtinction;
 	std::vector<double> GroundAlbedos;
+
+	ColorBuffer* GetTransmittance()
+	{
+		return Transmittance.get();
+	}
+	
+	ColorBuffer* GetIrradiance()
+	{
+		return Irradiance.get();
+	}
 
 	float InterpolateByLambda(
 		const std::vector<double>& wavelengthFunction,
@@ -257,19 +228,19 @@ namespace Atmosphere
 
 		// Update constant buffer
 		UpdateLambdaDependsCB(lambda_rgb);
-		PassConstants.atmosphere.sun_angular_radius = (float)kSunAngularRadius;
-		PassConstants.atmosphere.bottom_radius = (float)(kBottomRadius / kLengthUnitInMeters);
-		PassConstants.atmosphere.top_radius = (float)(kTopRadius / kLengthUnitInMeters);
-		PassConstants.atmosphere.rayleigh_density[0] = DensityProfileLayer();
-		PassConstants.atmosphere.rayleigh_density[1] = rayleigh_layer;
-		PassConstants.atmosphere.mie_density[0] = DensityProfileLayer();
-		PassConstants.atmosphere.mie_density[1] = mie_layer;
-		PassConstants.atmosphere.mie_phase_function_g = (float)kMiePhaseFunctionG;
-		PassConstants.atmosphere.absorption_density[0] = ozone_density[0];
-		PassConstants.atmosphere.absorption_density[1] = ozone_density[1];
-		PassConstants.atmosphere.mu_s_min = std::cosf((float)max_sun_zenith_angle);
-		XMStoreFloat3(&PassConstants.skySpectralRadianceToLuminance, sky_radiance_to_luminance);
-		XMStoreFloat3(&PassConstants.sunSpectralRadianceToLuminance, sun_radiance_to_luminance);
+		AtmospherePhysicalCB.atmosphere.sun_angular_radius = (float)kSunAngularRadius;
+		AtmospherePhysicalCB.atmosphere.bottom_radius = (float)(kBottomRadius / kLengthUnitInMeters);
+		AtmospherePhysicalCB.atmosphere.top_radius = (float)(kTopRadius / kLengthUnitInMeters);
+		AtmospherePhysicalCB.atmosphere.rayleigh_density[0] = DensityProfileLayer();
+		AtmospherePhysicalCB.atmosphere.rayleigh_density[1] = rayleigh_layer;
+		AtmospherePhysicalCB.atmosphere.mie_density[0] = DensityProfileLayer();
+		AtmospherePhysicalCB.atmosphere.mie_density[1] = mie_layer;
+		AtmospherePhysicalCB.atmosphere.mie_phase_function_g = (float)kMiePhaseFunctionG;
+		AtmospherePhysicalCB.atmosphere.absorption_density[0] = ozone_density[0];
+		AtmospherePhysicalCB.atmosphere.absorption_density[1] = ozone_density[1];
+		AtmospherePhysicalCB.atmosphere.mu_s_min = std::cosf((float)max_sun_zenith_angle);
+		XMStoreFloat3(&AtmospherePhysicalCB.skySpectralRadianceToLuminance, sky_radiance_to_luminance);
+		XMStoreFloat3(&AtmospherePhysicalCB.sunSpectralRadianceToLuminance, sun_radiance_to_luminance);
 	}
 
 	void UpdateModel()
@@ -314,11 +285,11 @@ namespace Atmosphere
 		Vector3 sun_radiance_to_luminance = ComputeSpectralRadianceToLuminanceFactors(SolarIrradiance, 0);
 
 		Vector3 lambda_rgb(kLambdaR, kLambdaG, kLambdaB);
-		XMStoreFloat3(&PassConstants.atmosphere.solar_irradiance, InterpolateByRGBLambda(SolarIrradiance, lambda_rgb, 1.0));
-		XMStoreFloat3(&PassConstants.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambda_rgb, kLengthUnitInMeters));
-		XMStoreFloat3(&PassConstants.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambda_rgb, 1.0));
-		XMStoreFloat3(&PassConstants.skySpectralRadianceToLuminance, sky_radiance_to_luminance);
-		XMStoreFloat3(&PassConstants.sunSpectralRadianceToLuminance, sun_radiance_to_luminance);
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.solar_irradiance, InterpolateByRGBLambda(SolarIrradiance, lambda_rgb, 1.0));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambda_rgb, kLengthUnitInMeters));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambda_rgb, 1.0));
+		XMStoreFloat3(&AtmospherePhysicalCB.skySpectralRadianceToLuminance, sky_radiance_to_luminance);
+		XMStoreFloat3(&AtmospherePhysicalCB.sunSpectralRadianceToLuminance, sun_radiance_to_luminance);
 	}
 
 	void InitTextures()
@@ -373,13 +344,14 @@ namespace Atmosphere
 				double lambda_r = kLambdaMin + (3.0 * i + 0.5) * dlambda;
 				double lambda_g = kLambdaMin + (3.0 * i + 1.5) * dlambda;
 				double lambda_b = kLambdaMin + (3.0 * i + 2.5) * dlambda;
-				/*Matrix4 luminance_from_radiance(
-					LambdaTosRGB(lambda_r),
-					LambdaTosRGB(lambda_g),
-					LambdaTosRGB(lambda_b)
+				Matrix4 luminance_from_radiance(
+					Vector4(LambdaTosRGB(lambda_r), 0.0f),
+					Vector4(LambdaTosRGB(lambda_g), 0.0f),
+					Vector4(LambdaTosRGB(lambda_b), 0.0f),
+					Vector4(0.0f, 0.0f, 0.0f, 0.0f)
 				);
-				XMStoreFloat3x3(&LuminanceFromRadiance, luminance_from_radiance);
-				Precompute(context, Vector3((float)lambda_r, (float)lambda_g, (float)lambda_b), numScatteringOrders);*/
+				XMStoreFloat4x4(&LuminanceFromRadiance, luminance_from_radiance);
+				Precompute(context, Vector3((float)lambda_r, (float)lambda_g, (float)lambda_b), numScatteringOrders);
 			}
 		}
 		context.Finish();
@@ -392,7 +364,7 @@ namespace Atmosphere
 		context.SetRootSignature(PrecomputeRS);
 		context.SetPipelineState(TransmittancePSO);
 		context.SetDynamicDescriptor(1, 0, Transmittance->GetUAV());
-		context.SetDynamicConstantBufferView(3, sizeof(PassConstants), &PassConstants);
+		context.SetDynamicConstantBufferView(3, sizeof(AtmospherePhysicalCB), &AtmospherePhysicalCB);
 		context.Dispatch2D(Transmittance->GetWidth(), Transmittance->GetHeight());
 
 		// Precompute direct ground irradiance
@@ -549,12 +521,12 @@ namespace Atmosphere
 
 	void UpdateLambdaDependsCB(const Vector3& lambdas)
 	{
-		XMStoreFloat3(&PassConstants.atmosphere.solar_irradiance, InterpolateByRGBLambda(SolarIrradiance, lambdas, 1.0));
-		XMStoreFloat3(&PassConstants.atmosphere.rayleigh_scattering, InterpolateByRGBLambda(RayleighScattering, lambdas, kLengthUnitInMeters));
-		XMStoreFloat3(&PassConstants.atmosphere.mie_scattering, InterpolateByRGBLambda(MieScattering, lambdas, kLengthUnitInMeters));
-		XMStoreFloat3(&PassConstants.atmosphere.mie_extinction, InterpolateByRGBLambda(MieExtinction, lambdas, kLengthUnitInMeters));
-		XMStoreFloat3(&PassConstants.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambdas, kLengthUnitInMeters));
-		XMStoreFloat3(&PassConstants.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambdas, 1.0));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.solar_irradiance, InterpolateByRGBLambda(SolarIrradiance, lambdas, 1.0));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.rayleigh_scattering, InterpolateByRGBLambda(RayleighScattering, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_scattering, InterpolateByRGBLambda(MieScattering, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_extinction, InterpolateByRGBLambda(MieExtinction, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambdas, kLengthUnitInMeters));
+		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambdas, 1.0));
 	}
 
 	void UpdatePhysicalCB(const Vector3& lambdas)
@@ -562,11 +534,11 @@ namespace Atmosphere
 
 	}
 
-	void UpdateUI(bool ShowUI)
+	void UpdateUI(bool* showUI)
 	{
-		if (ShowUI)
+		if (*showUI)
 		{
-			ImGui::Begin("Atmosphere Setting", &ShowUI);
+			ImGui::Begin("Atmosphere Setting", showUI);
 			bool dirty_flag = false;
 			static bool transmittance_view_detail = false;
 			static bool transmittance_detail_opening = false;
@@ -591,7 +563,7 @@ namespace Atmosphere
 			//if (i == 0)
 			if (ImGui::Button("Precompute"))
 			{
-				Precompute(2);
+				Precompute(4);
 				++i;
 			}
 			ImGui::End();

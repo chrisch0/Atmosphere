@@ -20,9 +20,57 @@ namespace Atmosphere
 		PRECOMPUTED
 	};
 
+	struct DensityProfileLayer
+	{
+		DensityProfileLayer() : DensityProfileLayer(0.0, 0.0, 0.0, 0.0, 0.0) {}
+		DensityProfileLayer(float width, float exp_term, float exp_scale, float linear_term, float constant_term)
+			: width(width), expTerm(exp_term), expScale(exp_scale), linearTerm(linear_term), constantTerm(constant_term)
+		{}
+		float width;
+		float expTerm;
+		float expScale;
+		float linearTerm;
+		float constantTerm;
+		float pad[3];
+	};
+
+	struct AtmosphereParameters {
+		XMFLOAT3 solar_irradiance;
+		float sun_angular_radius;
+		XMFLOAT3 absorption_extinction;
+		float bottom_radius;
+		XMFLOAT3 ground_albedo;
+		float top_radius;
+		XMFLOAT3 rayleigh_scattering;
+		float mie_phase_function_g;
+		XMFLOAT3 mie_scattering;
+		float mu_s_min;
+		XMFLOAT3 mie_extinction;
+		float pad;
+		DensityProfileLayer rayleigh_density[2];
+		DensityProfileLayer mie_density[2];
+		DensityProfileLayer absorption_density[2];
+	};
+
+	struct AtmosphereCB
+	{
+		AtmosphereParameters atmosphere;
+		XMFLOAT3 skySpectralRadianceToLuminance;
+		float pad0;
+		XMFLOAT3 sunSpectralRadianceToLuminance;
+		float pad1;
+	};
+
 	void Initialize(ColorBuffer* sceneBuffer, ColorBuffer* depthBuffer = nullptr);
 	void InitModel();
 	void Update();
-	void UpdateUI(bool showUI);
+	void UpdateUI(bool* showUI);
 	void Precompute(uint32_t numScatteringOrders);
+
+	ColorBuffer* GetTransmittance();
+	ColorBuffer* GetIrradiance();
+	VolumeColorBuffer* GetScattering();
+	VolumeColorBuffer* GetOptionalScattering();
+	AtmosphereCB* GetAtmosphereCB();
+
 }

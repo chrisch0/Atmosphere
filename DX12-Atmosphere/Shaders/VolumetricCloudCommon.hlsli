@@ -32,12 +32,14 @@ cbuffer cb : register(b0)
 	float RainAbsorption;
 
 	uint FrameIndex;
+	float Exposure;
+	float GroundAlbedo;
 
 	float4x4 PrevViewProj;
 }
 
 #define INNER_RADIUS (EarthRadius + CloudBottomRadius)
-#define OUTER_RADIUS (INNER_RADIUS + CloudTopRadius)
+#define OUTER_RADIUS (EarthRadius + CloudTopRadius)
 #define CLOUDS_MIN_TRANSMITTANCE 1e-1
 #define LIGHT_DIR float3(-0.40825, 0.40825, 0.8165)
 #define SUN_COLOR LightColor * float3(1.1, 1.1, 0.95)
@@ -105,6 +107,21 @@ bool RaySphereIntersection(float3 ro, float3 rd, float radius, out float3 startP
 	startPos = ro + rd * t;
 
 	return true;
+}
+
+bool RayIntersectGround(float3 ro, float3 rd, float radius, out float3 startPos)
+{
+	float3 p = ro + float3(0.0, radius, 0.0);
+	float p_dot_v = dot(rd, p);
+	float p_dot_p = dot(p, p);
+	float ray_earth_center_squared_distance = p_dot_p - p_dot_v * p_dot_v;
+	float distance_to_intersection = -p_dot_v - sqrt(radius * radius - ray_earth_center_squared_distance);
+	if (distance_to_intersection > 0.0)
+	{
+		startPos = ro + distance_to_intersection * rd;
+		return true;
+	}
+	return false;
 }
 
 float GetHeightFraction(float3 pos)

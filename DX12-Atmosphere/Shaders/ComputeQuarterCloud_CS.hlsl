@@ -1,11 +1,17 @@
 Texture3D<float4> CloudShapeTexture : register(t0);
 Texture3D<float4> ErosionTexture : register(t1);
 Texture2D<float4> WeatherTexture : register(t2);
+Texture2D<float4> Transmittance : register(t3);
+Texture3D<float4> Scattering : register(t4);
+Texture2D<float4> Irradiance_Texture : register(t5);
+Texture3D<float4> SingleMieScattering : register(t6);
 
 RWTexture2D<float4> CloudColor : register(u0);
 RWTexture2D<float4> PreCloudColor : register(u1);
 
-SamplerState LinearRepeatSampler : register(s0);
+#include "AtmosphereCommon.hlsli"
+
+SamplerState LinearRepeatSampler : register(s1);
 
 #include "VolumetricCloudCommon.hlsli"
 
@@ -36,7 +42,8 @@ void main( uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupT
 		fogRay = start_pos;
 
 		float3 ground_pos;
-		bool ground = RaySphereIntersection(CameraPosition, world_dir, EarthRadius, ground_pos);
+		//bool ground = RaySphereIntersection(CameraPosition, world_dir, EarthRadius * 10.0, ground_pos);
+		bool ground = RayIntersectGround(CameraPosition, world_dir, EarthRadius * 10.0, ground_pos);
 		if (ground)
 		{
 			CloudColor[globalID.xy] = float4(0.0, 0.2, 0.87, 1.0);

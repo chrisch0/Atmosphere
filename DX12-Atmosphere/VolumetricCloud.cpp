@@ -91,11 +91,13 @@ void VolumetricCloud::InitCloudParameters()
 
 void VolumetricCloud::CreatePSO()
 {
-	m_volumetricCloudRS.Reset(3, 1);
+	m_volumetricCloudRS.Reset(4, 2);
 	m_volumetricCloudRS[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 	m_volumetricCloudRS[1].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 	m_volumetricCloudRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
-	m_volumetricCloudRS.InitStaticSampler(0, SamplerLinearMirrorDesc);
+	m_volumetricCloudRS[3].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_volumetricCloudRS.InitStaticSampler(0, SamplerLinearClampDesc);
+	m_volumetricCloudRS.InitStaticSampler(1, SamplerLinearMirrorDesc);
 	m_volumetricCloudRS.Finalize(L"VolumetricCloudRS", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	D3D12_INPUT_ELEMENT_DESC layout[] =
