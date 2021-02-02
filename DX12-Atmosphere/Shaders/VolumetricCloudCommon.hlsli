@@ -265,7 +265,7 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 
 	for (int i = 0; i < nSteps; ++i)
 	{
-		/*float density_sample = SampleCloudDensity(pos, true, 0.0);
+		float density_sample = SampleCloudDensity(pos, true, 0.0);
 
 		if (density_sample > 0.0)
 		{
@@ -288,55 +288,54 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 			color.rgb += T * Sint;
 			T *= dTrans;
 		}
-		pos += dir;*/
+		pos += dir;
 
-		if (cloud_test > 0.0)
-		{
-			float density_sample = SampleCloudDensity(pos, true, 0.0);
-			if (density_sample > 0.0)
-			{
-				if (!entered)
-				{
-					cloudPos = float4(pos, 1.0);
-					entered = true;
-				}
+		//if (cloud_test > 0.0)
+		//{
+		//	float density_sample = SampleCloudDensity(pos, true, 0.0);
+		//	if (density_sample > 0.0)
+		//	{
+		//		if (!entered)
+		//		{
+		//			cloudPos = float4(pos, 1.0);
+		//			entered = true;
+		//		}
 
-				float height = GetHeightFraction(pos);
-				float3 ambient_light = CloudBottomColor;
-				float light_density = RaymarchLight(pos, ds * 0.1, LIGHT_DIR, density_sample, light_dot_eye);
-				float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
-				scattering = max(scattering, 1.0);
-				float powder_term = EnablePowder ? Powder(light_density) : 1.0f;
-				float beer_term = EnableBeer ? 2.0f * Beer(light_density) : 1.0f;
+		//		float height = GetHeightFraction(pos);
+		//		float3 ambient_light = CloudBottomColor;
+		//		float light_density = RaymarchLight(pos, ds * 0.1, LIGHT_DIR, density_sample, light_dot_eye);
+		//		float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
+		//		scattering = max(scattering, 1.0);
+		//		float powder_term = EnablePowder ? Powder(light_density) : 1.0f;
+		//		float beer_term = EnableBeer ? 2.0f * Beer(light_density) : 1.0f;
 
-				float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * SUN_COLOR, beer_term * powder_term * exp(-light_density))) * density_sample;
-				float dTrans = exp(density_sample * sigma_ds);
-				float3 Sint = (S - S * dTrans) * (1.0 / density_sample);
-				color.rgb += T * Sint;
-				T *= dTrans;
+		//		float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * SUN_COLOR, beer_term * powder_term * exp(-light_density))) * density_sample;
+		//		float dTrans = exp(density_sample * sigma_ds);
+		//		float3 Sint = (S - S * dTrans) * (1.0 / density_sample);
+		//		color.rgb += T * Sint;
+		//		T *= dTrans;
 
-			}
-			pos += dir;
-		}
-		else
-		{
-			cloud_test = SampleCloudDensity(pos, false, 0.0);
-			if (cloud_test == 0.0)
-			{
-				pos += dir * 2;
-				i++;
-			}
-			else
-			{
-				pos -= dir;
-				//i--;
-			}
-		}
+		//	}
+		//	pos += dir;
+		//}
+		//else
+		//{
+		//	cloud_test = SampleCloudDensity(pos, false, 0.0);
+		//	if (cloud_test == 0.0)
+		//	{
+		//		pos += dir * 2;
+		//		i++;
+		//	}
+		//	else
+		//	{
+		//		pos -= dir;
+		//		//i--;
+		//	}
+		//}
 
 		if (T < CLOUDS_MIN_TRANSMITTANCE)
 			break;
 
-		//pos += dir;
 	}
 	color.a = 1.0 - T;
 	return color;
