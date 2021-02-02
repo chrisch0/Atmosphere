@@ -23,6 +23,6 @@ namespace Atmosphere
 	void Initialize(ColorBuffer* sceneBuffer, ColorBuffer* depthBuffer = nullptr);
 	void InitModel();
 	void Update();
-	void UpdateUI(bool showUI);
+	void UpdateUI(bool* showUI);
 	void Precompute(uint32_t numScatteringOrders);
 }

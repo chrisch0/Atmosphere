@@ -196,11 +196,11 @@ void PostProcess::Render()
 	context.Finish();
 }
 
-void PostProcess::UpdateUI(bool showUI)
+void PostProcess::UpdateUI(bool* showUI)
 {
-	if (showUI)
+	if (*showUI)
 	{
-		ImGui::Begin("HDR Setting", &showUI);
+		ImGui::Begin("HDR Setting", showUI);
 		ImGui::Checkbox("Enable HDR", &PostProcess::EnableHDR);
 		if (PostProcess::EnableHDR)
 		{

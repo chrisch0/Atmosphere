@@ -27,6 +27,6 @@ namespace PostProcess
 
 	void Initialize(ColorBuffer* sceneBuffer);
 	void Render();
-	void UpdateUI(bool showUI);
+	void UpdateUI(bool* showUI);
 	void Shutdown();
 }

@@ -562,8 +562,8 @@ void App::UpdateAppUI()
 	}
 
 	// HDR setting
-	PostProcess::UpdateUI(show_hdr_setting);
-	Atmosphere::UpdateUI(show_atmosphere_setting);
+	PostProcess::UpdateUI(&show_hdr_setting);
+	Atmosphere::UpdateUI(&show_atmosphere_setting);
 }
 
 void App::Display()

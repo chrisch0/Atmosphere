@@ -562,11 +562,11 @@ namespace Atmosphere
 
 	}
 
-	void UpdateUI(bool ShowUI)
+	void UpdateUI(bool* ShowUI)
 	{
-		if (ShowUI)
+		if (*ShowUI)
 		{
-			ImGui::Begin("Atmosphere Setting", &ShowUI);
+			ImGui::Begin("Atmosphere Setting", ShowUI);
 			bool dirty_flag = false;
 			static bool transmittance_view_detail = false;
 			static bool transmittance_detail_opening = false;
