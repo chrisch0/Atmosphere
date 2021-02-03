@@ -438,8 +438,8 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 		context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
 		context.SetDynamicDescriptor(1, 1, m_worley->GetSRV());
 		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
+		context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
 		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
-		context.SetDynamicDescriptor(2, 1, m_cloudTempBuffer->GetUAV());
 		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 
 		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);

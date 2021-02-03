@@ -1,17 +1,11 @@
 Texture3D<float4> CloudShapeTexture : register(t0);
 Texture3D<float4> ErosionTexture : register(t1);
 Texture2D<float4> WeatherTexture : register(t2);
-Texture2D<float4> Transmittance : register(t3);
-Texture3D<float4> Scattering : register(t4);
-Texture2D<float4> Irradiance_Texture : register(t5);
-Texture3D<float4> SingleMieScattering : register(t6);
+Texture2D<float4> PreCloudColor : register(t3);
 
 RWTexture2D<float4> CloudColor : register(u0);
-RWTexture2D<float4> PreCloudColor : register(u1);
 
-#include "AtmosphereCommon.hlsli"
-
-SamplerState LinearRepeatSampler : register(s1);
+SamplerState LinearRepeatSampler : register(s0);
 
 #include "VolumetricCloudCommon.hlsli"
 
@@ -68,6 +62,7 @@ void main( uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupT
 	else
 	{
 		uint2 tex_coord = uint2(uv * Resolution.xy);
-		CloudColor[globalID.xy] = PreCloudColor[tex_coord];
+		//CloudColor[globalID.xy] = PreCloudColor[tex_coord];
+		CloudColor[globalID.xy] = PreCloudColor.SampleLevel(LinearRepeatSampler, uv, 0);
 	}
 }
