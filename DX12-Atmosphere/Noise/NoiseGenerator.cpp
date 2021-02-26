@@ -168,6 +168,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 	ImGui::Separator();
 	
 	bool dirty_flag = false;
+	bool remap_value_range = m_remapValueRange[i];
 	auto name = m_noiseTextureNames[i];
 	bool is_volume_texture = m_isVolumeNoise[i];
 	auto noise_state = m_noiseStates[i];
@@ -272,6 +273,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 		}
 		dirty_flag |= ImGui::Checkbox("Invert Color", &invert);
 		noise_state->invert_visualize_warp |= ((int)invert << 16);
+		dirty_flag |= ImGui::Checkbox("Remap Value Range", &remap_value_range);
 		ImGui::PopItemWidth();
 	}
 	ImGui::EndGroup();
@@ -280,9 +282,9 @@ void NoiseGenerator::NoiseConfig(size_t i)
 	if (dirty_flag)
 	{
 		if (is_volume_texture)
-			GenerateVolumeNoise(iter->second, noise_state.get());
+			GenerateVolumeNoise(iter->second, noise_state.get(), remap_value_range);
 		else
-			GenerateNoise(iter->second, noise_state.get());
+			GenerateNoise(iter->second, noise_state.get(), remap_value_range);
 	}
 
 	if (is_volume_texture)
@@ -302,6 +304,7 @@ void NoiseGenerator::NoiseConfig(size_t i)
 		m_imageWindow[i] = image_view;
 	}
 	m_dirtyFlags[i] = dirty_flag;
+	m_remapValueRange[i] = remap_value_range;
 }
 
 std::shared_ptr<VolumeColorBuffer> NoiseGenerator::CreateVolumeNoise(const std::string& name, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format)
@@ -332,7 +335,8 @@ std::shared_ptr<VolumeColorBuffer> NoiseGenerator::CreateVolumeNoise(const std::
 	m_textureFormat.push_back(format);
 	m_imageWindow.push_back(false);
 	m_dirtyFlags.push_back(false);
-	GenerateVolumeNoise(tex, m_noiseStates.back().get());
+	m_remapValueRange.push_back(true);
+	GenerateVolumeNoise(tex, m_noiseStates.back().get(), true);
 	return tex;
 }
 
@@ -355,6 +359,7 @@ void NoiseGenerator::AddVolumeNoise(const std::string& name, std::shared_ptr<Vol
 	m_textureFormat.push_back(texPtr->GetFormat());
 	m_imageWindow.push_back(false);
 	m_dirtyFlags.push_back(false);
+	m_remapValueRange.push_back(true);
 }
 
 std::shared_ptr<ColorBuffer> NoiseGenerator::CreateNoise(const std::string& name, uint32_t width, uint32_t height, DXGI_FORMAT format)
@@ -385,7 +390,8 @@ std::shared_ptr<ColorBuffer> NoiseGenerator::CreateNoise(const std::string& name
 	m_textureFormat.push_back(format);
 	m_imageWindow.push_back(false);
 	m_dirtyFlags.push_back(false);
-	GenerateNoise(tex, m_noiseStates.back().get());
+	m_remapValueRange.push_back(true);
+	GenerateNoise(tex, m_noiseStates.back().get(), true);
 	return tex;
 }
 
@@ -408,25 +414,32 @@ void NoiseGenerator::AddNoise(const std::string& name, std::shared_ptr<ColorBuff
 	m_textureFormat.push_back(texPtr->GetFormat());
 	m_imageWindow.push_back(false);
 	m_dirtyFlags.push_back(false);
+	m_remapValueRange.push_back(true);
 }
 
-void NoiseGenerator::GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state)
+void NoiseGenerator::GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state, bool remapValueRange)
 {
 	auto tex = std::dynamic_pointer_cast<VolumeColorBuffer>(texPtr);
 
 	ComputeContext& context = ComputeContext::Begin();
 	GenerateRawNoiseData(context, tex, state);
-	MapNoiseColor(context, tex, state);
+	if (remapValueRange)
+	{
+		MapNoiseColor(context, tex, state);
+	}
 	context.Finish(true);
 }
 
-void NoiseGenerator::GenerateNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state)
+void NoiseGenerator::GenerateNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state, bool remapValueRange)
 {
 	auto tex = std::dynamic_pointer_cast<ColorBuffer>(texPtr);
 
 	ComputeContext& context = ComputeContext::Begin();
 	GenerateRawNoiseData(context, tex, state);
-	MapNoiseColor(context, tex, state);
+	if (remapValueRange)
+	{
+		MapNoiseColor(context, tex, state);
+	}
 	context.Finish(true);
 }
 

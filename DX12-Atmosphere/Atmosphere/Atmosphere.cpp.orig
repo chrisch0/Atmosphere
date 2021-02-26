@@ -534,11 +534,19 @@ namespace Atmosphere
 
 	}
 
+<<<<<<< HEAD
+	void UpdateUI(bool* showUI)
+	{
+		if (*showUI)
+		{
+			ImGui::Begin("Atmosphere Setting", showUI);
+=======
 	void UpdateUI(bool* ShowUI)
 	{
 		if (*ShowUI)
 		{
 			ImGui::Begin("Atmosphere Setting", ShowUI);
+>>>>>>> a083f6543f132e416a960348a806867803d82f01
 			bool dirty_flag = false;
 			static bool transmittance_view_detail = false;
 			static bool transmittance_detail_opening = false;
@@ -568,10 +576,5 @@ namespace Atmosphere
 			}
 			ImGui::End();
 		}
-	}
-
-	void Render()
-	{
-
 	}
 }

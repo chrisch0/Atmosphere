@@ -511,7 +511,10 @@
     <FxCompile Include="Shaders\ComputeCombinedSingleScattering_CS.hlsl">
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\ComputeSky_CS.hlsl">
+    <FxCompile Include="Shaders\TemporalCloud_CS.hlsl">
+      <Filter>Shaders\Volumetric</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeAtmosphere_CS.hlsl">
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
   </ItemGroup>

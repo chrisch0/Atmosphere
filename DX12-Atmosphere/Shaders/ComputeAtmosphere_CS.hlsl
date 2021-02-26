@@ -48,5 +48,24 @@ void main( uint3 globalID : SV_DispatchThreadID )
 		float3 sun_irradiance = GetSunAndSkyIrradiance(ground_pos - earth_center, normal, SunDirection, sky_irradiance);
 		// TODO: sun_irradiance * sun_visibility
 		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance + sky_irradiance);
+		float3 transmittance;
+		float3 in_scatter = GetSkyRadianceToPoint(CameraPosition - earth_center,
+			ground_pos - earth_center, 0.0, SunDirection, transmittance);
+		ground_radiance = ground_radiance * transmittance + in_scatter;
+		ground_albedo = 1.0;
 	}
+
+	float3 transmittance;
+	float3 radiance = GetSkyRadiance(
+		CameraPosition - earth_center, world_dir, 0.0, SunDirection,
+		transmittance);
+
+	if (dot(world_dir, SunDirection) > SunSize.y)
+	{
+		radiance = radiance + transmittance * GetSolarRadiance();
+	}
+	radiance = lerp(radiance, ground_radiance, ground_albedo);
+	float3 finalColor =
+		pow(float3(1.0, 1.0, 1.0) - exp(-radiance * Exposure), 1.0 / 2.2);
+
 }

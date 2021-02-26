@@ -141,8 +141,8 @@ public:
 	void AddNoise(const std::string& name, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
 	void AddVolumeNoise(const std::string& name, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
 
-	void GenerateNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state);
-	void GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state);
+	void GenerateNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state, bool remapValueRange);
+	void GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state, bool remapValueRange);
 
 	void GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
 	void GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
@@ -167,6 +167,7 @@ private:
 	std::vector<DXGI_FORMAT> m_textureFormat;
 	std::vector<bool> m_imageWindow;
 	std::vector<bool> m_dirtyFlags;
+	std::vector<bool> m_remapValueRange;
 
 	RootSignature m_genNoiseRS;
 	RootSignature m_mapColorRS;

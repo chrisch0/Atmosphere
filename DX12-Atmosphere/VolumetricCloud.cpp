@@ -4,6 +4,7 @@
 #include "D3D12/CommandContext.h"
 #include "D3D12/TextureManager.h"
 #include "D3D12/ColorBuffer.h"
+#include "D3D12/PostProcess.h"
 #include "Utils/CameraController.h"
 #include "Utils/Camera.h"
 #include "Mesh/Mesh.h"
@@ -17,6 +18,7 @@
 #include "CompiledShaders/Worley_CS.h"
 #include "CompiledShaders/ComputeQuarterCloud_CS.h"
 #include "CompiledShaders/CombineSky_CS.h"
+#include "CompiledShaders/TemporalCloud_CS.h"
 
 using namespace Global;
 
@@ -53,10 +55,12 @@ bool VolumetricCloud::Initialize()
 	m_rotation = Vector3(0.0f, 0.0f, 0.0f);
 	m_scale = Vector3(1.0f, 1.0f, 1.0f);
 
-	//m_quarterBuffer = std::make_shared<ColorBuffer>();
-	//m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
+	m_quarterBuffer = std::make_shared<ColorBuffer>();
+	m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
 	m_cloudTempBuffer = std::make_shared<ColorBuffer>();
 	m_cloudTempBuffer->Create(L"Previous Cloud Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+
+	PostProcess::EnableHDR = false;
 
 	return true;
 }
@@ -155,6 +159,10 @@ void VolumetricCloud::CreatePSO()
 	m_generatePerlinWorleyPSO.SetRootSignature(m_generateNoiseRS);
 	m_generatePerlinWorleyPSO.SetComputeShader(g_pPerlinWorley_CS, sizeof(g_pPerlinWorley_CS));
 	m_generatePerlinWorleyPSO.Finalize();
+
+	m_temporalCloudPSO.SetRootSignature(m_computeCloudOnQuadRS);
+	m_temporalCloudPSO.SetComputeShader(g_pTemporalCloud_CS, sizeof(g_pTemporalCloud_CS));
+	m_temporalCloudPSO.Finalize();
 
 	m_quarterCloudPSO.SetRootSignature(m_computeCloudOnQuadRS);
 	m_quarterCloudPSO.SetComputeShader(g_pComputeQuarterCloud_CS, sizeof(g_pComputeQuarterCloud_CS));
@@ -329,6 +337,8 @@ void VolumetricCloud::UpdateUI()
 			m_cloudOnQuadCB.enableBeer = enable_beer;
 			ImGui::DragFloat("Rain Absorption", &m_cloudOnQuadCB.rainAbsorption, 0.01f, 0.01f, 20.0f);
 			ImGui::Checkbox("Enable Temporal", &m_useTemporal);
+			if (m_useTemporal)
+				ImGui::Checkbox("Render To Quarter Buffer", &m_computeToQuarter);
 
 			ImGui::Separator();
 			ImGui::Text("Cloud Distribution");
@@ -432,19 +442,26 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	if (m_useTemporal)
 	{
-		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		context.SetPipelineState(m_quarterCloudPSO);
-		context.SetDynamicConstantBufferView(0, sizeof(m_cloudOnQuadCB), &m_cloudOnQuadCB);
-		context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
-		context.SetDynamicDescriptor(1, 1, m_worley->GetSRV());
-		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
-		context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
-		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
-		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
+		if (m_computeToQuarter)
+		{
 
-		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
-		context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
-		context.CopySubresource(*m_cloudTempBuffer, 0, *m_sceneColorBuffer, 0);
+		}
+		else
+		{
+			context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.SetPipelineState(m_temporalCloudPSO);
+			context.SetDynamicConstantBufferView(0, sizeof(m_cloudOnQuadCB), &m_cloudOnQuadCB);
+			context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
+			context.SetDynamicDescriptor(1, 1, m_worley->GetSRV());
+			context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
+			context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
+			context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+			context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
+
+			context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
+			context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
+			context.CopySubresource(*m_cloudTempBuffer, 0, *m_sceneColorBuffer, 0);
+		}
 	}
 	else
 	{
@@ -464,8 +481,8 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 void VolumetricCloud::OnResize()
 {
 	App::OnResize();
-	//m_quarterBuffer->Destroy();
-	//m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
+	m_quarterBuffer->Destroy();
+	m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
 	m_cloudTempBuffer->Destroy();
-	m_cloudTempBuffer->Create(L"Cloud Temp Buffer", m_clientWidth, m_clientHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	m_cloudTempBuffer->Create(L"Cloud Temp Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 }

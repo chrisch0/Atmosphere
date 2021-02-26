@@ -61,9 +61,23 @@ namespace Atmosphere
 		float pad1;
 	};
 
+	struct RenderCB
+	{
+		XMFLOAT3 CameraPosition;
+		float Exposure;
+		XMFLOAT4 Resolution;
+		Matrix4 InvProj;
+		Matrix4 InvView;
+		XMFLOAT3 WhitePoint;
+		float EarthRadius;
+		XMFLOAT3 SunDirection;
+		float GroundAlbedo;
+		XMFLOAT2 SunSize;
+	};
+
 	void Initialize(ColorBuffer* sceneBuffer, ColorBuffer* depthBuffer = nullptr);
 	void InitModel();
-	void Update();
+	void Render();
 	void UpdateUI(bool* showUI);
 	void Precompute(uint32_t numScatteringOrders);
 

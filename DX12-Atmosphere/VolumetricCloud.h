@@ -46,6 +46,7 @@ private:
 	ComputePSO m_generateWorleyPSO;
 	ComputePSO m_generatePerlinWorleyPSO;
 
+	ComputePSO m_temporalCloudPSO;
 	ComputePSO m_quarterCloudPSO;
 	ComputePSO m_combineSkyPSO;
 
@@ -121,4 +122,5 @@ private:
 	}m_cloudOnQuadCB;
 
 	bool m_useTemporal;
+	bool m_computeToQuarter = false;
 };
