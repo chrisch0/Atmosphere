@@ -62,6 +62,9 @@
     <Filter Include="Atmosphere">
       <UniqueIdentifier>{07ba1a23-b2fe-42b2-a06e-52be60932c12}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\GenerateMips">
+      <UniqueIdentifier>{15885a97-10a7-455f-bf35-5af6d447ce7a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -517,6 +520,39 @@
     <FxCompile Include="Shaders\ComputeAtmosphere_CS.hlsl">
       <Filter>Shaders\Atmosphere</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsLinear_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsLinearOdd_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsLinearOddX_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsLinearOddY_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsGamma_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsGammaOdd_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsGammaOddX_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate2DMipsGammaOddY_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate3DMipsGamma_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Generate3DMipsLinear_CS.hlsl">
+      <Filter>Shaders\GenerateMips</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GenerateCurlNoise2D_CS.hlsl">
+      <Filter>Shaders\GenerateNoise</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">
@@ -543,6 +579,12 @@
     </None>
     <None Include="Shaders\ComputeSkyCommon.hlsli">
       <Filter>Shaders\Atmosphere</Filter>
+    </None>
+    <None Include="Shaders\Generate2DMips_CS.hlsli">
+      <Filter>Shaders\GenerateMips</Filter>
+    </None>
+    <None Include="Shaders\Generate3DMips_CS.hlsli">
+      <Filter>Shaders\GenerateMips</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@ Texture3D<float4> CloudShapeTexture : register(t0);
 Texture3D<float4> ErosionTexture : register(t1);
 Texture2D<float4> WeatherTexture : register(t2);
 Texture2D<float4> PreCloudColor : register(t3);
+Texture2D<float4> CurlNoise : register(t4);
 
 RWTexture2D<float4> CloudColor : register(u0);
 

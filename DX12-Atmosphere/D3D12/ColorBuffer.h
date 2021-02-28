@@ -41,7 +41,7 @@ public:
 
 	Color GetClearColor() const { return m_clearColor; }
 
-	void GenerateMinMaps(CommandContext& context);
+	void GenerateMipMaps(CommandContext& context);
 
 protected:
 
@@ -101,6 +101,9 @@ public:
 	}
 
 	Color GetClearColor() const { return m_clearColor; }
+
+	// Only support dimension is power of 2
+	void GenerateMipMaps(CommandContext& context);
 
 protected:
 	D3D12_RESOURCE_FLAGS CombineResourceFlags() const

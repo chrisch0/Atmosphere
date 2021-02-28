@@ -33,6 +33,8 @@ public:
 	float GetAltitudeMax() const { return m_cloudMax; }
 	ColorBuffer* GetDensityHeightGradient() const { return m_densityHeightGradinet.get(); }
 
+	NoiseGenerator* GetNoiseGenerator() { return m_noiseGenerator.get(); }
+
 private:
 	RootSignature m_basicShapeRS;
 	RootSignature m_gradientRS;

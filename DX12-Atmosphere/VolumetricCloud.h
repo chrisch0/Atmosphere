@@ -58,16 +58,19 @@ private:
 	std::shared_ptr<Mesh> m_quadMesh;
 
 	const Texture2D* m_weatherTexture;
+	const Texture2D* m_curlNoise2D;
 	std::shared_ptr<VolumeColorBuffer> m_curlNoiseTexture;
 	std::shared_ptr<VolumeColorBuffer> m_perlinWorleyUE;
 	VolumeColorBuffer* m_basicCloudShape;
-	std::shared_ptr<VolumeColorBuffer> m_erosionTexture;
+	VolumeColorBuffer* m_erosionTexture;
 
 	std::shared_ptr<VolumeColorBuffer> m_perlinWorley;
 	std::shared_ptr<VolumeColorBuffer> m_worley;
 	
 	std::shared_ptr<ColorBuffer> m_quarterBuffer;
 	std::shared_ptr<ColorBuffer> m_cloudTempBuffer;
+
+	std::shared_ptr<ColorBuffer> m_mipmapTestBuffer;
 
 	Vector3 m_position;
 	Vector3 m_scale;
@@ -94,21 +97,19 @@ private:
 
 	struct
 	{
-		Matrix4 invView;
-		Matrix4 invProj;
+
 		float lightColor[3] = { 1.0f, 0.99995f, 0.90193f };
-		float time = 0.0f;
-		XMFLOAT3 lightDir;
-		int sampleCount = 64;
-		XMFLOAT3 cameraPosition;
+		int sampleCountMin = 64;
+		int sampleCountMax = 128;
 		float cloudCoverage = 0.45f;
+		float Exposure = 1.0;
+		float GroundAlbedo = 1.0;
 		float cloudBottomColor[3] = {0.38235f, 0.41176f, 0.47059f};
 		float crispiness = 40.0f;
 		float curliness = 0.1f;
 		float earthRadius = 636000.0f;
 		float cloudBottomRadius = 5000.0f;
 		float cloudTopRadius = 17000.0f;
-		XMFLOAT4 resolution;
 		float cloudSpeed = 0.0f;
 		float densityFactor = 0.02f;
 		float absorption = 0.0035f;
@@ -117,10 +118,22 @@ private:
 		int enablePowder = 1;
 		int enableBeer = 1;
 		float rainAbsorption = 1.0f;
-		uint32_t frameIndex = 0;
+	}m_cloudParameterCB;
+
+	struct
+	{
+		Matrix4 invView;
+		Matrix4 invProj;
 		Matrix4 prevViewProj;
-	}m_cloudOnQuadCB;
+		XMFLOAT3 cameraPosition;
+		float time = 0.0f;
+		XMFLOAT3 lightDir;
+		uint32_t frameIndex = 0;
+		XMFLOAT4 resolution;
+
+	}m_passCB;
 
 	bool m_useTemporal;
 	bool m_computeToQuarter = false;
+	bool m_cloudParameterDirty = false;
 };

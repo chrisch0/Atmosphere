@@ -60,6 +60,9 @@ bool VolumetricCloud::Initialize()
 	m_cloudTempBuffer = std::make_shared<ColorBuffer>();
 	m_cloudTempBuffer->Create(L"Previous Cloud Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 
+	m_mipmapTestBuffer = std::make_shared<ColorBuffer>();
+	m_mipmapTestBuffer->Create(L"Generate Mips Buffer", m_clientWidth, m_clientHeight, 0, m_sceneBufferFormat);
+
 	PostProcess::EnableHDR = false;
 
 	return true;
@@ -82,12 +85,13 @@ void VolumetricCloud::InitCloudParameters()
 
 	//m_weatherTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.TGA");
 	m_weatherTexture = TextureManager::LoadDDSFromFile("Weather_Texture.dds");
-	auto* curl_2d = TextureManager::LoadDDSFromFile("CurlNoise_Volume_16by8.DDS");
-	m_curlNoiseTexture = std::make_shared<VolumeColorBuffer>();
-	m_curlNoiseTexture->CreateFromTexture2D(L"CurlVolumeNoise", curl_2d, 16, 8, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	//auto* curl_2d = TextureManager::LoadDDSFromFile("CurlNoise_Volume_16by8.DDS");
+	m_curlNoise2D = TextureManager::LoadDDSFromFile("CurlNoise_2D.dds");
+	//m_curlNoiseTexture = std::make_shared<VolumeColorBuffer>();
+	//m_curlNoiseTexture->CreateFromTexture2D(L"CurlVolumeNoise", curl_2d, 16, 8, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	auto* perlin_worley = TextureManager::LoadDDSFromFile("PerlinWorley.DDS");
 	m_perlinWorleyUE = std::make_shared<VolumeColorBuffer>();
-	m_perlinWorleyUE->CreateFromTexture2D(L"PerlinWorleyUE", perlin_worley, 16, 8, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	m_perlinWorleyUE->CreateFromTexture2D(L"PerlinWorleyUE", perlin_worley, 16, 8, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	//m_erosionTexture = TextureManager::LoadTGAFromFile("volume_test.TGA", 8, 2);
 	//m_noiseShapeTexture = TextureManager::LoadTGAFromFile("CloudWeatherTexture.tga", 8, 8);
 
@@ -137,10 +141,11 @@ void VolumetricCloud::CreatePSO()
 	m_skyboxPSO.SetPixelShader(g_pSkybox_PS, sizeof(g_pSkybox_PS));
 	m_skyboxPSO.Finalize();
 
-	m_computeCloudOnQuadRS.Reset(3, 1);
+	m_computeCloudOnQuadRS.Reset(4, 1);
 	m_computeCloudOnQuadRS[0].InitAsConstantBufferView(0);
 	m_computeCloudOnQuadRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
 	m_computeCloudOnQuadRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 10);
+	m_computeCloudOnQuadRS[3].InitAsConstantBufferView(1);
 	m_computeCloudOnQuadRS.InitStaticSampler(0, SamplerLinearWrapDesc);
 	m_computeCloudOnQuadRS.Finalize(L"ComputeCloudOnQuadRS");
 
@@ -187,7 +192,7 @@ void VolumetricCloud::CreateMeshes()
 void VolumetricCloud::CreateCamera()
 {
 	m_camera = CameraController::CreateCamera<SceneCamera>("Scene Camera");
-	m_camera->SetLookAt({ 2.25f, 1.75f, 2.10f }, { 0, 0, 0 }, { 0, 1, 0 });
+	m_camera->SetLookAt({ 2.25f, 1.75f, 2.10f }, { 2.25f - 0.659f, 1.75f + 0.409f, 2.10f - 0.632f }, { 0.0f, 1.0f, 0.0f });
 	m_camera->SetNearClip(0.01f);
 	m_camera->SetFarClip(10000.0f);
 }
@@ -195,9 +200,9 @@ void VolumetricCloud::CreateCamera()
 void VolumetricCloud::CreateNoise()
 {
 	m_perlinWorley = std::make_shared<VolumeColorBuffer>();
-	m_perlinWorley->Create(L"Perlin Worley", 128, 128, 128, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_perlinWorley->Create(L"Perlin Worley", 128, 128, 128, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 	m_worley = std::make_shared<VolumeColorBuffer>();
-	m_worley->Create(L"Worley", 32, 32, 32, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	m_worley->Create(L"Worley", 32, 32, 32, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_generateNoiseRS);
@@ -211,6 +216,12 @@ void VolumetricCloud::CreateNoise()
 	context.SetDynamicDescriptor(0, 0, m_worley->GetUAV());
 	context.Dispatch3D(m_worley->GetWidth(), m_worley->GetHeight(), m_worley->GetDepth(), 8, 8, 8);
 	context.Finish();
+
+	ComputeContext& mipContext = ComputeContext::Begin();
+	m_perlinWorley->GenerateMipMaps(context);
+	m_worley->GenerateMipMaps(mipContext);
+	m_perlinWorleyUE->GenerateMipMaps(context);
+	mipContext.Finish();
 }
 
 void VolumetricCloud::SwitchBasicCloudShape(int idx)
@@ -247,6 +258,17 @@ void VolumetricCloud::Draw(const Timer& timer)
 {
 	//DrawOnSkybox(timer);
 	DrawOnQuad(timer);
+
+	/*GraphicsContext& mipsContext = GraphicsContext::Begin();
+
+	mipsContext.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_GENERIC_READ);
+	mipsContext.TransitionResource(*m_mipmapTestBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
+	mipsContext.CopySubresource(*m_mipmapTestBuffer, 0, *m_sceneColorBuffer, 0);
+
+	m_mipmapTestBuffer->GenerateMipMaps(mipsContext);
+	m_cloudShapeManager.GetBasicCloudShape()->GenerateMipMaps(mipsContext);
+
+	mipsContext.Finish();*/
 }
 
 void VolumetricCloud::UpdateUI()
@@ -281,23 +303,30 @@ void VolumetricCloud::UpdateUI()
 			ImGui::Text("Raymarch Max Distance");
 			ImGui::InputFloat("Far Distance", &m_farDistance, 100.0f);
 
-			ImGui::Text("Basic Cloud Shape Texture");
+			//ImGui::Text("Basic Cloud Shape Texture");
 			ImGui::SetNextItemWidth(150.0f);
-			const char* cloud_shape_texture[] = { "Perlin-Worley", "Perlin-Worley_UE", "Perlin-Worley-New" };
-			static VolumeColorBuffer* cloud_shape_texture_ptr[] = { m_cloudShapeManager.GetBasicCloudShape(), m_perlinWorleyUE.get(), m_perlinWorley.get() };
+			const char* cloud_shape_textures[] = { "Perlin-Worley", "Perlin-Worley_UE", "Perlin-Worley-New" };
+			static VolumeColorBuffer* cloud_shape_texture_ptrs[] = { m_cloudShapeManager.GetBasicCloudShape(), m_perlinWorleyUE.get(), m_perlinWorley.get() };
 			static int cur_basic_shape = 0;
-			ImGui::Combo("Basic Cloud Shape", &cur_basic_shape, cloud_shape_texture, IM_ARRAYSIZE(cloud_shape_texture));
+			ImGui::Combo("Basic Cloud Shape", &cur_basic_shape, cloud_shape_textures, IM_ARRAYSIZE(cloud_shape_textures));
 			//SwitchBasicCloudShape(cur_basic_shape);
-			m_basicCloudShape = cloud_shape_texture_ptr[cur_basic_shape];
+			m_basicCloudShape = cloud_shape_texture_ptrs[cur_basic_shape];
 			static bool basic_cloud_shape_detail;
 			static bool basic_cloud_shapw_window_opening;
 			ImGui::SameLine(400.0);
 			ImGui::PreviewVolumeImageButton(m_basicCloudShape, ImVec2(128.0f, 128.0f), "Basic Cloud Shape", &basic_cloud_shape_detail, &basic_cloud_shapw_window_opening);
 			
-			ImGui::Text("Erosion Texture");
+			//ImGui::Text("Erosion Texture");
+			ImGui::SetNextItemWidth(150.0f);
+			const char* erosion_textures[] = { "Worley", "Erosion"};
+			static VolumeColorBuffer* erosion_texture_ptrs[] = { m_worley.get(), m_cloudShapeManager.GetErosion() };
+			static int cur_erosion = 0;
+			ImGui::Combo("Erosion Texture", &cur_erosion, erosion_textures, IM_ARRAYSIZE(erosion_textures));
+			m_erosionTexture = erosion_texture_ptrs[cur_erosion];
 			static bool erosion_window = false;
 			static bool erosion_window_open = false;
-			
+			ImGui::SameLine(400.0f);
+			ImGui::PreviewVolumeImageButton(m_erosionTexture, ImVec2(128.0f, 128.0f), "Basic Cloud Shape", &basic_cloud_shape_detail, &basic_cloud_shapw_window_opening);
 
 			ImGui::Text("Weather Texture");
 			static bool weather_detail;
@@ -309,42 +338,44 @@ void VolumetricCloud::UpdateUI()
 			static bool curl_noise_window = false;
 			static bool curl_noise_window_open = false;
 			ImGui::SameLine(400.0f);
-			ImGui::PreviewVolumeImageButton(m_curlNoiseTexture.get(), ImVec2(128.0f, 128.0f), "Curl Noise", &curl_noise_window, &curl_noise_window_open);
+			ImGui::PreviewImageButton(m_curlNoise2D, ImVec2(128.0f, 128.0f), "Curl Noise", &curl_noise_window, &curl_noise_window_open);
 
 			ImGui::EndTabItem();
 		}
 
 		if (ImGui::BeginTabItem("Compute Cloud Setting"))
 		{
-			ImGui::InputInt("Sample Count", &m_cloudOnQuadCB.sampleCount);
+			m_cloudParameterDirty = false;
+			m_cloudParameterDirty |= ImGui::InputInt("Sample Count Min", &m_cloudParameterCB.sampleCountMin);
+			m_cloudParameterDirty |= ImGui::InputInt("Sample Count Max", &m_cloudParameterCB.sampleCountMax);
 			ImGui::Separator();
 			ImGui::Text("Cloud Rendering");
-			ImGui::SliderFloat("Cloud Coverage", &m_cloudOnQuadCB.cloudCoverage, 0.0f, 1.0f);
-			ImGui::SliderFloat("Cloud Speed", &m_cloudOnQuadCB.cloudSpeed, 0.0f, 5.0e3f);
-			ImGui::SliderFloat("Crispiness", &m_cloudOnQuadCB.crispiness, 0.0f, 120.0f);
-			ImGui::SliderFloat("Curliness", &m_cloudOnQuadCB.curliness, 0.0f, 3.0f);
-			ImGui::SliderFloat("Density Factor", &m_cloudOnQuadCB.densityFactor, 0.0f, 0.1f);
-			ImGui::DragFloat("Light Absorption", &m_cloudOnQuadCB.absorption, 0.0001f, 0.0f, 1.5f, "%.4f");
-			ImGui::DragFloat("HG Coeff0", &m_cloudOnQuadCB.hg0, 0.0005f);
-			ImGui::DragFloat("HG Coeff1", &m_cloudOnQuadCB.hg1, 0.0005f);
-			ImGui::ColorEdit3("Cloud Bottom Color", m_cloudOnQuadCB.cloudBottomColor);
-			ImGui::ColorEdit3("Light Color", m_cloudOnQuadCB.lightColor);
-			bool enable_powder = (bool)m_cloudOnQuadCB.enablePowder;
-			ImGui::Checkbox("Enable Powder", &enable_powder);
-			m_cloudOnQuadCB.enablePowder = (int)enable_powder;
-			static bool enable_beer = (bool)m_cloudOnQuadCB.enableBeer;
-			ImGui::Checkbox("Enable Beer", &enable_beer);
-			m_cloudOnQuadCB.enableBeer = enable_beer;
-			ImGui::DragFloat("Rain Absorption", &m_cloudOnQuadCB.rainAbsorption, 0.01f, 0.01f, 20.0f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Coverage", &m_cloudParameterCB.cloudCoverage, 0.0f, 1.0f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Speed", &m_cloudParameterCB.cloudSpeed, 0.0f, 5.0e3f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Crispiness", &m_cloudParameterCB.crispiness, 0.0f, 120.0f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Curliness", &m_cloudParameterCB.curliness, 0.0f, 3.0f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Density Factor", &m_cloudParameterCB.densityFactor, 0.0f, 0.1f);
+			m_cloudParameterDirty |= ImGui::DragFloat("Light Absorption", &m_cloudParameterCB.absorption, 0.0001f, 0.0f, 1.5f, "%.4f");
+			m_cloudParameterDirty |= ImGui::DragFloat("HG Coeff0", &m_cloudParameterCB.hg0, 0.0005f);
+			m_cloudParameterDirty |= ImGui::DragFloat("HG Coeff1", &m_cloudParameterCB.hg1, 0.0005f);
+			m_cloudParameterDirty |= ImGui::ColorEdit3("Cloud Bottom Color", m_cloudParameterCB.cloudBottomColor);
+			m_cloudParameterDirty |= ImGui::ColorEdit3("Light Color", m_cloudParameterCB.lightColor);
+			bool enable_powder = (bool)m_cloudParameterCB.enablePowder;
+			m_cloudParameterDirty |= ImGui::Checkbox("Enable Powder", &enable_powder);
+			m_cloudParameterCB.enablePowder = (int)enable_powder;
+			static bool enable_beer = (bool)m_cloudParameterCB.enableBeer;
+			m_cloudParameterDirty |= ImGui::Checkbox("Enable Beer", &enable_beer);
+			m_cloudParameterCB.enableBeer = enable_beer;
+			m_cloudParameterDirty |= ImGui::DragFloat("Rain Absorption", &m_cloudParameterCB.rainAbsorption, 0.01f, 0.01f, 20.0f);
 			ImGui::Checkbox("Enable Temporal", &m_useTemporal);
 			if (m_useTemporal)
 				ImGui::Checkbox("Render To Quarter Buffer", &m_computeToQuarter);
 
 			ImGui::Separator();
 			ImGui::Text("Cloud Distribution");
-			ImGui::SliderFloat("Earth Radius", &m_cloudOnQuadCB.earthRadius, 10000.0f, 5000000.0f);
-			ImGui::SliderFloat("Cloud Bottom Altitude", &m_cloudOnQuadCB.cloudBottomRadius, 1000.0f, 15000.0f);
-			ImGui::SliderFloat("Cloud Top Altitude", &m_cloudOnQuadCB.cloudTopRadius, 1000.0f, 40000.0f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Earth Radius", &m_cloudParameterCB.earthRadius, 10000.0f, 5000000.0f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Bottom Altitude", &m_cloudParameterCB.cloudBottomRadius, 1000.0f, 15000.0f);
+			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Top Altitude", &m_cloudParameterCB.cloudTopRadius, 1000.0f, 40000.0f);
 			ImGui::EndTabItem();
 		}
 
@@ -423,16 +454,16 @@ void VolumetricCloud::DrawOnSkybox(const Timer& timer)
 
 void VolumetricCloud::DrawOnQuad(const Timer& timer)
 {
-	m_cloudOnQuadCB.invView = Invert(m_camera->GetViewMatrix());
-	m_cloudOnQuadCB.invProj = Invert(m_camera->GetProjMatrix());
-	m_cloudOnQuadCB.time = timer.TotalTime();
+	m_passCB.invView = Invert(m_camera->GetViewMatrix());
+	m_passCB.invProj = Invert(m_camera->GetProjMatrix());
+	m_passCB.time = timer.TotalTime();
 	auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
-	XMStoreFloat3(&m_cloudOnQuadCB.lightDir, -dir);
-	XMStoreFloat3(&m_cloudOnQuadCB.cameraPosition, m_camera->GetPosition());
+	XMStoreFloat3(&m_passCB.lightDir, -dir);
+	XMStoreFloat3(&m_passCB.cameraPosition, m_camera->GetPosition());
 	Vector4 res{ (float)m_sceneColorBuffer->GetWidth(), (float)m_sceneColorBuffer->GetHeight(), 1.0f / m_sceneColorBuffer->GetWidth(), 1.0f / m_sceneColorBuffer->GetHeight() };
-	XMStoreFloat4(&m_cloudOnQuadCB.resolution, res);
-	m_cloudOnQuadCB.frameIndex = m_frameIndex;
-	m_cloudOnQuadCB.prevViewProj = m_camera->GetPrevViewProjMatrix();
+	XMStoreFloat4(&m_passCB.resolution, res);
+	m_passCB.frameIndex = m_frameIndex;
+	m_passCB.prevViewProj = m_camera->GetPrevViewProjMatrix();
 
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_computeCloudOnQuadRS);
@@ -442,37 +473,32 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	if (m_useTemporal)
 	{
-		if (m_computeToQuarter)
-		{
+		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.SetPipelineState(m_temporalCloudPSO);
+		context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
+		context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
+		context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
+		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
+		context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
+		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+		context.SetDynamicConstantBufferView(3, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
+		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 
-		}
-		else
-		{
-			context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			context.SetPipelineState(m_temporalCloudPSO);
-			context.SetDynamicConstantBufferView(0, sizeof(m_cloudOnQuadCB), &m_cloudOnQuadCB);
-			context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
-			context.SetDynamicDescriptor(1, 1, m_worley->GetSRV());
-			context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
-			context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
-			context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
-			context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
-
-			context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
-			context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
-			context.CopySubresource(*m_cloudTempBuffer, 0, *m_sceneColorBuffer, 0);
-		}
+		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
+		context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		context.CopySubresource(*m_cloudTempBuffer, 0, *m_sceneColorBuffer, 0);
 	}
 	else
 	{
 		context.SetPipelineState(m_computeCloudOnQuadPSO);
 		//context.TransitionResource(*m_cloudShapeManager.GetErosion(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		context.SetDynamicConstantBufferView(0, sizeof(m_cloudOnQuadCB), &m_cloudOnQuadCB);
+		context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
 		context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
 		//context.SetDynamicDescriptor(1, 1, m_cloudShapeManager.GetErosion()->GetSRV());
-		context.SetDynamicDescriptor(1, 1, m_worley->GetSRV());
+		context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
 		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
 		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+		context.SetDynamicConstantBufferView(3, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
 		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 	}
 	context.Finish();
@@ -485,4 +511,6 @@ void VolumetricCloud::OnResize()
 	m_quarterBuffer->Create(L"Quarter Buffer", m_clientWidth / 4, m_clientHeight / 4, 1, m_sceneBufferFormat);
 	m_cloudTempBuffer->Destroy();
 	m_cloudTempBuffer->Create(L"Cloud Temp Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+	m_mipmapTestBuffer->Destroy();
+	m_mipmapTestBuffer->Create(L"Generate Mips Buffer", m_clientWidth, m_clientHeight, 0, m_sceneBufferFormat);
 }

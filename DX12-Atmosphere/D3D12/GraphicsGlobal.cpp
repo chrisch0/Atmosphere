@@ -4,6 +4,16 @@
 #include "PipelineState.h"
 
 #include "CompiledShaders/CreateVolumeTexture_CS.h"
+#include "CompiledShaders/Generate2DMipsGamma_CS.h"
+#include "CompiledShaders/Generate2DMipsGammaOdd_CS.h"
+#include "CompiledShaders/Generate2DMipsGammaOddX_CS.h"
+#include "CompiledShaders/Generate2DMipsGammaOddY_CS.h"
+#include "CompiledShaders/Generate2DMipsLinear_CS.h"
+#include "CompiledShaders/Generate2DMipsLinearOdd_CS.h"
+#include "CompiledShaders/Generate2DMipsLinearOddX_CS.h"
+#include "CompiledShaders/Generate2DMipsLinearOddY_CS.h"
+#include "CompiledShaders/Generate3DMipsGamma_CS.h"
+#include "CompiledShaders/Generate3DMipsLinear_CS.h"
 
 namespace Global
 {
@@ -53,6 +63,12 @@ namespace Global
 
 	RootSignature CreateVolumeTextureRS;
 	ComputePSO CreateVolumeTexturePSO;
+
+	RootSignature GenerateMipsRS;
+	ComputePSO Generate2DMipsLinearPSO[4];
+	ComputePSO Generate2DMipsGammaPSO[4];
+	ComputePSO Generate3DMipsLinearPSO[4];
+	ComputePSO Generate3DMipsGammaPSO[4];
 
 	void SetTextureAddressMode(D3D12_STATIC_SAMPLER_DESC& desc, D3D12_TEXTURE_ADDRESS_MODE mode)
 	{
@@ -215,6 +231,29 @@ namespace Global
 		CreateVolumeTexturePSO.SetRootSignature(CreateVolumeTextureRS);
 		CreateVolumeTexturePSO.SetComputeShader(g_pCreateVolumeTexture_CS, sizeof(g_pCreateVolumeTexture_CS));
 		CreateVolumeTexturePSO.Finalize();
+
+		GenerateMipsRS.Reset(3, 1);
+		GenerateMipsRS[0].InitAsConstants(8, 0);
+		GenerateMipsRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1);
+		GenerateMipsRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 4);
+		GenerateMipsRS.InitStaticSampler(0, SamplerLinearClampDesc);
+		GenerateMipsRS.Finalize(L"Generate Mips");
+
+#define CreatePSO(ObjName, ShaderByteCode ) \
+		ObjName.SetRootSignature(GenerateMipsRS); \
+		ObjName.SetComputeShader(ShaderByteCode, sizeof(ShaderByteCode) ); \
+		ObjName.Finalize();
+
+		CreatePSO(Generate2DMipsLinearPSO[0], g_pGenerate2DMipsLinear_CS);
+		CreatePSO(Generate2DMipsLinearPSO[1], g_pGenerate2DMipsLinearOddX_CS);
+		CreatePSO(Generate2DMipsLinearPSO[2], g_pGenerate2DMipsLinearOddY_CS);
+		CreatePSO(Generate2DMipsLinearPSO[3], g_pGenerate2DMipsLinearOdd_CS);
+		CreatePSO(Generate2DMipsGammaPSO[0], g_pGenerate2DMipsGamma_CS);
+		CreatePSO(Generate2DMipsGammaPSO[1], g_pGenerate2DMipsGammaOddX_CS);
+		CreatePSO(Generate2DMipsGammaPSO[2], g_pGenerate2DMipsGammaOddY_CS);
+		CreatePSO(Generate2DMipsGammaPSO[3], g_pGenerate2DMipsGammaOdd_CS);
+		CreatePSO(Generate3DMipsLinearPSO[0], g_pGenerate3DMipsLinear_CS);
+		CreatePSO(Generate3DMipsGammaPSO[0], g_pGenerate3DMipsGamma_CS);
 	}
 
 	void DestroyGlobalStates()

@@ -2,6 +2,7 @@ Texture3D<float4> CloudShapeTexture : register(t0);
 Texture3D<float4> ErosionTexture : register(t1);
 Texture2D<float4> WeatherTexture : register(t2);
 Texture2D<float4> PreCloudColor : register(t3);
+Texture2D<float4> CurlNoise : register(t4);
 
 RWTexture2D<float4> CloudColor : register(u0);
 
@@ -71,6 +72,14 @@ void main( uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupT
 
 	frag_color = bg;
 	alphaness = float4(cloud_alphaness, 0.0, 0.0, 1.0);
+
+	// sun
+	float sun = dot(-LightDir, world_dir);
+	if (sun > 0.8)  // cos(0.5 * angular_diameter)
+	{
+		float3 s = 0.8*float3(1.0, 0.4, 0.2)*pow(sun, 256.0);
+		frag_color.rgb += float3(1.0, 1.0, 1.0);
+	}
 
 	frag_color.a = alphaness.r;
 

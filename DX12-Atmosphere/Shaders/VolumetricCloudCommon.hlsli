@@ -1,15 +1,27 @@
-cbuffer cb : register(b0)
+cbuffer PassCB : register(b0)
 {
 	float4x4 InvView;
 	float4x4 InvProj;
-	float3 LightColor;
+	float4x4 PrevViewProj;
+
+	float3 CameraPosition;
 	float Time;
 
 	float3 LightDir;
-	int SampleCount;
+	uint FrameIndex;
 
-	float3 CameraPosition;
+	float4 Resolution;
+}
+
+cbuffer CloudParameterCB : register(b1)
+{
+	float3 LightColor;
+	int SampleCountMin;
+
+	int SampleCountMax;
 	float CloudCoverage;
+	float Exposure;
+	float GroundAlbedo;
 
 	float3 CloudBottomColor;
 	float Crispiness;
@@ -19,7 +31,6 @@ cbuffer cb : register(b0)
 	float CloudBottomRadius;
 	float CloudTopRadius;
 
-	float4 Resolution;
 
 	float CloudSpeed;
 	float DensityFactor;
@@ -30,12 +41,6 @@ cbuffer cb : register(b0)
 	int EnablePowder;
 	int EnableBeer;
 	float RainAbsorption;
-
-	uint FrameIndex;
-	float Exposure;
-	float GroundAlbedo;
-
-	float4x4 PrevViewProj;
 }
 
 #define INNER_RADIUS (EarthRadius + CloudBottomRadius)
@@ -176,20 +181,22 @@ float GetHeightDensityForCloud(float heightFraction, float cloudType)
 	return smoothstep(base_gradient.x, base_gradient.y, heightFraction) - smoothstep(base_gradient.z, base_gradient.w, heightFraction);
 }
 
-static float3 WindDirection = normalize(float3(0.5, 0.0, 0.1));
+//static float3 WindDirection = normalize(float3(0.5, 0.0, 0.1));
+static float3 WindDirection = normalize(float3(1.0, 0.0, 0.0));
 #define CLOUD_TOP_OFFSET 750.0
 
-float SampleCloudDensity(float3 p, bool expensive, float lod)
+float SampleCloudDensity(float3 p, bool expensive, uint lod)
 {
 	float height_fraction = GetHeightFraction(p);
-	float3 animation = height_fraction * WindDirection * CLOUD_TOP_OFFSET + WindDirection * Time * CloudSpeed;
+	float3 animation = height_fraction * WindDirection * CLOUD_TOP_OFFSET + (WindDirection + float3(0.0, 0.1, 0.0)) * Time * CloudSpeed;
 	float2 uv = WorldPosToUV(p);
 	float2 moving_uv = WorldPosToUV(p + animation);
 
 	if (height_fraction < 0.0 || height_fraction > 1.0)
 		return 0.0;
 
-	float4 low_frequency_noise = CloudShapeTexture.SampleLevel(LinearRepeatSampler, float3(uv * Crispiness, height_fraction), lod);
+	float4 low_frequency_noise = CloudShapeTexture.SampleLevel(LinearRepeatSampler, float3(moving_uv * Crispiness, height_fraction), lod);
+	//float4 low_frequency_noise = CloudShapeTexture.SampleLevel(LinearRepeatSampler, float3((p + animation) / Crispiness), lod);
 	float low_freq_FBM = dot(low_frequency_noise.gba, float3(0.625, 0.25, 0.125));
 	float base_cloud = Remap(low_frequency_noise.r, -(1.0 - low_freq_FBM), 1.0, 0.0, 1.0);
 
@@ -203,7 +210,12 @@ float SampleCloudDensity(float3 p, bool expensive, float lod)
 
 	if (expensive)
 	{
-		float3 erode_cloud_noise = ErosionTexture.SampleLevel(LinearRepeatSampler, float3(moving_uv * Crispiness, height_fraction) * Curliness, lod).rgb;
+		//float2 curl_noise = CurlNoise.SampleLevel(LinearRepeatSampler, (p.xy + animation.xy) * Crispiness, 0.0).rg;
+		//p.xy += curl_noise * (1.0 - height_fraction) * 200.0;
+		//moving_uv = WorldPosToUV(p + animation);
+
+		float3 erode_cloud_noise = ErosionTexture.SampleLevel(LinearRepeatSampler, float3(moving_uv * Crispiness, height_fraction) * Curliness * 0.1, lod).rgb;
+		//float3 erode_cloud_noise = ErosionTexture.SampleLevel(LinearRepeatSampler, float3((p + animation) / Crispiness * 0.1) * Curliness, lod).rgb;
 		float high_freq_FBM = dot(erode_cloud_noise.rgb, float3(0.625, 0.25, 0.125));
 		float high_freq_noise_modifier = lerp(high_freq_FBM, 1.0 - high_freq_FBM, saturate(height_fraction * 10.0));
 
@@ -215,7 +227,7 @@ float SampleCloudDensity(float3 p, bool expensive, float lod)
 	return max(0.0, base_cloud_with_coverage);
 }
 
-float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDensity, float lightDotEye)
+float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDensity, float lightDotEye, uint mipLevel)
 {
 	float3 start_pos = o;
 	float ds = stepSize * 6.0;
@@ -230,17 +242,17 @@ float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDen
 	//float T = 1.0;
 	float T = 0.0;
 
-	for (int i = 0; i < 6; ++i)
+	for (uint i = 0; i < 6; ++i)
 	{
 		pos = start_pos + cone_radius * NoiseKernel[i] * float(i);
 		float height_fraction = GetHeightFraction(pos);
 		if (height_fraction >= 0.0)
 		{
-			float cloud_density = SampleCloudDensity(pos, density > 0.3, 0.0);
+			uint mip_offset = uint(i * 0.5);
+			float cloud_density = SampleCloudDensity(pos, density > 0.3, mipLevel + mip_offset);
+			//float cloud_density = SampleCloudDensity(pos, false, mipLevel + mip_offset);
 			if (cloud_density > 0.0)
 			{
-				//float Ti = exp(cloud_density * sigma_ds);
-				//T *= Ti;
 				T += cloud_density * sigma_ds;
 				density += cloud_density;
 			}
@@ -249,7 +261,21 @@ float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDen
 		cone_radius += CONE_STEP;
 	}
 	return T;
-	//return exp(T);
+}
+
+float GetLightEnergy(float3 p, float heightFraction, float dl, float dsLoded, float phaseProbability, float cosAngle, float stepSize, float brightness)
+{
+	float primary_attenuation = exp(-dl);
+	float secondary_attenuation = exp(-dl * 0.25) * 0.7;
+	float attenuation_probability = max(Remap(cosAngle, 0.7, 1.0, secondary_attenuation, secondary_attenuation * 0.25), primary_attenuation);
+	//float attenuation_probability = max(primary_attenuation, secondary_attenuation);
+
+	float depth_probability = lerp(0.05 + pow(dsLoded, Remap(heightFraction, 0.3, 0.85, 0.5, 2.0)), 1.0, saturate(dl / stepSize));
+	float vertical_probability = pow(Remap(heightFraction, 0.07, 0.14, 0.1, 1.0), 0.8);
+	float in_scatter_probability = depth_probability * vertical_probability;
+
+	float light_energy = attenuation_probability * in_scatter_probability * phaseProbability * brightness;
+	return light_energy;
 }
 
 float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg, out float4 cloudPos)
@@ -258,7 +284,7 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	float len = length(path);
 
 	float3 dir = normalize(path);
-	const int nSteps = lerp(64, 96, dir.y);
+	const int nSteps = lerp(SampleCountMin, SampleCountMax, dir.y);
 
 	float ds = len / nSteps;
 	//float3 dir = path / len;
@@ -280,9 +306,10 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	float previous_density_sample = -1.0;
 	int zero_density_sample_count = 0;
 
-	for (int i = 0; i < nSteps; ++i)
+	for (uint i = 0; i < nSteps; ++i)
 	{
-		float density_sample = SampleCloudDensity(pos, true, 0.0);
+		uint mip_level = i * 0.0625;
+		float density_sample = SampleCloudDensity(pos, true, mip_level);
 
 		if (density_sample > 0.0)
 		{
@@ -293,7 +320,7 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 			}
 			float height = GetHeightFraction(pos);
 			float3 ambient_light = CloudBottomColor;
-			float light_density = RaymarchLight(pos, ds * 0.1, LIGHT_DIR, density_sample, light_dot_eye);
+			float light_density = RaymarchLight(pos, ds * 0.1, LIGHT_DIR, density_sample, light_dot_eye, mip_level);
 			float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
 			scattering = max(scattering, 1.0);
 			float powder_term = EnablePowder ? Powder(light_density) : 1.0f;

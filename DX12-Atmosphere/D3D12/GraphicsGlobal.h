@@ -52,6 +52,12 @@ namespace Global
 	extern RootSignature CreateVolumeTextureRS;
 	extern ComputePSO CreateVolumeTexturePSO;
 
+	extern RootSignature GenerateMipsRS;
+	extern ComputePSO Generate2DMipsLinearPSO[4];
+	extern ComputePSO Generate2DMipsGammaPSO[4];
+	extern ComputePSO Generate3DMipsLinearPSO[4];
+	extern ComputePSO Generate3DMipsGammaPSO[4];
+
 	void InitializeGlobalStates();
 	void DestroyGlobalStates();
 }

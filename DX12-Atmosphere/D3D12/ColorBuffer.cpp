@@ -3,6 +3,7 @@
 #include "Texture.h"
 #include "CommandContext.h"
 #include "PipelineState.h"
+#include "GraphicsGlobal.h"
 
 void ColorBuffer::CreateFromSwapChain(const std::wstring& name, ID3D12Resource* baseResource)
 {
@@ -48,10 +49,51 @@ void ColorBuffer::CreateArray(const std::wstring& name, uint32_t width, uint32_t
 	CreateDerivedViews(g_Device, format, arrayCount, 1);
 }
 
-void ColorBuffer::GenerateMinMaps(CommandContext& context)
+void ColorBuffer::GenerateMipMaps(CommandContext& baseContext)
 {
 	if (m_numMipMaps == 0)
 		return;
+
+	ComputeContext& context = baseContext.GetComputeContext();
+
+	context.SetRootSignature(Global::GenerateMipsRS);
+	context.TransitionResource(*this, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(1, 0, m_srvHandle);
+
+	for (uint32_t topMip = 0; topMip < m_numMipMaps; )
+	{
+		uint32_t srcWidth = m_width >> topMip;
+		uint32_t srcHeight = m_height >> topMip;
+		uint32_t dstWidth = srcWidth >> 1;
+		uint32_t dstHeight = srcHeight >> 1;
+
+		uint32_t nonPowerOfTwo = (srcWidth & 1) | (srcHeight & 1) << 1;
+		if (m_format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
+			context.SetPipelineState(Global::Generate2DMipsGammaPSO[nonPowerOfTwo]);
+		else
+			context.SetPipelineState(Global::Generate2DMipsLinearPSO[nonPowerOfTwo]);
+
+		uint32_t additionalMips;
+		_BitScanForward((unsigned long*)&additionalMips, (dstWidth == 1 ? dstHeight : dstWidth) | (dstHeight == 1 ? dstWidth : dstHeight));
+		uint32_t numMips = 1 + (additionalMips > 3 ? 3 : additionalMips);
+		if (topMip + numMips > m_numMipMaps)
+			numMips = m_numMipMaps - topMip;
+	
+		if (dstWidth == 0)
+			dstWidth = 1;
+		if (dstHeight == 0)
+			dstHeight = 1;
+
+		context.SetConstants(0, topMip, numMips, 1.0f / dstWidth, 1.0f / dstHeight);
+		context.SetConstant(0, 1.0f / dstWidth, 4);
+		context.SetConstant(0, 1.0f / dstHeight, 5);
+		context.SetDynamicDescriptors(2, 0, numMips, m_uavHandle + topMip + 1);
+		context.Dispatch2D(dstWidth, dstHeight);
+
+		context.InsertUAVBarrier(*this);
+
+		topMip += numMips;
+	}
 }
 
 void ColorBuffer::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, uint32_t arraySize, uint32_t numMips)
@@ -167,6 +209,58 @@ void VolumeColorBuffer::CreateFromTexture2D(const std::wstring& name, const Text
 	context.Finish();
 }
 
+void VolumeColorBuffer::GenerateMipMaps(CommandContext& baseContext)
+{
+	if (m_numMipMaps == 0)
+		return;
+
+	ComputeContext& context = baseContext.GetComputeContext();
+
+	context.SetRootSignature(Global::GenerateMipsRS);
+	context.TransitionResource(*this, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	context.SetDynamicDescriptor(1, 0, m_srvHandle);
+
+	for (uint32_t topMip = 0; topMip < m_numMipMaps;)
+	{
+		uint32_t srcWidth = m_width >> topMip;
+		uint32_t srcHeight = m_height >> topMip;
+		uint32_t srcDepth = m_depth >> topMip;
+		uint32_t dstWidth = srcWidth >> 1;
+		uint32_t dstHeight = srcHeight >> 1;
+		uint32_t dstDepth = srcDepth >> 1;
+
+		uint32_t maxDimension = std::max(dstWidth, std::max(dstHeight, dstDepth));
+
+		if (m_format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
+			context.SetPipelineState(Global::Generate3DMipsGammaPSO[0]);
+		else
+			context.SetPipelineState(Global::Generate3DMipsLinearPSO[0]);
+
+		uint32_t additionalMips;
+		_BitScanForward((unsigned long*)&additionalMips, (dstWidth == 1 ? maxDimension : dstWidth) | (dstHeight == 1 ? maxDimension : dstHeight) | (dstDepth == 1 ? maxDimension : dstDepth));
+		uint32_t numMips = 1 + (additionalMips > 2 ? 2 : additionalMips);
+
+		if (topMip + numMips > m_numMipMaps)
+			numMips = m_numMipMaps - topMip;
+
+		if (dstWidth == 0)
+			dstWidth = 1;
+		if (dstHeight == 0)
+			dstHeight = 1;
+
+		context.SetConstants(0, topMip, numMips, 0, 0);
+		context.SetConstant(0, 1.0f / dstWidth, 4);
+		context.SetConstant(0, 1.0f / dstHeight, 5);
+		context.SetConstant(0, 1.0f / dstDepth, 6);
+		context.SetDynamicDescriptors(2, 0, numMips, m_uavHandle + topMip + 1);
+		context.Dispatch3D(dstWidth, dstHeight, dstDepth, 4, 4, 4);
+
+		context.InsertUAVBarrier(*this);
+
+		topMip += numMips;
+	}
+}
+
 void VolumeColorBuffer::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT format, uint32_t numMips)
 {
 	m_numMipMaps = numMips - 1;
@@ -216,6 +310,7 @@ void VolumeColorBuffer::CreateDerivedViews(ID3D12Device* device, DXGI_FORMAT for
 
 		device->CreateUnorderedAccessView(resource, nullptr, &uavDesc, m_uavHandle[i]);
 
-		uavDesc.Texture2D.MipSlice++;
+		uavDesc.Texture3D.MipSlice++;
+		uavDesc.Texture3D.WSize = m_depth >> (i + 1);
 	}
 }

@@ -96,7 +96,7 @@ void CloudShapeManager::CreateBasicCloudShape()
 	if (m_basicShape == nullptr)
 	{
 		m_basicShape = std::make_shared<VolumeColorBuffer>();
-		m_basicShape->Create(L"BasicShape", 128, 128, 128, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+		m_basicShape->Create(L"BasicShape", 128, 128, 128, 0, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	}
 
 	if (m_basicShapeView == nullptr)
@@ -116,7 +116,7 @@ void CloudShapeManager::CreateBasicCloudShape()
 	if (m_erosion == nullptr)
 	{
 		m_erosion = std::make_shared<VolumeColorBuffer>();
-		m_erosion->Create(L"Erosion", 32, 32, 32, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+		m_erosion->Create(L"Erosion", 32, 32, 32, 0, DXGI_FORMAT_R32G32B32A32_FLOAT);
 	}
 	GenerateErosion();
 }
@@ -180,6 +180,10 @@ void CloudShapeManager::GenerateBasicCloudShape()
 	context.TransitionResource(*m_basicShape, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*m_basicShapeView, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.Finish();
+
+	ComputeContext& mipContext = ComputeContext::Begin();
+	m_basicShape->GenerateMipMaps(mipContext);
+	mipContext.Finish();
 }
 
 void CloudShapeManager::GenerateDensityHeightGradient()
@@ -209,6 +213,10 @@ void CloudShapeManager::GenerateErosion()
 	context.SetDynamicDescriptor(1, 0, m_erosion->GetUAV());
 	context.Dispatch3D(m_erosion->GetWidth(), m_erosion->GetHeight(), m_erosion->GetDepth(), 8, 8, 8);
 	context.Finish();
+
+	ComputeContext& mipContext = ComputeContext::Begin();
+	m_erosion->GenerateMipMaps(mipContext);
+	mipContext.Finish();
 }
 
 void CloudShapeManager::Update()
@@ -220,6 +228,14 @@ void CloudShapeManager::Update()
 	if (dirty_flag)
 	{
 		GenerateBasicCloudShape();
+	}
+
+	dirty_flag = m_noiseGenerator->IsDirty("WorlyFBMLow32");
+	dirty_flag |= m_noiseGenerator->IsDirty("WorlyFBMMid32");
+	dirty_flag |= m_noiseGenerator->IsDirty("WorlyFBMHigh32");
+	if (dirty_flag)
+	{
+		GenerateErosion();
 	}
 }
 

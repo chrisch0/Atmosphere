@@ -144,6 +144,8 @@ public:
 	void GenerateNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state, bool remapValueRange);
 	void GenerateVolumeNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state, bool remapValueRange);
 
+	void GenerateCurlNoise(std::shared_ptr<PixelBuffer> texPtr, NoiseState* state);
+
 	void GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<ColorBuffer> texPtr, NoiseState* state);
 	void GenerateRawNoiseData(ComputeContext& context, std::shared_ptr<VolumeColorBuffer> texPtr, NoiseState* state);
 
@@ -168,6 +170,7 @@ private:
 	std::vector<bool> m_imageWindow;
 	std::vector<bool> m_dirtyFlags;
 	std::vector<bool> m_remapValueRange;
+	std::vector<bool> m_curlNoise;
 
 	RootSignature m_genNoiseRS;
 	RootSignature m_mapColorRS;
@@ -179,6 +182,7 @@ private:
 	ComputePSO m_genVolumeNoiseRGBAPSO;
 	ComputePSO m_mapNoiseColorRGBAPSO;
 	ComputePSO m_mapVolumeNoiseColorRGBAPSO;
+	ComputePSO m_genCurlNoisePSO;
 	StructuredBuffer m_minMax;
 
 	bool m_showNoiseWindow;

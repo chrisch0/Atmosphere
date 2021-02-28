@@ -25,6 +25,9 @@ void Camera::UpdateUI()
 		transform_dirty |= ImGui::DragFloat("Roll", &m_currentRoll, 0.05f, -FLT_MAX, +FLT_MAX, "%.2f", ImGuiSliderFlags_None);
 		ImGui::PopItemWidth();
 
+		ImGui::Text("Forward: (%.3f, %.3f, %.3f)", (float)GetForward().GetX(), (float)GetForward().GetY(), (float)GetForward().GetZ());
+		ImGui::Text("Up:      (%.3f, %.3f, %.3f)", (float)GetUp().GetX(), (float)GetUp().GetY(), (float)GetUp().GetZ());
+
 		m_currentPitch = std::fmod(m_currentPitch, 360.0f);
 		m_currentHeading = std::fmod(m_currentHeading, 360.0f);
 		m_currentRoll = std::fmod(m_currentRoll, 360.0f);
