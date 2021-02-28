@@ -75,6 +75,14 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		frag_color = bg;
 		alphaness = float4(cloud_alphaness, 0.0, 0.0, 1.0);
 
+		// sun
+		float sun = dot(LightDir, world_dir);
+		if (sun > 0.999653)  // cos(0.5 * angular_diameter)
+		{
+			//float3 s = 0.8*float3(1.0, 0.4, 0.2)*pow(sun, 256.0);
+			frag_color.rgb += 1.0;
+		}
+
 		frag_color.a = alphaness.r;
 
 		CloudColor[globalID.xy] = frag_color;

@@ -553,6 +553,9 @@
     <FxCompile Include="Shaders\GenerateCurlNoise2D_CS.hlsl">
       <Filter>Shaders\GenerateNoise</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeSky_CS.hlsl">
+      <Filter>Shaders\Atmosphere</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl">

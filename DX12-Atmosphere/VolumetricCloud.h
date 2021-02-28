@@ -97,7 +97,6 @@ private:
 
 	struct
 	{
-
 		float lightColor[3] = { 1.0f, 0.99995f, 0.90193f };
 		int sampleCountMin = 64;
 		int sampleCountMax = 128;
@@ -118,6 +117,10 @@ private:
 		int enablePowder = 1;
 		int enableBeer = 1;
 		float rainAbsorption = 1.0f;
+		float eccentricity = 0.6f;
+		float sliverIntensity = 1.0f;
+		float sliverSpread = 0.3f;
+		float brightness = 1.0f;
 	}m_cloudParameterCB;
 
 	struct
@@ -135,5 +138,4 @@ private:
 
 	bool m_useTemporal;
 	bool m_computeToQuarter = false;
-	bool m_cloudParameterDirty = false;
 };

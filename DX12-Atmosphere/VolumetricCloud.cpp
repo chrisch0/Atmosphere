@@ -293,11 +293,10 @@ void VolumetricCloud::UpdateUI()
 
 			ImGui::Text("Sun Light");
 			float rotate[3] = { m_sunLightRotation.GetX(), m_sunLightRotation.GetY(), m_sunLightRotation.GetZ() };
-			float color[3] = { m_sunLightColor.GetX(), m_sunLightColor.GetY(), m_sunLightColor.GetZ() };
 			ImGui::DragFloat3("Rotation", rotate, 0.05f, -FLT_MAX, FLT_MAX, "%.2f");
-			ImGui::ColorEdit3("Light Color", color);
+			ImGui::ColorEdit3("Light Color", m_cloudParameterCB.lightColor);
 			m_sunLightRotation = Vector3(rotate);
-			m_sunLightColor = Vector3(color);
+			//Vector3 light_dir = Matrix3::MakeYRotation(ToRadian(m_sunLightRotation.GetY())) * Matrix3::MakeXRotation(ToRadian(m_sunLightRotation.GetX())) * Matrix3::MakeZRotation(ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0, 1.0, 0.0);
 			ImGui::InputInt("Light Sample Count", &m_lightSampleCount);
 
 			ImGui::Text("Raymarch Max Distance");
@@ -345,37 +344,40 @@ void VolumetricCloud::UpdateUI()
 
 		if (ImGui::BeginTabItem("Compute Cloud Setting"))
 		{
-			m_cloudParameterDirty = false;
-			m_cloudParameterDirty |= ImGui::InputInt("Sample Count Min", &m_cloudParameterCB.sampleCountMin);
-			m_cloudParameterDirty |= ImGui::InputInt("Sample Count Max", &m_cloudParameterCB.sampleCountMax);
+			ImGui::InputInt("Sample Count Min", &m_cloudParameterCB.sampleCountMin);
+			ImGui::InputInt("Sample Count Max", &m_cloudParameterCB.sampleCountMax);
 			ImGui::Separator();
 			ImGui::Text("Cloud Rendering");
-			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Coverage", &m_cloudParameterCB.cloudCoverage, 0.0f, 1.0f);
-			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Speed", &m_cloudParameterCB.cloudSpeed, 0.0f, 5.0e3f);
-			m_cloudParameterDirty |= ImGui::SliderFloat("Crispiness", &m_cloudParameterCB.crispiness, 0.0f, 120.0f);
-			m_cloudParameterDirty |= ImGui::SliderFloat("Curliness", &m_cloudParameterCB.curliness, 0.0f, 3.0f);
-			m_cloudParameterDirty |= ImGui::SliderFloat("Density Factor", &m_cloudParameterCB.densityFactor, 0.0f, 0.1f);
-			m_cloudParameterDirty |= ImGui::DragFloat("Light Absorption", &m_cloudParameterCB.absorption, 0.0001f, 0.0f, 1.5f, "%.4f");
-			m_cloudParameterDirty |= ImGui::DragFloat("HG Coeff0", &m_cloudParameterCB.hg0, 0.0005f);
-			m_cloudParameterDirty |= ImGui::DragFloat("HG Coeff1", &m_cloudParameterCB.hg1, 0.0005f);
-			m_cloudParameterDirty |= ImGui::ColorEdit3("Cloud Bottom Color", m_cloudParameterCB.cloudBottomColor);
-			m_cloudParameterDirty |= ImGui::ColorEdit3("Light Color", m_cloudParameterCB.lightColor);
+			ImGui::SliderFloat("Cloud Coverage", &m_cloudParameterCB.cloudCoverage, 0.0f, 1.0f);
+			ImGui::SliderFloat("Cloud Speed", &m_cloudParameterCB.cloudSpeed, 0.0f, 5.0e3f);
+			ImGui::SliderFloat("Crispiness", &m_cloudParameterCB.crispiness, 0.0f, 120.0f);
+			ImGui::SliderFloat("Curliness", &m_cloudParameterCB.curliness, 0.0f, 3.0f);
+			ImGui::SliderFloat("Density Factor", &m_cloudParameterCB.densityFactor, 0.0f, 0.1f);
+			ImGui::DragFloat("Light Absorption", &m_cloudParameterCB.absorption, 0.0001f, 0.0f, 1.5f, "%.4f");
+			ImGui::DragFloat("HG Coeff0", &m_cloudParameterCB.hg0, 0.0005f);
+			ImGui::DragFloat("HG Coeff1", &m_cloudParameterCB.hg1, 0.0005f);
+			ImGui::ColorEdit3("Cloud Bottom Color", m_cloudParameterCB.cloudBottomColor);
+			ImGui::ColorEdit3("Light Color", m_cloudParameterCB.lightColor);
 			bool enable_powder = (bool)m_cloudParameterCB.enablePowder;
-			m_cloudParameterDirty |= ImGui::Checkbox("Enable Powder", &enable_powder);
+			ImGui::Checkbox("Enable Powder", &enable_powder);
 			m_cloudParameterCB.enablePowder = (int)enable_powder;
 			static bool enable_beer = (bool)m_cloudParameterCB.enableBeer;
-			m_cloudParameterDirty |= ImGui::Checkbox("Enable Beer", &enable_beer);
+			ImGui::Checkbox("Enable Beer", &enable_beer);
 			m_cloudParameterCB.enableBeer = enable_beer;
-			m_cloudParameterDirty |= ImGui::DragFloat("Rain Absorption", &m_cloudParameterCB.rainAbsorption, 0.01f, 0.01f, 20.0f);
+			ImGui::DragFloat("Rain Absorption", &m_cloudParameterCB.rainAbsorption, 0.01f, 0.01f, 20.0f);
+			ImGui::DragFloat("Eccentricity", &m_cloudParameterCB.eccentricity, 0.001f, -FLT_MAX, FLT_MAX);
+			ImGui::DragFloat("Sliver Intensity", &m_cloudParameterCB.sliverIntensity, 0.001f, -FLT_MAX, FLT_MAX);
+			ImGui::DragFloat("Sliver Spread", &m_cloudParameterCB.sliverSpread, 0.001f, -FLT_MAX, FLT_MAX);
+			ImGui::DragFloat("Brightness", &m_cloudParameterCB.brightness, 0.001f, -FLT_MAX, FLT_MAX);
 			ImGui::Checkbox("Enable Temporal", &m_useTemporal);
 			if (m_useTemporal)
 				ImGui::Checkbox("Render To Quarter Buffer", &m_computeToQuarter);
 
 			ImGui::Separator();
 			ImGui::Text("Cloud Distribution");
-			m_cloudParameterDirty |= ImGui::SliderFloat("Earth Radius", &m_cloudParameterCB.earthRadius, 10000.0f, 5000000.0f);
-			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Bottom Altitude", &m_cloudParameterCB.cloudBottomRadius, 1000.0f, 15000.0f);
-			m_cloudParameterDirty |= ImGui::SliderFloat("Cloud Top Altitude", &m_cloudParameterCB.cloudTopRadius, 1000.0f, 40000.0f);
+			ImGui::SliderFloat("Earth Radius", &m_cloudParameterCB.earthRadius, 10000.0f, 5000000.0f);
+			ImGui::SliderFloat("Cloud Bottom Altitude", &m_cloudParameterCB.cloudBottomRadius, 1000.0f, 15000.0f);
+			ImGui::SliderFloat("Cloud Top Altitude", &m_cloudParameterCB.cloudTopRadius, 1000.0f, 40000.0f);
 			ImGui::EndTabItem();
 		}
 
