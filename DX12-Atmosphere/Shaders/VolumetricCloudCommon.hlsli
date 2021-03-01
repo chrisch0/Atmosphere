@@ -11,17 +11,23 @@ cbuffer PassCB : register(b0)
 	uint FrameIndex;
 
 	float4 Resolution;
+
+	float3 GroundAlbedo;
+	float Exposure;
+
+	float3 WhitePoint;
+	float SunSize;
 }
 
-cbuffer CloudParameterCB : register(b1)
+cbuffer CloudParameterCB : register(b2)
 {
 	float3 LightColor;
 	int SampleCountMin;
 
 	int SampleCountMax;
 	float CloudCoverage;
-	float Exposure;
-	float GroundAlbedo;
+	float pad_CP0;
+	float pad_CP1;
 
 	float3 CloudBottomColor;
 	float Crispiness;
@@ -73,6 +79,18 @@ static const float BayerFilter[] =
 	3.0*BAYER_FACTOR, 11.0*BAYER_FACTOR, 1.0*BAYER_FACTOR, 9.0*BAYER_FACTOR,
 	15.0*BAYER_FACTOR, 7.0*BAYER_FACTOR, 13.0*BAYER_FACTOR, 5.0*BAYER_FACTOR
 };
+
+float nrand(float2 n)
+{
+	return frac(sin(dot(n.xy, float2(12.9898, 78.233)))* 43758.5453);
+}
+
+float n1rand(float2 n)
+{
+	float t = frac(235.45323);
+	float nrnd0 = nrand(n + 0.07*t);
+	return nrnd0;
+}
 
 float3 ScreenToClip(float2 screenPos)
 {
@@ -299,7 +317,8 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	float4 color = 0.0;
 	uint a = pixelCoord.x % 4;
 	uint b = pixelCoord.y % 4;
-	startPos += dir * BayerFilter[a * 4 + b];
+	//startPos += dir * BayerFilter[a * 4 + b];
+	startPos += dir * n1rand(float2(pixelCoord));
 	float3 pos = startPos;
 
 	float density = 0.0;

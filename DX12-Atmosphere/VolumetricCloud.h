@@ -133,7 +133,10 @@ private:
 		XMFLOAT3 lightDir;
 		uint32_t frameIndex = 0;
 		XMFLOAT4 resolution;
-
+		XMFLOAT3 groundAlbedo;
+		float exposure = 10.0f;
+		XMFLOAT3 whitePoint;
+		float sunSize = 0.999653f;
 	}m_passCB;
 
 	bool m_useTemporal;

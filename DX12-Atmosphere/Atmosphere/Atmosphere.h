@@ -91,5 +91,5 @@ namespace Atmosphere
 	VolumeColorBuffer* GetScattering();
 	VolumeColorBuffer* GetOptionalScattering();
 	AtmosphereCB* GetAtmosphereCB();
-
+	bool UseCombinedScatteringTexture();
 }

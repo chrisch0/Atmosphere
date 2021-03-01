@@ -33,6 +33,23 @@ cbuffer PassCB : register(b0)
 #include "AtmosphereCommon.hlsli"
 #include "ComputeSkyCommon.hlsli"
 
+float3 ScreenToClip(float2 screenPos)
+{
+	float2 xy = screenPos * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f);
+	return float3(xy, 1.0f);
+}
+
+float3 ComputeWorldViewDir(float2 pixelCoord)
+{
+	float3 clip_coord = ScreenToClip(pixelCoord * Resolution.zw);
+	float4 view_coord = mul(InvProj, float4(clip_coord, 1.0));
+	//view_coord = float4(view_coord.xy, -1.0, 0.0);
+	view_coord /= view_coord.w;
+	float3 world_dir = mul(InvView, float4(view_coord.xyz, 0.0)).xyz;
+	world_dir = normalize(world_dir);
+	return world_dir;
+}
+
 [numthreads(8, 8, 1)]
 void main( uint3 globalID : SV_DispatchThreadID )
 {

@@ -68,6 +68,8 @@ bool VolumetricCloud::Initialize()
 
 	Atmosphere::Precompute(4);
 
+	XMStoreFloat3(&m_passCB.groundAlbedo, Vector3(0.0f, 0.0f, 0.04f));
+
 	return true;
 }
 
@@ -144,12 +146,14 @@ void VolumetricCloud::CreatePSO()
 	m_skyboxPSO.SetPixelShader(g_pSkybox_PS, sizeof(g_pSkybox_PS));
 	m_skyboxPSO.Finalize();
 
-	m_computeCloudOnQuadRS.Reset(4, 1);
+	m_computeCloudOnQuadRS.Reset(5, 2);
 	m_computeCloudOnQuadRS[0].InitAsConstantBufferView(0);
 	m_computeCloudOnQuadRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
 	m_computeCloudOnQuadRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 10);
 	m_computeCloudOnQuadRS[3].InitAsConstantBufferView(1);
-	m_computeCloudOnQuadRS.InitStaticSampler(0, SamplerLinearWrapDesc);
+	m_computeCloudOnQuadRS[4].InitAsConstantBufferView(2);
+	m_computeCloudOnQuadRS.InitStaticSampler(0, SamplerLinearClampDesc);
+	m_computeCloudOnQuadRS.InitStaticSampler(1, SamplerLinearWrapDesc);
 	m_computeCloudOnQuadRS.Finalize(L"ComputeCloudOnQuadRS");
 
 	m_computeCloudOnQuadPSO.SetRootSignature(m_computeCloudOnQuadRS);
@@ -268,13 +272,14 @@ void VolumetricCloud::Update(const Timer& timer)
 	m_passCB.frameIndex = m_frameIndex;
 	m_passCB.prevViewProj = m_camera->GetPrevViewProjMatrix();
 
-	Atmosphere::Update(dir, res);
+	XMStoreFloat3(&m_passCB.whitePoint, Vector3(1.0f, 1.0f, 1.0f));
+	//Atmosphere::Update(dir, res);
 }
 
 void VolumetricCloud::Draw(const Timer& timer)
 {
 	//DrawOnSkybox(timer);
-	Atmosphere::Draw();
+	//Atmosphere::Draw();
 	DrawOnQuad(timer);
 
 	/*GraphicsContext& mipsContext = GraphicsContext::Begin();
@@ -399,6 +404,20 @@ void VolumetricCloud::UpdateUI()
 			ImGui::EndTabItem();
 		}
 
+		if (ImGui::BeginTabItem("Atmosphere Setting"))
+		{
+			static float ground_albedo[3] = { 0.0f, 0.0f, 0.04f };
+			ImGui::DragFloat3("Ground Albedo", ground_albedo);
+			Vector3 g(ground_albedo);
+			XMStoreFloat3(&m_passCB.groundAlbedo, g);
+			ImGui::DragFloat("Exposure", &m_passCB.exposure);
+			
+			//ImGui::DragFloat3("White Point")
+			//ImGui::DragFloat("Sun Size", &m_passCB.sunSize, 0.0000001f, 0.999f, 1.0f);
+
+			ImGui::EndTabItem();
+		}
+
 		ImGui::EndTabBar();
 	}
 
@@ -489,8 +508,15 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 		context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
 		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
 		context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
+		context.SetDynamicDescriptor(1, 4, m_curlNoise2D->GetSRV());
+		context.SetDynamicDescriptor(1, 5, Atmosphere::GetTransmittance()->GetSRV());
+		context.SetDynamicDescriptor(1, 6, Atmosphere::GetScattering()->GetSRV());
+		context.SetDynamicDescriptor(1, 7, Atmosphere::GetIrradiance()->GetSRV());
+		if (!Atmosphere::UseCombinedScatteringTexture())
+			context.SetDynamicDescriptor(1, 8, Atmosphere::GetOptionalScattering()->GetSRV());
 		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
-		context.SetDynamicConstantBufferView(3, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
+		context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
+		context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
 		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 
 		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -507,7 +533,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 		context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
 		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
 		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
-		context.SetDynamicConstantBufferView(3, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
+		context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
 		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 	}
 	context.Finish();

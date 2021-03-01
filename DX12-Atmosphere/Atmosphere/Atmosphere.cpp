@@ -81,6 +81,26 @@ namespace Atmosphere
 		return Irradiance.get();
 	}
 
+	VolumeColorBuffer* GetScattering()
+	{
+		return Scattering.get();
+	}
+
+	VolumeColorBuffer* GetOptionalScattering()
+	{
+		return OptionalSingleMieScattering.get();
+	}
+
+	AtmosphereCB* GetAtmosphereCB()
+	{
+		return &AtmospherePhysicalCB;
+	}
+
+	bool UseCombinedScatteringTexture()
+	{
+		return UseCombinedTextures;
+	}
+
 	float InterpolateByLambda(
 		const std::vector<double>& wavelengthFunction,
 		double wavelength
@@ -604,7 +624,7 @@ namespace Atmosphere
 		XMStoreFloat4(&PassCB.resolution, resolution);
 		XMStoreFloat3(&PassCB.whitePoint, Vector3(1.f, 1.f, 1.f));
 		XMStoreFloat3(&PassCB.earthCenter, Vector3(0.f, -6360.f, 0.f));
-		XMStoreFloat3(&PassCB.groundAlbedo, Vector3(0.0, 0.0, 0.04));
+		XMStoreFloat3(&PassCB.groundAlbedo, Vector3(0.0f, 0.0f, 0.04f));
 	}
 
 	void Draw()
