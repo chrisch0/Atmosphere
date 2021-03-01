@@ -2,6 +2,7 @@
 #include "stdafx.h"
 
 class ColorBuffer;
+class Camera;
 
 namespace Atmosphere
 {
@@ -63,23 +64,27 @@ namespace Atmosphere
 
 	struct RenderCB
 	{
-		XMFLOAT3 CameraPosition;
-		float Exposure;
-		XMFLOAT4 Resolution;
-		Matrix4 InvProj;
-		Matrix4 InvView;
-		XMFLOAT3 WhitePoint;
-		float EarthRadius;
-		XMFLOAT3 SunDirection;
-		float GroundAlbedo;
-		XMFLOAT2 SunSize;
+		Matrix4 invView;
+		Matrix4 invProj;
+		XMFLOAT3 cameraPosition;
+		float exposure;
+		XMFLOAT3 lightDir;
+		float sunSize;
+		XMFLOAT4 resolution;
+		XMFLOAT3 whitePoint;
+		float pad;
+		XMFLOAT3 earthCenter;
+		float pad1;
+		XMFLOAT3 groundAlbedo;
 	};
 
 	void Initialize(ColorBuffer* sceneBuffer, ColorBuffer* depthBuffer = nullptr);
 	void InitModel();
-	void Render();
+	void Update(const Vector3& lightDir, const Vector4& resolution);
+	void Draw();
 	void UpdateUI(bool* showUI);
 	void Precompute(uint32_t numScatteringOrders);
+	void SetCamera(Camera* camera);
 
 	ColorBuffer* GetTransmittance();
 	ColorBuffer* GetIrradiance();

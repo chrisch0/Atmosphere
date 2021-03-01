@@ -34,6 +34,7 @@ static const float2 HaltonSequence[] =
 void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupThreadID)
 {
 	float4 frag_color, bloom, alphaness, cloud_distance;
+	frag_color = CloudColor[globalID.xy];
 	float2 pixel_coord = float2(globalID.xy) + 0.5f;
 	float3 world_dir = ComputeWorldViewDir(pixel_coord);
 	float2 uv = WorldViewDirToUV(world_dir, PrevViewProj);
@@ -48,7 +49,7 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		float3 start_pos, end_pos;
 		float4 v = 0.0f;
 
-		float4 bg = float4(0.4851, 0.5986, 0.7534, 1.0);
+		float4 bg = frag_color;
 		float3 fogRay;
 		// assert camera near ground
 		RaySphereIntersection(CameraPosition, world_dir, INNER_RADIUS, start_pos);
@@ -57,10 +58,10 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 
 		float3 ground_pos;
 		//bool ground = RaySphereIntersection(CameraPosition, world_dir, EarthRadius * 10.0, ground_pos);
-		bool ground = RayIntersectGround(CameraPosition, world_dir, EarthRadius * 10.0, ground_pos);
+		bool ground = RayIntersectGround(CameraPosition, world_dir, EarthRadius * 0.01, ground_pos);
 		if (ground)
 		{
-			CloudColor[globalID.xy] = float4(0.0, 0.2, 0.87, 1.0);
+			//CloudColor[globalID.xy] = float4(0.0, 0.2, 0.87, 1.0);
 			return;
 		}
 
@@ -76,12 +77,12 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		alphaness = float4(cloud_alphaness, 0.0, 0.0, 1.0);
 
 		// sun
-		float sun = dot(LightDir, world_dir);
-		if (sun > 0.999653)  // cos(0.5 * angular_diameter)
-		{
-			//float3 s = 0.8*float3(1.0, 0.4, 0.2)*pow(sun, 256.0);
-			frag_color.rgb += 1.0;
-		}
+		//float sun = dot(LightDir, world_dir);
+		//if (sun > 0.999653)  // cos(0.5 * angular_diameter)
+		//{
+		//	//float3 s = 0.8*float3(1.0, 0.4, 0.2)*pow(sun, 256.0);
+		//	frag_color.rgb += 1.0;
+		//}
 
 		frag_color.a = alphaness.r;
 

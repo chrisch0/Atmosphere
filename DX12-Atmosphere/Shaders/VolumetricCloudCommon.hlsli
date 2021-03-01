@@ -273,15 +273,15 @@ float GetLightEnergy(float3 p, float heightFraction, float dl, float dsLoded, fl
 {
 	float primary_attenuation = exp(-dl);
 	float secondary_attenuation = exp(-dl * 0.25) * 0.7;
-	float attenuation_probability = max(Remap(cosAngle, 0.7, 1.0, secondary_attenuation, secondary_attenuation * 0.25), primary_attenuation);
-	//float attenuation_probability = max(primary_attenuation, secondary_attenuation);
+	//float attenuation_probability = max(Remap(cosAngle, 0.7, 1.0, secondary_attenuation, secondary_attenuation * 0.25), primary_attenuation);
+	float attenuation_probability = max(primary_attenuation, secondary_attenuation);
 
 	float depth_probability = lerp(0.05 + pow(dsLoded, Remap(heightFraction, 0.3, 0.85, 0.5, 2.0)), 1.0, saturate(dl / stepSize));
 	//float depth_probability = 0.05 + pow(dsLoded, Remap(heightFraction, 0.3, 0.85, 0.5, 2.0));
-	//float vertical_probability = pow(Remap(heightFraction, 0.07, 0.14, 0.1, 1.0), 0.8);
-	float in_scatter_probability = depth_probability;// *vertical_probability;
+	float vertical_probability = pow(Remap(heightFraction, 0.07, 0.14, 0.1, 1.0), 0.8);
+	float in_scatter_probability = depth_probability *vertical_probability;
 
-	float light_energy = attenuation_probability * in_scatter_probability * phaseProbability * brightness;
+	float light_energy = attenuation_probability * phaseProbability * brightness *in_scatter_probability;
 	return light_energy;
 }
 
@@ -313,19 +313,27 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	float previous_density_sample = -1.0;
 	int zero_density_sample_count = 0;
 
-	int low_lod_steps = nSteps / 8;
+	/*int low_lod_steps = nSteps / 8;
 	float big_step = len / low_lod_steps;
 	float3 low_lod_pos = pos;
 	float ds_lodded = 0.0;
-	float3 big_step_dir = normalize(path) * big_step;
-	for (uint ii = 0; ii < low_lod_steps; ++ii)
-	{
-		uint mip = ii * 0.25;
-		mip += 4;
-		float density = SampleCloudDensity(low_lod_pos, false, mip);
-		ds_lodded += density * big_step;
-		low_lod_pos += big_step_dir;
-	}
+	float3 big_step_dir = normalize(path) * big_step;*/
+	//for (uint ii = 0; ii < low_lod_steps; ++ii)
+	//{
+	//	uint mip = ii * 0.25;
+	//	mip += 4;
+	//	float density = SampleCloudDensity(low_lod_pos, false, mip);
+	//	ds_lodded += density * big_step;
+	//	low_lod_pos += big_step_dir;
+	//}
+
+	//for (uint ii = 0; ii < nSteps; ++ii)
+	//{
+	//	uint mip = ii * 0.0625;
+	//	float density = SampleCloudDensity(low_lod_pos, true, mip);
+	//	ds_lodded += density * -sigma_ds;
+	//	low_lod_pos += dir;
+	//}
 
 	float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
 	scattering = max(scattering, 1.0);

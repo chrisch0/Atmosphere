@@ -5,6 +5,7 @@
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
 #include "D3D12/CommandContext.h"
+#include "Utils/Camera.h"
 
 #include "CompiledShaders/ComputeTransmittance_CS.h"
 #include "CompiledShaders/ComputeSingleScattering_CS.h"
@@ -13,6 +14,7 @@
 #include "CompiledShaders/ComputeDirectIrradiance_CS.h"
 #include "CompiledShaders/ComputeIndirectIrradiance_CS.h"
 #include "CompiledShaders/ComputeScatteringDensity_CS.h"
+#include "CompiledShaders/ComputeSky_CS.h"
 
 namespace Atmosphere
 {
@@ -44,6 +46,7 @@ namespace Atmosphere
 	std::shared_ptr<VolumeColorBuffer> InterScatteringDensity;
 
 	RootSignature PrecomputeRS;
+	RootSignature ComputeSkyRS;
 	ComputePSO TransmittancePSO;
 	ComputePSO ScatteringDensityPSO;
 	ComputePSO CombinedSingleScatteringPSO;
@@ -54,6 +57,7 @@ namespace Atmosphere
 	ComputePSO ComputeSkyPSO;
 
 	AtmosphereCB AtmospherePhysicalCB;
+	RenderCB PassCB;
 
 	XMFLOAT4X4 LuminanceFromRadiance;
 
@@ -64,6 +68,8 @@ namespace Atmosphere
 	std::vector<double> MieExtinction;
 	std::vector<double> AbsorptionExtinction;
 	std::vector<double> GroundAlbedos;
+
+	Camera* MainCamera;
 
 	ColorBuffer* GetTransmittance()
 	{
@@ -123,6 +129,11 @@ namespace Atmosphere
 		InitIntermediateTextures();
 	}
 
+	void SetCamera(Camera* camera)
+	{
+		MainCamera = camera;
+	}
+
 	void InitPSO()
 	{
 		PrecomputeRS.Reset(5, 1);
@@ -133,6 +144,14 @@ namespace Atmosphere
 		PrecomputeRS[4].InitAsConstantBufferView(2);
 		PrecomputeRS.InitStaticSampler(0, Global::SamplerLinearClampDesc);
 		PrecomputeRS.Finalize(L"PrecomputeRS");
+
+		ComputeSkyRS.Reset(4, 1);
+		ComputeSkyRS[0].InitAsConstantBufferView(0);
+		ComputeSkyRS[1].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 10);
+		ComputeSkyRS[2].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 0, 1);
+		ComputeSkyRS[3].InitAsConstantBufferView(1);
+		ComputeSkyRS.InitStaticSampler(0, Global::SamplerLinearClampDesc);
+		ComputeSkyRS.Finalize(L"ComputeSkyRS");
 
 		TransmittancePSO.SetRootSignature(PrecomputeRS);
 		TransmittancePSO.SetComputeShader(g_pComputeTransmittance_CS, sizeof(g_pComputeTransmittance_CS));
@@ -161,6 +180,10 @@ namespace Atmosphere
 		IndirectIrradiancePSO.SetRootSignature(PrecomputeRS);
 		IndirectIrradiancePSO.SetComputeShader(g_pComputeIndirectIrradiance_CS, sizeof(g_pComputeIndirectIrradiance_CS));
 		IndirectIrradiancePSO.Finalize();
+
+		ComputeSkyPSO.SetRootSignature(ComputeSkyRS);
+		ComputeSkyPSO.SetComputeShader(g_pComputeSky_CS, sizeof(g_pComputeSky_CS));
+		ComputeSkyPSO.Finalize();
 	}
 
 	void InitModel()
@@ -570,8 +593,35 @@ namespace Atmosphere
 		}
 	}
 
-	void Render()
+	void Update(const Vector3& lightDir, const Vector4& resolution)
 	{
+		PassCB.invView = Invert(MainCamera->GetViewMatrix());
+		PassCB.invProj = Invert(MainCamera->GetProjMatrix());
+		XMStoreFloat3(&PassCB.cameraPosition, MainCamera->GetPosition());
+		PassCB.exposure = 10.0f;
+		XMStoreFloat3(&PassCB.lightDir, -lightDir);
+		PassCB.sunSize = 0.999653f;
+		XMStoreFloat4(&PassCB.resolution, resolution);
+		XMStoreFloat3(&PassCB.whitePoint, Vector3(1.f, 1.f, 1.f));
+		XMStoreFloat3(&PassCB.earthCenter, Vector3(0.f, -6360.f, 0.f));
+		XMStoreFloat3(&PassCB.groundAlbedo, Vector3(0.0, 0.0, 0.04));
+	}
 
+	void Draw()
+	{
+		ComputeContext& context = ComputeContext::Begin();
+		context.TransitionResource(*SceneColorBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		context.SetRootSignature(ComputeSkyRS);
+		context.SetPipelineState(ComputeSkyPSO);
+		context.SetDynamicConstantBufferView(0, sizeof(PassCB), &PassCB);
+		context.SetDynamicConstantBufferView(3, sizeof(AtmospherePhysicalCB), &AtmospherePhysicalCB);
+		context.SetDynamicDescriptor(1, 0, Transmittance->GetSRV());
+		context.SetDynamicDescriptor(1, 1, Scattering->GetSRV());
+		context.SetDynamicDescriptor(1, 2, Irradiance->GetSRV());
+		if (!UseCombinedTextures)
+			context.SetDynamicDescriptor(1, 3, OptionalSingleMieScattering->GetSRV());
+		context.SetDynamicDescriptor(2, 0, SceneColorBuffer->GetUAV());
+		context.Dispatch2D(SceneColorBuffer->GetWidth(), SceneColorBuffer->GetHeight());
+		context.Finish();
 	}
 }

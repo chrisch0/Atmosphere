@@ -8,6 +8,7 @@
 #include "Utils/CameraController.h"
 #include "Utils/Camera.h"
 #include "Mesh/Mesh.h"
+#include "Atmosphere/Atmosphere.h"
 
 #include "CompiledShaders/VolumetricCloud_VS.h"
 #include "CompiledShaders/VolumetricCloud_PS.h"
@@ -64,6 +65,8 @@ bool VolumetricCloud::Initialize()
 	m_mipmapTestBuffer->Create(L"Generate Mips Buffer", m_clientWidth, m_clientHeight, 0, m_sceneBufferFormat);
 
 	PostProcess::EnableHDR = false;
+
+	Atmosphere::Precompute(4);
 
 	return true;
 }
@@ -195,6 +198,7 @@ void VolumetricCloud::CreateCamera()
 	m_camera->SetLookAt({ 2.25f, 1.75f, 2.10f }, { 2.25f - 0.659f, 1.75f + 0.409f, 2.10f - 0.632f }, { 0.0f, 1.0f, 0.0f });
 	m_camera->SetNearClip(0.01f);
 	m_camera->SetFarClip(10000.0f);
+	Atmosphere::SetCamera(m_camera.get());
 }
 
 void VolumetricCloud::CreateNoise()
@@ -252,11 +256,25 @@ void VolumetricCloud::Update(const Timer& timer)
 	Matrix3 skybox_scale = Matrix3::MakeScale({ 10000.0f, 10000.0f, 10000.0f });
 	AffineTransform skybox_trans(skybox_scale, m_camera->GetPosition());
 	m_skyboxModelMatrix = Matrix4(skybox_trans);
+
+	m_passCB.invView = Invert(m_camera->GetViewMatrix());
+	m_passCB.invProj = Invert(m_camera->GetProjMatrix());
+	m_passCB.time = timer.TotalTime();
+	auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
+	XMStoreFloat3(&m_passCB.lightDir, -dir);
+	XMStoreFloat3(&m_passCB.cameraPosition, m_camera->GetPosition());
+	Vector4 res{ (float)m_sceneColorBuffer->GetWidth(), (float)m_sceneColorBuffer->GetHeight(), 1.0f / m_sceneColorBuffer->GetWidth(), 1.0f / m_sceneColorBuffer->GetHeight() };
+	XMStoreFloat4(&m_passCB.resolution, res);
+	m_passCB.frameIndex = m_frameIndex;
+	m_passCB.prevViewProj = m_camera->GetPrevViewProjMatrix();
+
+	Atmosphere::Update(dir, res);
 }
 
 void VolumetricCloud::Draw(const Timer& timer)
 {
 	//DrawOnSkybox(timer);
+	Atmosphere::Draw();
 	DrawOnQuad(timer);
 
 	/*GraphicsContext& mipsContext = GraphicsContext::Begin();
@@ -456,17 +474,6 @@ void VolumetricCloud::DrawOnSkybox(const Timer& timer)
 
 void VolumetricCloud::DrawOnQuad(const Timer& timer)
 {
-	m_passCB.invView = Invert(m_camera->GetViewMatrix());
-	m_passCB.invProj = Invert(m_camera->GetProjMatrix());
-	m_passCB.time = timer.TotalTime();
-	auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
-	XMStoreFloat3(&m_passCB.lightDir, -dir);
-	XMStoreFloat3(&m_passCB.cameraPosition, m_camera->GetPosition());
-	Vector4 res{ (float)m_sceneColorBuffer->GetWidth(), (float)m_sceneColorBuffer->GetHeight(), 1.0f / m_sceneColorBuffer->GetWidth(), 1.0f / m_sceneColorBuffer->GetHeight() };
-	XMStoreFloat4(&m_passCB.resolution, res);
-	m_passCB.frameIndex = m_frameIndex;
-	m_passCB.prevViewProj = m_camera->GetPrevViewProjMatrix();
-
 	ComputeContext& context = ComputeContext::Begin();
 	context.SetRootSignature(m_computeCloudOnQuadRS);
 	context.TransitionResource(*m_basicCloudShape, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
