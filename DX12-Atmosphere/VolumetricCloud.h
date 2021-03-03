@@ -106,7 +106,7 @@ private:
 		float cloudBottomColor[3] = {0.38235f, 0.41176f, 0.47059f};
 		float crispiness = 40.0f;
 		float curliness = 0.1f;
-		float earthRadius = 636000.0f;
+		float earthRadius = 6360.0f;
 		float cloudBottomRadius = 5000.0f;
 		float cloudTopRadius = 17000.0f;
 		float cloudSpeed = 0.0f;

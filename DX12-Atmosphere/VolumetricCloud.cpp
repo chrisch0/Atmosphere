@@ -361,6 +361,7 @@ void VolumetricCloud::UpdateUI()
 			static bool curl_noise_window_open = false;
 			ImGui::SameLine(400.0f);
 			ImGui::PreviewImageButton(m_curlNoise2D, ImVec2(128.0f, 128.0f), "Curl Noise", &curl_noise_window, &curl_noise_window_open);
+			//ImGui::PreviewVolumeImageButton(m_curlNoiseTexture.get(), ImVec2(128.0f, 128.0f), "Curl Noise", &curl_noise_window, &curl_noise_window_open);
 
 			ImGui::EndTabItem();
 		}
@@ -407,7 +408,7 @@ void VolumetricCloud::UpdateUI()
 		if (ImGui::BeginTabItem("Atmosphere Setting"))
 		{
 			static float ground_albedo[3] = { 0.0f, 0.0f, 0.04f };
-			ImGui::DragFloat3("Ground Albedo", ground_albedo);
+			ImGui::ColorEdit3("Ground Albedo", ground_albedo, ImGuiColorEditFlags_Float);
 			Vector3 g(ground_albedo);
 			XMStoreFloat3(&m_passCB.groundAlbedo, g);
 			ImGui::DragFloat("Exposure", &m_passCB.exposure);
@@ -526,13 +527,18 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	else
 	{
 		context.SetPipelineState(m_computeCloudOnQuadPSO);
-		//context.TransitionResource(*m_cloudShapeManager.GetErosion(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
 		context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
-		//context.SetDynamicDescriptor(1, 1, m_cloudShapeManager.GetErosion()->GetSRV());
 		context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
 		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
+		context.SetDynamicDescriptor(1, 4, m_curlNoise2D->GetSRV());
+		context.SetDynamicDescriptor(1, 5, Atmosphere::GetTransmittance()->GetSRV());
+		context.SetDynamicDescriptor(1, 6, Atmosphere::GetScattering()->GetSRV());
+		context.SetDynamicDescriptor(1, 7, Atmosphere::GetIrradiance()->GetSRV());
+		if (!Atmosphere::UseCombinedScatteringTexture())
+			context.SetDynamicDescriptor(1, 8, Atmosphere::GetOptionalScattering()->GetSRV());
 		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+		context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
 		context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
 		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 	}

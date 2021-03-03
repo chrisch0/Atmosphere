@@ -1,3 +1,20 @@
+Texture3D<float4> CloudShapeTexture : register(t0);
+Texture3D<float4> ErosionTexture : register(t1);
+Texture2D<float4> WeatherTexture : register(t2);
+Texture2D<float4> PreCloudColor : register(t3);
+Texture2D<float4> CurlNoise : register(t4);
+Texture2D<float4> Transmittance : register(t5);
+Texture3D<float4> Scattering : register(t6);
+Texture2D<float4> Irradiance_Texture : register(t7);
+Texture3D<float4> SingleMieScattering : register(t8);
+
+RWTexture2D<float4> CloudColor : register(u0);
+
+SamplerState LinearRepeatSampler : register(s1);
+
+#include "AtmosphereCommon.hlsli"
+#include "ComputeSkyCommon.hlsli"
+
 cbuffer PassCB : register(b0)
 {
 	float4x4 InvView;
@@ -37,7 +54,6 @@ cbuffer CloudParameterCB : register(b2)
 	float CloudBottomRadius;
 	float CloudTopRadius;
 
-
 	float CloudSpeed;
 	float DensityFactor;
 	float Absorption;
@@ -54,12 +70,13 @@ cbuffer CloudParameterCB : register(b2)
 	float Brightness;
 }
 
-#define INNER_RADIUS (EarthRadius + CloudBottomRadius)
-#define OUTER_RADIUS (EarthRadius + CloudTopRadius)
+#define INNER_RADIUS (EarthRadius * 100 + CloudBottomRadius)
+#define OUTER_RADIUS (EarthRadius * 100 + CloudTopRadius)
 #define CLOUDS_MIN_TRANSMITTANCE 1e-1
 //#define LIGHT_DIR float3(-0.40825, 0.40825, 0.8165)
 #define LIGHT_DIR LightDir
 #define SUN_COLOR LightColor * float3(1.1, 1.1, 0.95)
+#define CLOUD_TOP (EarthRadius + CloudTopRadius)
 
 static const float3 NoiseKernel[] =
 {
@@ -119,13 +136,15 @@ float2 WorldViewDirToUV(float3 worldDir, float4x4 ViewProj)
 bool RaySphereIntersection(float3 ro, float3 rd, float radius, out float3 startPos)
 {
 	float t;
-	float3 sphere_center = float3(CameraPosition.x, -EarthRadius, CameraPosition.z);
+	float3 sphere_center = float3(CameraPosition.x, -EarthRadius * 100, CameraPosition.z);
 	float radius_sqr = radius * radius;
 	float3 L = ro - sphere_center;
+	//float L = ro.y + EarthRadius;
 
 	float a = dot(rd, rd);
 	float b = 2.0 * dot(rd, L);
 	float c = dot(L, L) - radius_sqr;
+	//float c = L * L - radius_sqr;
 
 	float discr = b * b - 4.0 * a * c;
 	if (discr < 0.0) return false;
@@ -155,7 +174,7 @@ bool RayIntersectGround(float3 ro, float3 rd, float radius, out float3 startPos)
 
 float GetHeightFraction(float3 pos)
 {
-	float3 sphere_center = float3(CameraPosition.x, -EarthRadius, CameraPosition.z);
+	float3 sphere_center = float3(CameraPosition.x, -EarthRadius * 100, CameraPosition.z);
 	return (length(pos.y - sphere_center.y) - INNER_RADIUS) / (OUTER_RADIUS - INNER_RADIUS);
 }
 
@@ -254,7 +273,7 @@ float SampleCloudDensity(float3 p, bool expensive, uint lod)
 float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDensity, float lightDotEye, uint mipLevel)
 {
 	float3 start_pos = o;
-	float ds = stepSize * 6.0;
+	float ds = stepSize;
 	float3 ray_step = lightDir * ds;
 	const float CONE_STEP = 1.0 / 6.0;
 	float cone_radius = 1.0;
@@ -358,6 +377,10 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	scattering = max(scattering, 1.0);
 	float phase_probability = max(HG(light_dot_eye, Eccentricity), SliverIntensity * HG(light_dot_eye, 0.99 - SliverSpread));
 
+	//float3 sky_irradiance;
+	//float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint(float3(endPos.x, endPos.y * 0.00001 + EarthRadius, endPos.z), LightDir, sky_irradiance);
+	//float3 total_irradiance = sun_irradiance;
+
 	for (uint i = 0; i < nSteps; ++i)
 	{
 		uint mip_level = i * 0.0625;
@@ -371,13 +394,31 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 				entered = true;
 			}
 			float height = GetHeightFraction(pos);
+			//float3 ambient_light = float3(0.0, 0.0, 0.0);
 			float3 ambient_light = CloudBottomColor;
-			float light_density = RaymarchLight(pos, ds * 0.1, LIGHT_DIR, density_sample, light_dot_eye, mip_level);
+			float light_density = RaymarchLight(pos, ds * 0.6, LIGHT_DIR, density_sample, light_dot_eye, mip_level);
 			float dTrans = exp(density_sample * sigma_ds);
 
+			//Sun and sky irradiance
+			float distance_to_earth_center = length(float3(pos.x, (pos.y * 0.01 - EarthRadius), pos.z));
+			float b = 2 * light_dot_eye * distance_to_earth_center;
+			float d_e_c_2 = distance_to_earth_center * distance_to_earth_center;
+			float c_t_2 = CLOUD_TOP * CLOUD_TOP;
+			float e_r_2 = EarthRadius * EarthRadius;
+			float c = d_e_c_2 - c_t_2;
+			float distance_to_cloud_top = -light_dot_eye * distance_to_earth_center + 0.5 * sqrt(b * b - 4.0 * c);
+			float max_distance = sqrt(d_e_c_2 - e_r_2) + sqrt(c_t_2 - e_r_2);
+			//float3 intersection_on_cloud_top = float3(pos.x, pos.y * 0.01, pos.z) + LightDir * distance_to_cloud_top*0.0001;
+			float3 intersection_on_cloud_top = float3(pos.x, pos.y * 0.01, pos.z) +LightDir * ds * 3.6 * 0.01;
+			float3 sky_irradiance;
+			float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint(intersection_on_cloud_top - float3(0.0, -EarthRadius, 0.0), LightDir, sky_irradiance);
+			float3 total_irradiance = sun_irradiance;
+
+			// light model
 			float powder_term = EnablePowder ? Powder(light_density) : 1.0f;
 			float beer_term = EnableBeer ? 2.0f * Beer(light_density) : 1.0f;
 			float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * SUN_COLOR, beer_term * powder_term * exp(-light_density))) * density_sample;
+			//float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * total_irradiance, beer_term * powder_term * exp(-light_density))) * density_sample;
 			float3 Sint = (S - S * dTrans) * (1.0 / density_sample);
 			color.rgb += T * Sint;
 

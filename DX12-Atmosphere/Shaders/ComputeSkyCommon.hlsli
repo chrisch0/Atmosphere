@@ -29,6 +29,18 @@ RadianceSpectrum GetSunAndSkyIrradiance(
 {
 	return GetSunAndSkyIrradiance(Atmosphere, Transmittance, Irradiance_Texture, p, normal, sun_direction, sky_irradiance);
 }
+
+// p ref to earth center
+RadianceSpectrum GetSunAndSkyIrradianceAtPoint(
+	Position p, Direction sun_direction,
+	out IrradianceSpectrum sky_irradiance
+)
+{
+	Length r = length(p);
+	Number mu_s = dot(p, sun_direction) / r;
+	sky_irradiance = GetIrradiance(Atmosphere, Irradiance_Texture, r, mu_s);
+	return Atmosphere.solar_irradiance * GetTransmittanceToSun(Atmosphere, Transmittance, r, mu_s);
+}
 #endif
 
 Luminance3 GetSolarLuminance()

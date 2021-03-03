@@ -1,21 +1,34 @@
-Texture3D<float4> CloudShapeTexture : register(t0);
-Texture3D<float4> ErosionTexture : register(t1);
-Texture2D<float4> WeatherTexture : register(t2);
-Texture2D<float4> PreCloudColor : register(t3);
-Texture2D<float4> CurlNoise : register(t4);
-Texture2D<float4> Transmittance : register(t5);
-Texture3D<float4> Scattering : register(t6);
-Texture2D<float4> Irradiance_Texture : register(t7);
-Texture3D<float4> SingleMieScattering : register(t8);
 
-RWTexture2D<float4> CloudColor : register(u0);
-
-SamplerState LinearRepeatSampler : register(s1);
 
 #define RADIANCE_API_ENABLED
 #include "VolumetricCloudCommon.hlsli"
-#include "AtmosphereCommon.hlsli"
-#include "ComputeSkyCommon.hlsli"
+
+float HPDot(float3 FloorV0, float3 FractV0, float3 FloorV1, float3 FractV1, out float fractR)
+{
+	float inter0 = dot(FloorV0, FractV1);
+	float inter1 = dot(FractV0, FloorV1);
+	fractR = frac(inter0) + frac(inter1) + dot(FractV0, FractV1);
+	float floorR = floor(inter0) + floor(inter1) + dot(FloorV0, FloorV1) + floor(fractR);
+	fractR = frac(fractR);
+	return floorR;
+}
+
+float HPDot(float3 floor_v0, float fract_v0, float3 v1, out float fractR)
+{
+	fractR = dot(fract_v0, v1);
+	float floorR = dot(floor_v0, v1);
+	fractR = frac(floorR) + frac(floorR);
+	floorR = floor(floorR) + floor(fractR);
+	fractR = frac(fractR);
+	return floorR;
+}
+
+float HP2(float fl, float fr, out float frR)
+{
+	float flR = fl * fl;
+	frR = fr * fr;
+
+}
 
 [numthreads(8, 8, 1)]
 void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupThreadID)
@@ -25,29 +38,42 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 	float3 world_dir = ComputeWorldViewDir(pixel_coord);
 	float2 uv = WorldViewDirToUV(world_dir, PrevViewProj);
 
-	float3 EarthCenter = float3(0.0, -EarthRadius * 0.01, 0.0);
-	float3 p = CameraPosition - EarthCenter;
+	float3 EarthCenter = float3(CameraPosition.x, -EarthRadius, CameraPosition.z);
+	float3 camera = CameraPosition;
+	camera.y *= 0.001f;
+	float3 p = camera - EarthCenter;
+
 	float p_dot_v = dot(p, world_dir);
 	float p_dot_p = dot(p, p);
 	float ray_earth_center_squared_distance = p_dot_p - p_dot_v * p_dot_v;
 	float distance_to_intersection = -p_dot_v - sqrt(EarthCenter.y * EarthCenter.y - ray_earth_center_squared_distance);
+	
+	/*float3 floor_p = floor(p);
+	float3 fract_p = frac(p);
+	float fract_p_dot_v;
+	float floor_p_dot_v = HPDot(floor_p, fract_p, world_dir, fract_p_dot_v);
+	float fract_p_dot_p;
+	float floor_p_dot_p = HPDot(floor_p, fract_p, floor_p, fract_p, fract_p_dot_p);
+	float fl_r = floor_p_dot_p - floor_p_dot_v * floor_p_dot_v;
+	float fr_r = fract_p_dot_p - fract_p_dot_v * fract_p_dot_v;
+	float distance_to_intersection = -(floor_p_dot_v + fract_p_dot_v) - sqrt(EarthCenter.y * EarthCenter.y - fl_r + fr_r);*/
 
 	float ground_alpha = 0.0;
 	float3 ground_radiance;
 	if (distance_to_intersection > 0.0)
 	{
-		float3 intersection_point = CameraPosition + distance_to_intersection * world_dir;
+		float3 intersection_point = camera + distance_to_intersection * world_dir;
 		float3 normal = normalize(intersection_point - EarthCenter);
 		float3 sky_irradiance;
 		float3 sun_irradiance = GetSunAndSkyIrradiance(intersection_point - EarthCenter, normal, LightDir, sky_irradiance);
 		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance + sky_irradiance);
 		float3 transmittance;
-		float3 in_scatter = GetSkyRadianceToPoint(CameraPosition - EarthCenter, intersection_point - EarthCenter, 0, LightDir, transmittance);
+		float3 in_scatter = GetSkyRadianceToPoint(camera - EarthCenter, intersection_point - EarthCenter, 0, LightDir, transmittance);
 		ground_radiance = ground_radiance * transmittance + in_scatter;
 		ground_alpha = 1.0;
 	}
 	float3 transmittance;
-	float3 radiance = GetSkyRadiance(CameraPosition - EarthCenter, world_dir, 0, LightDir, transmittance);
+	float3 radiance = GetSkyRadiance(camera - EarthCenter, world_dir, 0, LightDir, transmittance);
 	if (dot(world_dir, LightDir) > SunSize)
 	{
 		radiance += transmittance * GetSolarRadiance();
