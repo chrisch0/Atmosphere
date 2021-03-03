@@ -112,6 +112,7 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		// assert camera near ground
 		RaySphereIntersection(CameraPosition, world_dir, INNER_RADIUS, start_pos);
 		RaySphereIntersection(CameraPosition, world_dir, OUTER_RADIUS, end_pos);
+		
 		fogRay = start_pos;
 
 		v = RaymarchCloud(globalID.xy, start_pos, end_pos, bg.rgb, cloud_distance);
