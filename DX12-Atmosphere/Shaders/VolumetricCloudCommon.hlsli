@@ -437,7 +437,7 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 
 			//Sun and sky irradiance
 			float3 sky_irradiance;
-			float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint((pos + ds * LightDir * 3.6) * 0.001  - float3(0.0, -EarthRadius, 0.0), LightDir, sky_irradiance) * CloudScatter.xyz * CloudScatter.w;
+			float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint((pos + ds * LightDir * 3.6) * 0.00001  - float3(0.0, -EarthRadius, 0.0), LightDir, sky_irradiance) * CloudScatter.xyz * CloudScatter.w;
 			float3 ambient_light = ((0.5 + 0.6*height)*CloudBottomColor*6.5 + float3(0.8, 0.8, 0.8) * max(0.0, 1.0 - 2.0*height)) * length(sun_irradiance) * 0.02;
 			//float3 ambient_light = CloudBottomColor * length(sun_irradiance) * 0.2;
 			float3 total_irradiance = sun_irradiance + ambient_light;

@@ -77,7 +77,7 @@ private:
 	float m_worleyAmp;
 	float m_perlinAmp;
 	float m_noiseBias;
-	int m_method2;
+	int m_method2 = 0;
 
 	bool m_showWindow;
 };

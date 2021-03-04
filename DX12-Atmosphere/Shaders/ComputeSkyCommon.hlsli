@@ -41,6 +41,23 @@ RadianceSpectrum GetSunAndSkyIrradianceAtPoint(
 	sky_irradiance = GetIrradiance(Atmosphere, Irradiance_Texture, r, mu_s);
 	return Atmosphere.solar_irradiance * GetTransmittanceToSun(Atmosphere, Transmittance, r, mu_s);
 }
+
+DimensionlessSpectrum GetTransmittanceToPoint(
+	Position camera, Position pos, Direction sun_direction
+)
+{
+	Direction view_ray = normalize(pos - camera);
+	Length r = length(camera);
+	Length rmu = dot(camera, view_ray);
+	// assert(camera is in atmosphere)
+	Number mu = rmu / r;
+	Number mu_s = dot(camera, sun_direction) / r;
+	Number nu = dot(view_ray, sun_direction);
+	Length d = length(pos - camera);
+	bool ray_r_mu_intersects_ground = RayIntersectsGround(Atmosphere, r, mu);
+	return GetTransmittance(Atmosphere, Transmittance, r, mu, d, ray_r_mu_intersects_ground);
+
+}
 #endif
 
 Luminance3 GetSolarLuminance()

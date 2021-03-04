@@ -255,7 +255,7 @@ void CloudShapeManager::UpdateUI()
 	ImGui::BeginGroup();
 	{
 		ImGui::PushItemWidth(125.0f);
-		static bool use_method2 = true;
+		static bool use_method2 = false;
 		refresh_basic_shape |= ImGui::Checkbox("Use Method2", &use_method2);
 		if (use_method2)
 		{

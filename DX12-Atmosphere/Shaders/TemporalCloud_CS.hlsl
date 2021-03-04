@@ -114,11 +114,14 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		RaySphereIntersection(CameraPosition, world_dir, OUTER_RADIUS, end_pos);
 		
 		fogRay = start_pos;
+		cloud_distance.xyz = CameraPosition;
 
 		v = RaymarchCloud(globalID.xy, start_pos, end_pos, bg.rgb, cloud_distance);
+		//float3 cloud_bottom_pos = (cloud_distance - start_pos) * 0.001 + 
+		transmittance = GetTransmittanceToPoint(CameraPosition * 0.001 - float3(0.0, -EarthRadius, 0.0), cloud_distance.xyz * 0.00001 - float3(0.0, -EarthRadius, 0.0), LightDir);
 
 		float cloud_alphaness = Threshold(v.a, 0.2);
-		v.rgb = v.rgb * 1.8 - 0.1;
+		v.rgb = (v.rgb * 1.8 - 0.1) * transmittance;
 		//v.rgb = pow(v.rgb, pad_CP0);
 
 		bg.rgb = bg.rgb * (1.0 - v.a) + v.rgb;
