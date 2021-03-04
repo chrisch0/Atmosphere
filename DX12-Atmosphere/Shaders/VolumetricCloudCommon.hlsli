@@ -68,6 +68,10 @@ cbuffer CloudParameterCB : register(b2)
 	float SliverIntensity;
 	float SliverSpread;
 	float Brightness;
+
+	float4 CloudScatter;
+	float3 ABC;
+	float HGWeight;
 }
 
 #define INNER_RADIUS (EarthRadius * 100 + CloudBottomRadius)
@@ -194,6 +198,29 @@ float HG(float cosTheta, float g)
 	return (1.0 - g_sqrt) / pow(1.0 + g_sqrt - 2.0 * g * cosTheta, 1.5) * 0.079577471f;
 }
 
+// From https://www.shadertoy.com/view/4sjBDG
+float numericalMieFit(float costh)
+{
+	// This function was optimized to minimize (delta*delta)/reference in order to capture
+	// the low intensity behavior.
+	float bestParams[10];
+	bestParams[0] = 9.805233e-06;
+	bestParams[1] = -6.500000e+01;
+	bestParams[2] = -5.500000e+01;
+	bestParams[3] = 8.194068e-01;
+	bestParams[4] = 1.388198e-01;
+	bestParams[5] = -8.370334e+01;
+	bestParams[6] = 7.810083e+00;
+	bestParams[7] = 2.054747e-03;
+	bestParams[8] = 2.600563e-02;
+	bestParams[9] = -4.552125e-12;
+
+	float p1 = costh + bestParams[3];
+	float4 expValues = exp(float4(bestParams[1] * costh + bestParams[2], bestParams[5] * p1*p1, bestParams[6] * costh, bestParams[9] * costh));
+	float4 expValWeight = float4(bestParams[0], bestParams[4], bestParams[7], bestParams[8]);
+	return dot(expValues, expValWeight);
+}
+
 float Beer(float d)
 {
 	return exp(-d * RainAbsorption);
@@ -293,17 +320,17 @@ float RaymarchLight(float3 o, float stepSize, float3 lightDir, float originalDen
 		{
 			uint mip_offset = uint(i * 0.5);
 			float cloud_density = SampleCloudDensity(pos, density > 0.3, mipLevel + mip_offset);
-			//float cloud_density = SampleCloudDensity(pos, true, mipLevel + mip_offset);
+			//float cloud_density = SampleCloudDensity(pos, false, mipLevel + mip_offset);
 			if (cloud_density > 0.0)
 			{
-				T += cloud_density * sigma_ds;
+				T += cloud_density;// *sigma_ds;
 				density += cloud_density;
 			}
 		}
 		start_pos += ray_step;
 		cone_radius += CONE_STEP;
 	}
-	return T;
+	return T * sigma_ds;
 }
 
 float GetLightEnergy(float3 p, float heightFraction, float dl, float dsLoded, float phaseProbability, float cosAngle, float stepSize, float brightness)
@@ -372,14 +399,24 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	//	ds_lodded += density * -sigma_ds;
 	//	low_lod_pos += dir;
 	//}
-
+	
+	//float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
 	float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
 	scattering = max(scattering, 1.0);
+	float scattering_1 = lerp(HG(light_dot_eye, HG0 * ABC.z), HG(light_dot_eye, HG1 * ABC.z), saturate(light_dot_eye * 0.5 + 0.5));
+	scattering_1 = max(scattering_1, 1.0);
+	float scattering_2 = lerp(HG(light_dot_eye, HG0 * ABC.z * ABC.z), HG(light_dot_eye, HG1 * ABC.z * ABC.z), saturate(light_dot_eye * 0.5 + 0.5));
+	scattering_2 = max(scattering_2, 1.0);
 	float phase_probability = max(HG(light_dot_eye, Eccentricity), SliverIntensity * HG(light_dot_eye, 0.99 - SliverSpread));
 
 	//float3 sky_irradiance;
 	//float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint(float3(endPos.x, endPos.y, endPos.z) * 0.001 - float3(0.0, -EarthRadius, 0.0), LightDir, sky_irradiance);
 	//float3 total_irradiance = sun_irradiance + sky_irradiance;
+
+	//float phase = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), HGWeight);
+	float phase = numericalMieFit(light_dot_eye);
+
+	float scatter_amount = lerp(0.008, 1.0, smoothstep(0.96, 0.0, light_dot_eye));
 
 	for (uint i = 0; i < nSteps; ++i)
 	{
@@ -394,24 +431,51 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 				entered = true;
 			}
 			float height = GetHeightFraction(pos);
-			float3 ambient_light = float3(0.0, 0.0, 0.0);
-			//float3 ambient_light = CloudBottomColor;
+
 			float light_density = RaymarchLight(pos, ds * 0.6, LIGHT_DIR, density_sample, light_dot_eye, mip_level);
 			float dTrans = exp(density_sample * sigma_ds);
 
 			//Sun and sky irradiance
-			float3 intersection_on_cloud_top = float3(pos.x, pos.y * 0.01, pos.z) +LightDir * ds * 3.6 * 0.01;
 			float3 sky_irradiance;
-			float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint((pos + ds * LightDir * 3.6) * 0.001  - float3(0.0, -EarthRadius, 0.0), LightDir, sky_irradiance);
-			float3 total_irradiance = sun_irradiance;
+			float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint((pos + ds * LightDir * 3.6) * 0.001  - float3(0.0, -EarthRadius, 0.0), LightDir, sky_irradiance) * CloudScatter.xyz * CloudScatter.w;
+			float3 ambient_light = ((0.5 + 0.6*height)*CloudBottomColor*6.5 + float3(0.8, 0.8, 0.8) * max(0.0, 1.0 - 2.0*height)) * length(sun_irradiance) * 0.02;
+			//float3 ambient_light = CloudBottomColor * length(sun_irradiance) * 0.2;
+			float3 total_irradiance = sun_irradiance + ambient_light;
 
-			// light model
+			//// light model
 			float powder_term = EnablePowder ? Powder(light_density) : 1.0f;
 			float beer_term = EnableBeer ? 2.0f * Beer(light_density) : 1.0f;
 			//float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * SUN_COLOR, beer_term * powder_term * exp(-light_density))) * density_sample;
-			float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * total_irradiance, beer_term * powder_term * exp(-light_density))) * density_sample;
-			float3 Sint = (S - S * dTrans) * (1.0 / density_sample);
+			float3 S = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering * sun_irradiance, beer_term * powder_term * exp(-light_density))) * density_sample;
+			float3 S_1 = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering_1 * sun_irradiance, beer_term * powder_term * exp(-light_density))) * density_sample * ABC.y;
+			float3 S_2 = 0.6 * (lerp(lerp(ambient_light * 1.8, bg, 0.2), scattering_2 * sun_irradiance, beer_term * powder_term * exp(-light_density))) * density_sample * ABC.y * ABC.y;
+			//float3 S = 0.6 * scattering * total_irradiance * beer_term * powder_term * exp(-light_density) * density_sample;
+			float3 Sint = (S - S * dTrans) * (1.0 / density_sample) + S_1 * (1.0 - exp(density_sample * sigma_ds * ABC.x)) / (density_sample * ABC.x) + S_2 * (1.0 - exp(density_sample * sigma_ds * ABC.x * ABC.x)) / (density_sample * ABC.x * ABC.x);
 			color.rgb += T * Sint;
+
+			// light model - 2
+			/*float3 light_scattering_0 = CloudScatter.xyz * CloudScatter.w * exp(-light_density) * beer_term * powder_term * density_sample;
+			float3 light_scattering_1 = light_scattering_0 * ABC.x;
+			float3 light_scattering_2 = light_scattering_0 * ABC.x * ABC.x;
+			light_scattering_0 *= phase;
+			float phase_1 = lerp(HG(light_dot_eye, HG0 * ABC.z), HG(light_dot_eye * ABC.z, HG1 * ABC.z), HGWeight);
+			float phase_2 = lerp(HG(light_dot_eye, HG0 * ABC.z * ABC.z), HG(light_dot_eye, HG1 * ABC.z * ABC.z), HGWeight);
+			light_scattering_1 *= phase_1;
+			light_scattering_2 *= phase_2;
+			float dTrans_1 = exp(density_sample * sigma_ds * ABC.y);
+			float dTrans_2 = exp(density_sample * sigma_ds * ABC.y * ABC.y);
+
+			float3 light_scattering = light_scattering_0 * (1.0 - dTrans) / (density_sample) + 
+									  light_scattering_1 * (1.0 - dTrans_1) / (density_sample * ABC.y) + 
+									  light_scattering_2 * (1.0 - dTrans_2) / (density_sample * ABC.y * ABC.y);
+			color.rgb += T * (light_scattering * sun_irradiance + ambient_light);*/
+
+			//// light model - 3
+			//float beers_law = exp(-light_density) + 0.5 * scatter_amount * exp(-light_density * 0.1) + 0.4 * scatter_amount * exp(-light_density * 0.02);
+			//float intensity = beers_law * phase * lerp(0.05 + 1.5 * pow(min(1.0, density_sample * 8.5), 0.3 + 5.5 * height), 1.0, saturate(light_density* 0.4));
+			//float radiance = ambient_light * 0.8 + sun_irradiance * intensity;
+			//color.rgb += T * radiance * (1.0 - dTrans);// / density_sample;
+
 
 			//float light_energy = GetLightEnergy(pos, height, light_density, ds_lodded, phase_probability, light_dot_eye, ds, Brightness);
 			//color.rgb += light_energy * SUN_COLOR * T;

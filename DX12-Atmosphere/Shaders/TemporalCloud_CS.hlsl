@@ -119,6 +119,7 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 
 		float cloud_alphaness = Threshold(v.a, 0.2);
 		v.rgb = v.rgb * 1.8 - 0.1;
+		//v.rgb = pow(v.rgb, pad_CP0);
 
 		bg.rgb = bg.rgb * (1.0 - v.a) + v.rgb;
 		bg.a = 1.0;

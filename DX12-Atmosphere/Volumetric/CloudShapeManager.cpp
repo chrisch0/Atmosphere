@@ -67,15 +67,17 @@ void CloudShapeManager::CreateBasicCloudShape()
 	// Perlin
 	NoiseState* perlin = new NoiseState();
 	perlin->seed = 1567;
-	perlin->frequency = 0.05f;
+	perlin->frequency = 0.046f;
 	perlin->noise_type = kNoisePerlin;
-	perlin->fractal_type = kFractalNone;
+	perlin->fractal_type = kFractalFBM;
+	perlin->octaves = 5;
+	perlin->lacunarity = 3.430f;
 	m_perlinNoise = m_noiseGenerator->CreateVolumeNoise("PerlinNoise", 128, 128, 128, DXGI_FORMAT_R32_FLOAT, perlin);
 
 	// Worley FBM
 	NoiseState* worleyFBM_Low = new NoiseState();
 	worleyFBM_Low->seed = 2342;
-	worleyFBM_Low->frequency = 0.05f;
+	worleyFBM_Low->frequency = 0.123f;
 	worleyFBM_Low->noise_type = kNoiseCellular;
 	worleyFBM_Low->fractal_type = kFractalFBM;
 	worleyFBM_Low->octaves = 5;
@@ -85,12 +87,12 @@ void CloudShapeManager::CreateBasicCloudShape()
 
 	NoiseState* worleyFBM_Mid = new NoiseState(*worleyFBM_Low);
 	worleyFBM_Mid->seed = 3424;
-	worleyFBM_Mid->frequency = 0.1f;
+	worleyFBM_Mid->frequency = 0.277f;
 	m_worleyFBMMid = m_noiseGenerator->CreateVolumeNoise("WorlyFBMMid", 128, 128, 128, DXGI_FORMAT_R32_FLOAT, worleyFBM_Mid);
 
 	NoiseState* worleyFBM_High = new NoiseState(*worleyFBM_Mid);
 	worleyFBM_High->seed = 1987;
-	worleyFBM_High->frequency = 0.2f;
+	worleyFBM_High->frequency = 0.534f;
 	m_worleyFBMHigh = m_noiseGenerator->CreateVolumeNoise("WorlyFBMHigh", 128, 128, 128, DXGI_FORMAT_R32_FLOAT, worleyFBM_High);
 
 	if (m_basicShape == nullptr)

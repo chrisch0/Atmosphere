@@ -402,6 +402,13 @@ void VolumetricCloud::UpdateUI()
 			ImGui::SliderFloat("Earth Radius", &m_cloudParameterCB.earthRadius, 10000.0f, 5000000.0f);
 			ImGui::SliderFloat("Cloud Bottom Altitude", &m_cloudParameterCB.cloudBottomRadius, 1000.0f, 15000.0f);
 			ImGui::SliderFloat("Cloud Top Altitude", &m_cloudParameterCB.cloudTopRadius, 1000.0f, 40000.0f);
+			
+			ImGui::Separator();
+			ImGui::ColorEdit3("Cloud Scatter", m_cloudParameterCB.cloudScattering, ImGuiColorEditFlags_Float);
+			ImGui::SliderFloat("Cloud Scatter Weight", &m_cloudParameterCB.cloudScatteringWeight, 0.0f, 10.0f);
+			ImGui::SliderFloat("HG Weight", &m_cloudParameterCB.HGWeight, 0.0f, 1.0f);
+			ImGui::SliderFloat("Cloud Exposure", &m_cloudParameterCB.Exposure, 0.0f, 1.0f);
+			ImGui::SliderFloat3("ABC", m_cloudParameterCB.ABC, 0.0f, 1.0f);
 			ImGui::EndTabItem();
 		}
 

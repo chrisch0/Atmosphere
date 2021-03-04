@@ -121,6 +121,10 @@ private:
 		float sliverIntensity = 1.0f;
 		float sliverSpread = 0.3f;
 		float brightness = 1.0f;
+		float cloudScattering[3] = { 1.0f , 1.0f, 1.0f};
+		float cloudScatteringWeight = 1.0;
+		float ABC[3] = { 0.5f, 0.5f, 0.5f };
+		float HGWeight = 0.5;
 	}m_cloudParameterCB;
 
 	struct
