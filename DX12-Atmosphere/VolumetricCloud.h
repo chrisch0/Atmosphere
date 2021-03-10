@@ -50,6 +50,8 @@ private:
 	ComputePSO m_quarterCloudPSO;
 	ComputePSO m_combineSkyPSO;
 
+	ComputePSO m_computeSkyPSO;
+
 	//GraphicsPSO m_renderCloudOnQuadPSO;
 
 	std::shared_ptr<Camera> m_camera;
@@ -110,7 +112,7 @@ private:
 		float cloudBottomRadius = 5000.0f;
 		float cloudTopRadius = 17000.0f;
 		float cloudSpeed = 0.0f;
-		float densityFactor = 0.003f;
+		float densityFactor = 0.001f;
 		float absorption = 0.0037f;
 		float hg0 = -0.08f;
 		float hg1 = 0.08f;
@@ -138,11 +140,12 @@ private:
 		uint32_t frameIndex = 0;
 		XMFLOAT4 resolution;
 		XMFLOAT3 groundAlbedo;
-		float exposure = 10.0f;
+		float exposure = 1.0f;
 		XMFLOAT3 whitePoint;
 		float sunSize = 0.999653f;
 	}m_passCB;
 
 	bool m_useTemporal;
 	bool m_computeToQuarter = false;
+	bool m_renderCloud = true;
 };

@@ -23,11 +23,11 @@ RadianceSpectrum GetSkyRadianceToPoint(
 }
 
 RadianceSpectrum GetSunAndSkyIrradiance(
-	Position p, Direction normal, Direction sun_direction,
+	Position p, /*Direction normal,*/ Direction sun_direction,
 	out IrradianceSpectrum sky_irradiance
 )
 {
-	return GetSunAndSkyIrradiance(Atmosphere, Transmittance, Irradiance_Texture, p, normal, sun_direction, sky_irradiance);
+	return GetSunAndSkyIrradiance(Atmosphere, Transmittance, Irradiance_Texture, p, /*normal,*/ sun_direction, sky_irradiance);
 }
 
 // p ref to earth center
@@ -88,7 +88,7 @@ Illuminance3 GetSunAndSkyIlluminance(
 	out IrradianceSpectrum sky_irradiance
 )
 {
-	IrradianceSpectrum sun_irradiance = GetSunAndSkyIrradiance(Atmosphere, Transmittance, Irradiance_Texture, p, normal, sun_direction, sky_irradiance);
+	IrradianceSpectrum sun_irradiance = GetSunAndSkyIrradiance(Atmosphere, Transmittance, Irradiance_Texture, p, /*normal,*/ sun_direction, sky_irradiance);
 	sky_irradiance *= SKY_SPECTRAL_RADIANCE_TO_LUMINANCE;
 	return sun_irradiance * SUN_SPECTRAL_RADIANCE_TO_LUMINANCE;
 }

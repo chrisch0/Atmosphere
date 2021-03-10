@@ -1556,6 +1556,7 @@
     <None Include="Shaders\Generate2DMips_CS.hlsli" />
     <None Include="Shaders\Generate3DMips_CS.hlsli" />
     <None Include="Shaders\Random.hlsli" />
+    <None Include="Shaders\RaymarchPrimitives.hlsli" />
     <None Include="Shaders\VolumetricCloudCommon.hlsli" />
   </ItemGroup>
   <ItemGroup>

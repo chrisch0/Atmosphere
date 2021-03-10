@@ -202,7 +202,7 @@ Length ComputeOpticalLengthToTopAtmosphereBoundary(
 	const int SAMPLE_COUNT = 500;
 	Length dx = DistanceToTopAtmosphereBoundary(atmosphere, r, mu) / Number(SAMPLE_COUNT);
 	Length result = 0.0 * m;
-	for (int i = 0; i < SAMPLE_COUNT; ++i)
+	for (int i = 0; i <= SAMPLE_COUNT; ++i)
 	{
 		Length d_i = Number(i) * dx;
 		Length r_i = sqrt(d_i * d_i + 2.0 * r * mu * d_i + r * r);
@@ -1196,17 +1196,17 @@ IrradianceSpectrum GetSunAndSkyIrradiance(
 	const in TransmittanceTexture transmittance_texture,
 	const in IrradianceTexture irradiance_texture,
 	const in Position pos,
-	const in Direction normal,
+	//const in Direction normal,
 	const in Direction sun_direction,
 	out IrradianceSpectrum sky_irradiance
 )
 {
 	Length r = length(pos);
 	Number mu_s = dot(pos, sun_direction) / r;
-	sky_irradiance = GetIrradiance(atmosphere, irradiance_texture, r, mu_s) *
-		(1.0 + dot(normal, pos) / r) * 0.5;
+	sky_irradiance = GetIrradiance(atmosphere, irradiance_texture, r, mu_s);// *
+		//(1.0 + dot(normal, pos) / r) * 0.5;
 
 	return atmosphere.solar_irradiance * GetTransmittanceToSun(
 		atmosphere, transmittance_texture, r, mu_s
-	) * max(dot(normal, sun_direction), 0.0);
+	);// * max(dot(normal, sun_direction), 0.0);
 }

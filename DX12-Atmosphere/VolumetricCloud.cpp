@@ -20,6 +20,7 @@
 #include "CompiledShaders/ComputeQuarterCloud_CS.h"
 #include "CompiledShaders/CombineSky_CS.h"
 #include "CompiledShaders/TemporalCloud_CS.h"
+#include "CompiledShaders/ComputeSky_CS.h"
 
 using namespace Global;
 
@@ -64,7 +65,9 @@ bool VolumetricCloud::Initialize()
 	m_mipmapTestBuffer = std::make_shared<ColorBuffer>();
 	m_mipmapTestBuffer->Create(L"Generate Mips Buffer", m_clientWidth, m_clientHeight, 0, m_sceneBufferFormat);
 
-	PostProcess::EnableHDR = false;
+	PostProcess::EnableHDR = true;
+	PostProcess::Exposure = 0.754571f;
+	PostProcess::EnableAdaptation = false;
 
 	Atmosphere::Precompute(4);
 
@@ -183,6 +186,10 @@ void VolumetricCloud::CreatePSO()
 	m_combineSkyPSO.SetRootSignature(m_computeCloudOnQuadRS);
 	m_combineSkyPSO.SetComputeShader(g_pCombineSky_CS, sizeof(g_pCombineSky_CS));
 	m_combineSkyPSO.Finalize();
+
+	m_computeSkyPSO.SetRootSignature(m_computeCloudOnQuadRS);
+	m_computeSkyPSO.SetComputeShader(g_pComputeSky_CS, sizeof(g_pComputeSky_CS));
+	m_computeSkyPSO.Finalize();
 }
 
 void VolumetricCloud::CreateMeshes()
@@ -305,6 +312,7 @@ void VolumetricCloud::UpdateUI()
 	{
 		if (ImGui::BeginTabItem("Cloud Setting"))
 		{
+			ImGui::Checkbox("Render Cloud", &m_renderCloud);
 			ImGui::Text("Sample Setting");
 			ImGui::InputInt("Sample Count Min", &m_sampleCountMin);
 			ImGui::InputInt("Sample Count Max", &m_sampleCountMax);
@@ -507,48 +515,64 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	context.TransitionResource(*m_worley, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*const_cast<Texture2D*>(m_weatherTexture), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	if (m_useTemporal)
+	//if (m_renderCloud)
 	{
-		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		context.SetPipelineState(m_temporalCloudPSO);
-		context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
-		context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
-		context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
-		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
-		context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
-		context.SetDynamicDescriptor(1, 4, m_curlNoise2D->GetSRV());
-		context.SetDynamicDescriptor(1, 5, Atmosphere::GetTransmittance()->GetSRV());
-		context.SetDynamicDescriptor(1, 6, Atmosphere::GetScattering()->GetSRV());
-		context.SetDynamicDescriptor(1, 7, Atmosphere::GetIrradiance()->GetSRV());
-		if (!Atmosphere::UseCombinedScatteringTexture())
-			context.SetDynamicDescriptor(1, 8, Atmosphere::GetOptionalScattering()->GetSRV());
-		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
-		context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
-		context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
-		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
+		//if (m_useTemporal)
+		{
+			context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			context.SetPipelineState(m_temporalCloudPSO);
+			context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
+			context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
+			context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
+			context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
+			context.SetDynamicDescriptor(1, 3, m_cloudTempBuffer->GetSRV());
+			context.SetDynamicDescriptor(1, 4, m_curlNoise2D->GetSRV());
+			context.SetDynamicDescriptor(1, 5, Atmosphere::GetTransmittance()->GetSRV());
+			context.SetDynamicDescriptor(1, 6, Atmosphere::GetScattering()->GetSRV());
+			context.SetDynamicDescriptor(1, 7, Atmosphere::GetIrradiance()->GetSRV());
+			if (!Atmosphere::UseCombinedScatteringTexture())
+				context.SetDynamicDescriptor(1, 8, Atmosphere::GetOptionalScattering()->GetSRV());
+			context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+			context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
+			context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
+			context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 
-		context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
-		context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
-		context.CopySubresource(*m_cloudTempBuffer, 0, *m_sceneColorBuffer, 0);
+			context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
+			context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
+			context.CopySubresource(*m_cloudTempBuffer, 0, *m_sceneColorBuffer, 0);
+		}
+		/*else
+		{
+			context.SetPipelineState(m_computeCloudOnQuadPSO);
+			context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
+			context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
+			context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
+			context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
+			context.SetDynamicDescriptor(1, 4, m_curlNoise2D->GetSRV());
+			context.SetDynamicDescriptor(1, 5, Atmosphere::GetTransmittance()->GetSRV());
+			context.SetDynamicDescriptor(1, 6, Atmosphere::GetScattering()->GetSRV());
+			context.SetDynamicDescriptor(1, 7, Atmosphere::GetIrradiance()->GetSRV());
+			if (!Atmosphere::UseCombinedScatteringTexture())
+				context.SetDynamicDescriptor(1, 8, Atmosphere::GetOptionalScattering()->GetSRV());
+			context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+			context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
+			context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
+			context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
+		}*/
 	}
-	else
+	/*else
 	{
-		context.SetPipelineState(m_computeCloudOnQuadPSO);
+		context.SetPipelineState(m_computeSkyPSO);
 		context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
-		context.SetDynamicDescriptor(1, 0, m_basicCloudShape->GetSRV());
-		context.SetDynamicDescriptor(1, 1, m_erosionTexture->GetSRV());
-		context.SetDynamicDescriptor(1, 2, m_weatherTexture->GetSRV());
-		context.SetDynamicDescriptor(1, 4, m_curlNoise2D->GetSRV());
-		context.SetDynamicDescriptor(1, 5, Atmosphere::GetTransmittance()->GetSRV());
-		context.SetDynamicDescriptor(1, 6, Atmosphere::GetScattering()->GetSRV());
-		context.SetDynamicDescriptor(1, 7, Atmosphere::GetIrradiance()->GetSRV());
+		context.SetDynamicDescriptor(1, 0, Atmosphere::GetTransmittance()->GetSRV());
+		context.SetDynamicDescriptor(1, 1, Atmosphere::GetScattering()->GetSRV());
+		context.SetDynamicDescriptor(1, 2, Atmosphere::GetIrradiance()->GetSRV());
 		if (!Atmosphere::UseCombinedScatteringTexture())
-			context.SetDynamicDescriptor(1, 8, Atmosphere::GetOptionalScattering()->GetSRV());
+			context.SetDynamicDescriptor(1, 3, Atmosphere::GetOptionalScattering()->GetSRV());
 		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
 		context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
-		context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
 		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
-	}
+	}*/
 	context.Finish();
 }
 

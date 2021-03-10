@@ -62,9 +62,9 @@ void main( uint3 globalID : SV_DispatchThreadID )
 		float3 normal = normalize(ground_pos - earth_center);
 
 		float3 sky_irradiance;
-		float3 sun_irradiance = GetSunAndSkyIrradiance(ground_pos - earth_center, normal, SunDirection, sky_irradiance);
+		float3 sun_irradiance = GetSunAndSkyIrradiance(ground_pos - earth_center, SunDirection, sky_irradiance);
 		// TODO: sun_irradiance * sun_visibility
-		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance + sky_irradiance);
+		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance * max(dot(normal, SunDirection), 0.0) + sky_irradiance);
 		float3 transmittance;
 		float3 in_scatter = GetSkyRadianceToPoint(CameraPosition - earth_center,
 			ground_pos - earth_center, 0.0, SunDirection, transmittance);

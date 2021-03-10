@@ -589,5 +589,8 @@
     <None Include="Shaders\Generate3DMips_CS.hlsli">
       <Filter>Shaders\GenerateMips</Filter>
     </None>
+    <None Include="Shaders\RaymarchPrimitives.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

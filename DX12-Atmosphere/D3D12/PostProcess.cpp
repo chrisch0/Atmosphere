@@ -20,7 +20,7 @@ namespace PostProcess
 	bool EnableAdaptation = true;
 	float Exposure = 2.0f;
 
-	bool DrawHistogram = true;
+	bool DrawHistogram = false;
 
 	ExposureConstants ExposureCB;
 

@@ -65,8 +65,8 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		float3 intersection_point = camera + distance_to_intersection * world_dir;
 		float3 normal = normalize(intersection_point - EarthCenter);
 		float3 sky_irradiance;
-		float3 sun_irradiance = GetSunAndSkyIrradiance(intersection_point - EarthCenter, normal, LightDir, sky_irradiance);
-		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance + sky_irradiance);
+		float3 sun_irradiance = GetSunAndSkyIrradiance(intersection_point - EarthCenter, /*normal,*/ LightDir, sky_irradiance);
+		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance * max(dot(normal, LightDir), 0.0) + sky_irradiance);
 		float3 transmittance;
 		float3 in_scatter = GetSkyRadianceToPoint(camera - EarthCenter, intersection_point - EarthCenter, 0, LightDir, transmittance);
 		ground_radiance = ground_radiance * transmittance + in_scatter;
@@ -140,6 +140,7 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		//uv = (float2(tex_coord) + HaltonSequence[( quarter_group_index) % 16]) * Resolution.zw;
 		//CloudColor[globalID.xy] = PreCloudColor[tex_coord];
 		CloudColor[globalID.xy] = PreCloudColor.SampleLevel(LinearRepeatSampler, uv, 0);
+		//CloudColor[globalID.xy] = PreCloudColor.SampleLevel(LinearClampSampler, uv, 0);
 		//CloudColor[globalID.xy] = noise(float3(globalID));
 	}
 }
