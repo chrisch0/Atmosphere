@@ -105,6 +105,7 @@ protected:
 
 	ColorBuffer m_displayBuffer[c_swapChainBufferCount];
 	std::shared_ptr<ColorBuffer> m_sceneColorBuffer;
+	ColorBuffer m_sceneBuffers[c_swapChainBufferCount];
 
 	uint32_t m_frameIndex = 0;
 

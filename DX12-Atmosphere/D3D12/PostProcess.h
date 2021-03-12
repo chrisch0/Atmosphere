@@ -25,8 +25,10 @@ namespace PostProcess
 
 	extern ColorBuffer HistogramColorBuffer;
 
-	void Initialize(ColorBuffer* sceneBuffer);
-	void Render();
+	//void Initialize(ColorBuffer* sceneBuffer);
+	void Initialize();
+	//void Render();
+	void Render(ColorBuffer* currentBuffer);
 	void UpdateUI(bool* showUI);
 	void Shutdown();
 }

@@ -105,7 +105,8 @@ bool App::Initialize()
 	CreateFontTexture();
 
 	m_fullScreenQuad.reset(Mesh::CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f));
-	PostProcess::Initialize(m_sceneColorBuffer.get());
+	//PostProcess::Initialize(m_sceneColorBuffer.get());
+	PostProcess::Initialize();
 	Atmosphere::Initialize(m_sceneColorBuffer.get());
 
 	return true;
@@ -219,6 +220,7 @@ void App::CreateSwapChain()
 			ComPtr<ID3D12Resource> displayPlaneBuffer;
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(displayPlaneBuffer.GetAddressOf())));
 			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
+			m_sceneBuffers[i].Create(L"Scene Buffers" + std::to_wstring(i), m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 		}
 		m_sceneColorBuffer = std::make_shared<ColorBuffer>();
 		m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
@@ -438,7 +440,7 @@ int App::Run()
 
 			Update(m_timer);
 			Draw(m_timer);
-			PostProcess::Render();
+			PostProcess::Render(&m_sceneBuffers[m_currBackBuffer]);
 
 			Display();
 
@@ -574,7 +576,8 @@ void App::Display()
 	GraphicsContext& context = GraphicsContext::Begin(L"Display");
 	// Present LDR 
 	{
-		context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		context.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
 		context.ClearColor(m_displayBuffer[m_currBackBuffer]);
 		context.SetRootSignature(m_presentRS);
@@ -583,7 +586,8 @@ void App::Display()
 		else
 			context.SetPipelineState(m_copyTexturePSO);
 		context.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
-		context.SetDynamicDescriptor(0, 0, m_sceneColorBuffer->GetSRV());
+		//context.SetDynamicDescriptor(0, 0, m_sceneColorBuffer->GetSRV());
+		context.SetDynamicDescriptor(0, 0, m_sceneBuffers[m_currBackBuffer].GetSRV());
 		context.SetPrimitiveTopology(m_fullScreenQuad->Topology());
 		context.SetViewportAndScissor(m_screenViewport, m_scissorRect);
 		context.SetVertexBuffer(0, m_fullScreenQuad->VertexBufferView());

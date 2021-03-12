@@ -3,6 +3,7 @@
 #include "D3D12/RootSignature.h"
 #include "D3D12/PipelineState.h"
 #include "D3D12/CommandContext.h"
+#include "D3D12/PostProcess.h"
 #include "Mesh/Mesh.h"
 #include "Math/Common.h"
 
@@ -46,6 +47,7 @@ bool ComputeDemo::Initialize()
 
 	m_noiseGenerator.Initialize();
 
+	PostProcess::EnableHDR = false;
 	return true;
 }
 
@@ -134,19 +136,19 @@ void ComputeDemo::Draw(const Timer& timer)
 			context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			context.TransitionResource(m_minMax, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			context.SetConstants(0, m_seed, m_frequency);
-			context.SetDynamicDescriptor(1, 0, m_noise.GetUAV());
 			context.SetDynamicDescriptor(1, 1, m_minMax.GetUAV());
+			context.SetDynamicDescriptor(1, 0, m_noise.GetUAV());
 			context.Dispatch2D(m_noise.GetWidth(), m_noise.GetHeight());
 			context.TransitionResource(m_noise, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, true);
 		}
 	}
 
 
-	graphicsContext.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	m_displayBuffer[m_currBackBuffer].SetClearColor(m_clearColor);
-	graphicsContext.ClearColor(m_displayBuffer[m_currBackBuffer]);
+	graphicsContext.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	m_sceneBuffers[m_currBackBuffer].SetClearColor(m_clearColor);
+	graphicsContext.ClearColor(m_sceneBuffers[m_currBackBuffer]);
 
-	graphicsContext.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
+	graphicsContext.SetRenderTarget(m_sceneBuffers[m_currBackBuffer].GetRTV());
 	graphicsContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	graphicsContext.SetRootSignature(m_graphicsRS);
 	if (m_generate3D)
@@ -165,7 +167,7 @@ void ComputeDemo::Draw(const Timer& timer)
 	graphicsContext.SetIndexBuffer(m_quad->IndexBufferView());
 	graphicsContext.DrawIndexed(6, 0, 0);
 
-	graphicsContext.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_COMMON);
+	graphicsContext.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	graphicsContext.Finish();
 }

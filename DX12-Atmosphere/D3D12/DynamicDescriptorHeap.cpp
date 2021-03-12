@@ -195,7 +195,8 @@ uint32_t DynamicDescriptorHeap::DescriptorHandleCache::ComputeStagedSize()
 		staleParams ^= (1 << rootIndex);
 		uint32_t maxSetHandle = 0;
 		// return true if any bit set to 1, and the highest bit which is non-zero decides the max space requires
-		assert(TRUE == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
+		//assert(TRUE == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
+		_BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap);
 		neededSpace += maxSetHandle + 1;
 	}
 	// return the max needed handle space of the whole root signature
@@ -237,7 +238,8 @@ void DynamicDescriptorHeap::DescriptorHandleCache::CopyAndBindStaleTables(
 		staleParams ^= (1 << rootIndex);
 
 		uint32_t maxSetHandle = 0;
-		assert(TRUE == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
+		//assert(TRUE == _BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap));
+		_BitScanReverse((unsigned long*)&maxSetHandle, m_rootDescriptorTable[rootIndex].assignedHandlesBitMap);
 
 		// record the max needed space of the descriptor table
 		neededSpace += maxSetHandle + 1;

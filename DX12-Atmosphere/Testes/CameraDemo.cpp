@@ -213,11 +213,11 @@ void CameraDemo::Draw(const Timer& timer)
 	objCB.ModelColor = m_color;
 
 	// Clear back buffer
-	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	m_displayBuffer[m_currBackBuffer].SetClearColor(m_clearColor);
-	context.ClearColor(m_displayBuffer[m_currBackBuffer]);
+	context.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	m_sceneBuffers[m_currBackBuffer].SetClearColor(m_clearColor);
+	context.ClearColor(m_sceneBuffers[m_currBackBuffer]);
 
-	context.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
+	context.SetRenderTarget(m_sceneBuffers[m_currBackBuffer].GetRTV());
 	context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context.SetPipelineState(m_PSO);
 	context.SetRootSignature(m_RS);
@@ -228,6 +228,6 @@ void CameraDemo::Draw(const Timer& timer)
 	context.SetIndexBuffer(m_indexBuffer.IndexBufferView());
 	context.DrawIndexed(36, 0, 0);
 
-	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_COMMON);
+	context.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	context.Finish();
 }

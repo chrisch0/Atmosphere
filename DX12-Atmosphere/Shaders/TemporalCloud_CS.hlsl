@@ -139,8 +139,8 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupTh
 		uint2 tex_coord = uint2(uv * Resolution.xy);
 		//uv = (float2(tex_coord) + HaltonSequence[( quarter_group_index) % 16]) * Resolution.zw;
 		//CloudColor[globalID.xy] = PreCloudColor[tex_coord];
-		CloudColor[globalID.xy] = PreCloudColor.SampleLevel(LinearRepeatSampler, uv, 0);
-		//CloudColor[globalID.xy] = PreCloudColor.SampleLevel(LinearClampSampler, uv, 0);
+		//CloudColor[globalID.xy] = PreCloudColor.SampleLevel(LinearRepeatSampler, uv, 0);
+		CloudColor[globalID.xy] = PreCloudColor.SampleLevel(LinearClampSampler, uv, 0);
 		//CloudColor[globalID.xy] = noise(float3(globalID));
 	}
 }

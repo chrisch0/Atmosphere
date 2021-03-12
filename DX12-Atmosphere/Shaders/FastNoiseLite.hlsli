@@ -196,6 +196,7 @@ struct fnl_state
      * @remark Default: 1.0
      */
     float domain_warp_amp;
+	float pad;
 };
 
 /**

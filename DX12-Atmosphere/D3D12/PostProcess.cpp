@@ -37,16 +37,19 @@ namespace PostProcess
 	ComputePSO ToneMapPSO;
 	ComputePSO DrawHistogramPSO;
 
-	ColorBuffer* SceneColorBuffer;
+	//ColorBuffer* SceneColorBuffer;
 
 	void UpdateExposure(ComputeContext&);
-	void ExtractLuma(ComputeContext&);
-	void ProcessHDR(ComputeContext&);
+	//void ExtractLuma(ComputeContext&);
+	void ExtractLuma(ComputeContext&, ColorBuffer*);
+	//void ProcessHDR(ComputeContext&);
+	void ProcessHDR(ComputeContext&, ColorBuffer*);
 }
 
-void PostProcess::Initialize(ColorBuffer* sceneBuffer)
+//void PostProcess::Initialize(ColorBuffer* sceneBuffer)
+void PostProcess::Initialize()
 {
-	SceneColorBuffer = sceneBuffer;
+	//SceneColorBuffer = sceneBuffer;
 
 	PostProcessRS.Reset(4, 2);
 	PostProcessRS.InitStaticSampler(0, Global::SamplerLinearClampDesc);
@@ -106,7 +109,8 @@ void PostProcess::Shutdown()
 	HistogramColorBuffer.Destroy();
 }
 
-void PostProcess::ExtractLuma(ComputeContext& context)
+//void PostProcess::ExtractLuma(ComputeContext& context)
+void PostProcess::ExtractLuma(ComputeContext& context, ColorBuffer* SceneColorBuffer)
 {
 	context.TransitionResource(*SceneColorBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	context.TransitionResource(LumaLR, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -152,11 +156,12 @@ void PostProcess::UpdateExposure(ComputeContext& context)
 	context.TransitionResource(ExposureBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 }
 
-void PostProcess::ProcessHDR(ComputeContext& context)
+//void PostProcess::ProcessHDR(ComputeContext& context)
+void PostProcess::ProcessHDR(ComputeContext& context, ColorBuffer* SceneColorBuffer)
 {
 	if (EnableAdaptation)
 	{
-		ExtractLuma(context);
+		ExtractLuma(context, SceneColorBuffer);
 	}
 
 	// assert uav load support R11G11B10_FLOAT
@@ -172,13 +177,14 @@ void PostProcess::ProcessHDR(ComputeContext& context)
 	UpdateExposure(context);
 }
 
-void PostProcess::Render()
+//void PostProcess::Render()
+void PostProcess::Render(ColorBuffer* currentBuffer)
 {
 	ComputeContext& context = ComputeContext::Begin();
 
 	context.SetRootSignature(PostProcessRS);
 	if (EnableHDR)
-		ProcessHDR(context);
+		ProcessHDR(context, currentBuffer);
 
 	if (DrawHistogram)
 	{

@@ -105,11 +105,11 @@ void FullScreenQuad::Draw(const Timer& timer)
 	cb.use_uv = (uint32_t)m_useUVAsColor;
 
 	// Clear back buffer
-	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-	m_displayBuffer[m_currBackBuffer].SetClearColor(m_clearColor);
-	context.ClearColor(m_displayBuffer[m_currBackBuffer]);
+	context.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+	m_sceneBuffers[m_currBackBuffer].SetClearColor(m_clearColor);
+	context.ClearColor(m_sceneBuffers[m_currBackBuffer]);
 
-	context.SetRenderTarget(m_displayBuffer[m_currBackBuffer].GetRTV());
+	context.SetRenderTarget(m_sceneBuffers[m_currBackBuffer].GetRTV());
 	context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context.SetPipelineState(m_pipelineState);
 	context.SetRootSignature(m_rootSignature);
@@ -119,7 +119,7 @@ void FullScreenQuad::Draw(const Timer& timer)
 	context.SetIndexBuffer(m_indexBuffer.IndexBufferView());
 	context.DrawIndexed(6, 0, 0);
 
-	context.TransitionResource(m_displayBuffer[m_currBackBuffer], D3D12_RESOURCE_STATE_COMMON);
+	context.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_COMMON);
 	context.Finish();
 }
 

@@ -11,5 +11,4 @@ int main(int argc, char** argv)
 	VolumetricCloud app;
 	app.Initialize();
 	return app.Run();
-
 }
