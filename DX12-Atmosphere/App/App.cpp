@@ -440,7 +440,7 @@ int App::Run()
 
 			Update(m_timer);
 			Draw(m_timer);
-			PostProcess::Render(&m_sceneBuffers[m_currBackBuffer]);
+			PostProcess::Render(&m_sceneBuffers[(m_currBackBuffer + c_swapChainBufferCount -1) % 3]);
 
 			Display();
 

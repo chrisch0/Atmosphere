@@ -540,6 +540,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 			context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
 			context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
 			context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
+			//context.InsertUAVBarrier(m_sceneBuffers[m_currBackBuffer], true);
 
 			//context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
 			//context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -578,6 +579,10 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 	}*/
 	context.Finish();
+
+	//ComputeContext& uavBarrier = ComputeContext::Begin();
+	//uavBarrier.InsertUAVBarrier(m_sceneBuffers[m_currBackBuffer], true);
+	//uavBarrier.Finish();
 }
 
 void VolumetricCloud::OnResize()
