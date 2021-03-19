@@ -3,6 +3,7 @@
 //#include "Testes/FullScreenQuad.h"
 //#include "Testes/CameraDemo.h"
 //#include "Testes/ComputeDemo.h"
+//#include "Testes/ModelLoading.h"
 #include "VolumetricCloud.h"
 #include <tchar.h>
 

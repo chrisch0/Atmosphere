@@ -594,4 +594,5 @@ void VolumetricCloud::OnResize()
 	m_cloudTempBuffer->Create(L"Cloud Temp Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 	m_mipmapTestBuffer->Destroy();
 	m_mipmapTestBuffer->Create(L"Generate Mips Buffer", m_clientWidth, m_clientHeight, 0, m_sceneBufferFormat);
+	m_camera->SetAspectRatio(m_clientHeight, m_clientWidth);
 }

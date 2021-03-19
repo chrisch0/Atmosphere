@@ -167,7 +167,7 @@ void Camera::UpdateProjMatrix()
 	}
 	else
 	{
-
+		SetProjMatrix(Matrix4(XMMatrixOrthographicLH(m_frustumWidth, m_frustumHeight, m_nearClip, m_farClip)));
 	}
 }
 

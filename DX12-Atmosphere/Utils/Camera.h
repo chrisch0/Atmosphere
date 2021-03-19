@@ -22,7 +22,7 @@ public:
 	void SetPrespectiveMatrix(float verticalFOV, float aspectRatio, float nearClip, float farClip);
 	void SetFOV(float verticalFOV) { m_verticalFOV = verticalFOV; UpdateProjMatrix(); }
 	void SetAspectRatio(float heightOverWidth) { m_aspectRatio = heightOverWidth; UpdateProjMatrix(); }
-	void SetAspectRatio(float height, float width) { m_aspectRatio = height / width; UpdateProjMatrix(); }
+	void SetAspectRatio(float height, float width) { m_frustumWidth = width; m_frustumHeight = height; m_aspectRatio = height / width; UpdateProjMatrix(); }
 	void SetNearClip(float nearClip) { m_nearClip = nearClip; UpdateProjMatrix(); }
 	void SetFarClip(float farClip) { m_farClip = farClip; UpdateProjMatrix(); }
 	void ReverseZ(bool enable) { m_isReverseZ = enable; UpdateProjMatrix(); }
@@ -78,6 +78,8 @@ protected:
 	Frustum m_frustumWS;
 
 	float m_verticalFOV;
+	float m_frustumWidth;
+	float m_frustumHeight;
 	float m_aspectRatio;
 	float m_nearClip;
 	float m_farClip;

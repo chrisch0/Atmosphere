@@ -100,8 +100,9 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;assimp-vc141-mtd.lib;zlibstaticd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>bin\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -194,6 +195,7 @@
     <ClInclude Include="Testes\CameraDemo.h" />
     <ClInclude Include="Testes\ComputeDemo.h" />
     <ClInclude Include="Testes\FullScreenQuad.h" />
+    <ClInclude Include="Testes\ModelLoading.h" />
     <ClInclude Include="Utils\Camera.h" />
     <ClInclude Include="Utils\CameraController.h" />
     <ClInclude Include="Utils\FileUtility.h" />
@@ -239,6 +241,7 @@
     <ClCompile Include="Testes\CameraDemo.cpp" />
     <ClCompile Include="Testes\ComputeDemo.cpp" />
     <ClCompile Include="Testes\FullScreenQuad.cpp" />
+    <ClCompile Include="Testes\ModelLoading.cpp" />
     <ClCompile Include="Utils\Camera.cpp" />
     <ClCompile Include="Utils\CameraController.cpp" />
     <ClCompile Include="Utils\FileUtility.cpp" />

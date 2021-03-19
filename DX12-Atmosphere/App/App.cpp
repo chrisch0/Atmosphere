@@ -219,11 +219,11 @@ void App::CreateSwapChain()
 		{
 			ComPtr<ID3D12Resource> displayPlaneBuffer;
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(displayPlaneBuffer.GetAddressOf())));
-			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
-			m_sceneBuffers[i].Create(L"Scene Buffers" + std::to_wstring(i), m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer " + std::to_wstring(i), displayPlaneBuffer.Detach());
+			m_sceneBuffers[i].Create(L"Scene Buffers " + std::to_wstring(i), m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 		}
-		m_sceneColorBuffer = std::make_shared<ColorBuffer>();
-		m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+		//m_sceneColorBuffer = std::make_shared<ColorBuffer>();
+		//m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 	}
 
 	m_screenViewport.TopLeftX = 0.0;
@@ -470,10 +470,12 @@ void App::OnResize()
 		ComPtr<ID3D12Resource> displayPlaneBuffer;
 		ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&displayPlaneBuffer)));
 		m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
+		m_sceneBuffers[i].Destroy();
+		m_sceneBuffers[i].Create(L"Scene Buffers " + std::to_wstring(i), m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 	}
 
-	m_sceneColorBuffer->Destroy();
-	m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+	//m_sceneColorBuffer->Destroy();
+	//m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
 
 	m_screenViewport.TopLeftX = 0.0;
 	m_screenViewport.TopLeftY = 0.0;
