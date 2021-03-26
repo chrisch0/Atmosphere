@@ -1,6 +1,21 @@
 #include "stdafx.h"
 #include "Mesh.h"
 #include "SkyboxMesh.h"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
+Mesh* Mesh::LoadModel(const std::string& name)
+{
+	Assimp::Importer importer;
+	const aiScene* scene_ptr = importer.ReadFile(name,
+		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded);
+
+	if (scene_ptr == nullptr)
+		return nullptr;
+
+
+}
 
 void Mesh::CreateGpuBuffer(Mesh* mesh)
 {

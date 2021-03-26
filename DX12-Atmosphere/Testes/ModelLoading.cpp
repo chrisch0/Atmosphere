@@ -6,5 +6,5 @@
 
 bool ModelLoading::Initialize()
 {
-
+	return true;
 }

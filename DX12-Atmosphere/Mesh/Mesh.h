@@ -54,6 +54,7 @@ public:
 	//static Mesh* CreateCylinder();
 	static Mesh* CreateGrid(uint16_t m, uint16_t n);
 	static Mesh* CreateSkybox();
+	static Mesh* LoadModel(const std::string& name);
 
 	Mesh() {}
 	~Mesh() {}

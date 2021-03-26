@@ -274,7 +274,7 @@ void VolumetricCloud::Update(const Timer& timer)
 	auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
 	XMStoreFloat3(&m_passCB.lightDir, -dir);
 	XMStoreFloat3(&m_passCB.cameraPosition, m_camera->GetPosition());
-	Vector4 res{ (float)m_sceneColorBuffer->GetWidth(), (float)m_sceneColorBuffer->GetHeight(), 1.0f / m_sceneColorBuffer->GetWidth(), 1.0f / m_sceneColorBuffer->GetHeight() };
+	Vector4 res{ (float)m_clientWidth, (float)m_clientHeight, 1.0f / m_clientWidth, 1.0f / m_clientHeight };
 	XMStoreFloat4(&m_passCB.resolution, res);
 	m_passCB.frameIndex = m_frameIndex;
 	m_passCB.prevViewProj = m_camera->GetPrevViewProjMatrix();
@@ -517,7 +517,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 	//context.TransitionResource(*m_sceneColorBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	context.TransitionResource(m_sceneBuffers[m_currBackBuffer], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	context.TransitionResource(m_sceneBuffers[(m_currBackBuffer + c_swapChainBufferCount - 1) % c_swapChainBufferCount], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	//if (m_renderCloud)
+	if (m_renderCloud)
 	{
 		//if (m_useTemporal)
 		{
@@ -539,7 +539,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 			context.SetDynamicDescriptor(2, 0, m_sceneBuffers[m_currBackBuffer].GetUAV());
 			context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
 			context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
-			context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
+			context.Dispatch2D(m_clientWidth, m_clientHeight);
 			//context.InsertUAVBarrier(m_sceneBuffers[m_currBackBuffer], true);
 
 			//context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -565,7 +565,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 			context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
 		}*/
 	}
-	/*else
+	else
 	{
 		context.SetPipelineState(m_computeSkyPSO);
 		context.SetDynamicConstantBufferView(0, sizeof(m_passCB), &m_passCB);
@@ -574,10 +574,10 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 		context.SetDynamicDescriptor(1, 2, Atmosphere::GetIrradiance()->GetSRV());
 		if (!Atmosphere::UseCombinedScatteringTexture())
 			context.SetDynamicDescriptor(1, 3, Atmosphere::GetOptionalScattering()->GetSRV());
-		context.SetDynamicDescriptor(2, 0, m_sceneColorBuffer->GetUAV());
+		context.SetDynamicDescriptor(2, 0, m_sceneBuffers[m_currBackBuffer].GetUAV());
 		context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
-		context.Dispatch2D(m_sceneColorBuffer->GetWidth(), m_sceneColorBuffer->GetHeight());
-	}*/
+		context.Dispatch2D(m_clientWidth, m_clientHeight);
+	}
 	context.Finish();
 
 	//ComputeContext& uavBarrier = ComputeContext::Begin();

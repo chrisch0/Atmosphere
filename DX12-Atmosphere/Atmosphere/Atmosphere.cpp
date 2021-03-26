@@ -568,7 +568,9 @@ namespace Atmosphere
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.rayleigh_scattering, InterpolateByRGBLambda(RayleighScattering, lambdas, kLengthUnitInMeters));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_scattering, InterpolateByRGBLambda(MieScattering, lambdas, kLengthUnitInMeters));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_extinction, InterpolateByRGBLambda(MieExtinction, lambdas, kLengthUnitInMeters));
+		//XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_extinction, Vector3(0.2f, 0.2f, 0.2f));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambdas, kLengthUnitInMeters));
+		//XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.absorption_extinction, Vector3(0.055f, 0.0588f, 0.09f));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambdas, 1.0));
 	}
 

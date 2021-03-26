@@ -153,9 +153,9 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	camera.y *= 0.001f;
 	float3 p = CameraPosition - EarthCenter;
 
-	//float primitive_alpha;
-	//float cast_shadow;
-	//float3 primitive_radiance = RenderPrimitives(CameraPosition, world_dir, cast_shadow, primitive_alpha);
+	float primitive_alpha = 0.0;
+	float cast_shadow = 1.0;
+	float3 primitive_radiance = RenderPrimitives(CameraPosition, world_dir, cast_shadow, primitive_alpha);
 
 	float p_dot_v = dot(p, world_dir);
 	float p_dot_p = dot(p, p);
@@ -163,14 +163,14 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	float distance_to_intersection = -p_dot_v - sqrt(EarthCenter.y * EarthCenter.y - ray_earth_center_squared_distance);
 
 	float ground_alpha = 0.0;
-	float3 ground_radiance;
+	float3 ground_radiance = 0.0;
 	if (distance_to_intersection > 0.0)
 	{
 		float3 intersection_point = CameraPosition + distance_to_intersection * world_dir;
 		float3 ground_normal = normalize(intersection_point - EarthCenter);
 		float3 sky_irradiance;
 		float3 sun_irradiance = GetSunAndSkyIrradiance(intersection_point - EarthCenter, LightDir, sky_irradiance);
-		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance * max(dot(ground_normal, LightDir), 0.0) /** cast_shadow*/ + sky_irradiance);
+		ground_radiance = GroundAlbedo * (1.0 / PI) * (sun_irradiance * max(dot(ground_normal, LightDir), 0.0) * cast_shadow + sky_irradiance);
 		float3 transmittance;
 		float3 in_scatter = GetSkyRadianceToPoint(CameraPosition - EarthCenter, intersection_point - EarthCenter, 0, LightDir, transmittance);
 		ground_radiance = ground_radiance * transmittance + in_scatter;
@@ -187,7 +187,7 @@ void main( uint3 globalID : SV_DispatchThreadID )
 	}
 
 	radiance = lerp(radiance, ground_radiance, ground_alpha);
-	//radiance = lerp(radiance, primitive_radiance, primitive_alpha);
+	radiance = lerp(radiance, primitive_radiance, primitive_alpha);
 	float4 color;
 	color.rgb = pow(1.0 - exp(-radiance / WhitePoint * Exposure), 1.0 / 2.2);
 	color.a = 1.0;
