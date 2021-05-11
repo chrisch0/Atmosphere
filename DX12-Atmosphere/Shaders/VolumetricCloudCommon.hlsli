@@ -281,7 +281,7 @@ float SampleCloudDensity(float3 p, bool expensive, uint lod)
 	if (expensive)
 	{
 		//float2 curl_noise = CurlNoise.SampleLevel(LinearRepeatSampler, (p.xy + animation.xy) * Crispiness, 0.0).rg;
-		//p.xy += curl_noise * (1.0 - height_fraction) * 200.0;
+		//p.xy += curl_noise * (1.0 - height_fraction);
 		//moving_uv = WorldPosToUV(p + animation);
 
 		float3 erode_cloud_noise = ErosionTexture.SampleLevel(LinearRepeatSampler, float3(moving_uv.x * Crispiness, height_fraction, moving_uv.y * Crispiness) * Curliness, lod).rgb;
@@ -400,23 +400,35 @@ float4 RaymarchCloud(uint2 pixelCoord, float3 startPos, float3 endPos, float3 bg
 	//	low_lod_pos += dir;
 	//}
 	
-	//float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
-	float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
+	float scattering = numericalMieFit(light_dot_eye);
 	scattering = max(scattering, 1.0);
-	float scattering_1 = lerp(HG(light_dot_eye, HG0 * ABC.z), HG(light_dot_eye, HG1 * ABC.z), saturate(light_dot_eye * 0.5 + 0.5));
+	float scattering_1 = numericalMieFit(light_dot_eye * ABC.z);
 	scattering_1 = max(scattering_1, 1.0);
-	float scattering_2 = lerp(HG(light_dot_eye, HG0 * ABC.z * ABC.z), HG(light_dot_eye, HG1 * ABC.z * ABC.z), saturate(light_dot_eye * 0.5 + 0.5));
+	float scattering_2 = numericalMieFit(light_dot_eye * ABC.z * ABC.z);
 	scattering_2 = max(scattering_2, 1.0);
-	float phase_probability = max(HG(light_dot_eye, Eccentricity), SliverIntensity * HG(light_dot_eye, 0.99 - SliverSpread));
+
+	//float scattering = 1.0;
+	//float scattering_1 = ABC.z;
+	//float scattering_2 = ABC.z * ABC.z;
+
+
+	//float scattering = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), saturate(light_dot_eye * 0.5 + 0.5));
+	//scattering = max(scattering, 1.0);
+	//float scattering_1 = lerp(HG(light_dot_eye, HG0 * ABC.z), HG(light_dot_eye, HG1 * ABC.z), saturate(light_dot_eye * 0.5 + 0.5));
+	//scattering_1 = max(scattering_1, 1.0);
+	//float scattering_2 = lerp(HG(light_dot_eye, HG0 * ABC.z * ABC.z), HG(light_dot_eye, HG1 * ABC.z * ABC.z), saturate(light_dot_eye * 0.5 + 0.5));
+	//scattering_2 = max(scattering_2, 1.0);
+
+	//float phase_probability = max(HG(light_dot_eye, Eccentricity), SliverIntensity * HG(light_dot_eye, 0.99 - SliverSpread));
 
 	//float3 sky_irradiance;
 	//float3 sun_irradiance = GetSunAndSkyIrradianceAtPoint(float3(endPos.x, endPos.y, endPos.z) * 0.001 - float3(0.0, -EarthRadius, 0.0), LightDir, sky_irradiance);
 	//float3 total_irradiance = sun_irradiance + sky_irradiance;
 
 	//float phase = lerp(HG(light_dot_eye, HG0), HG(light_dot_eye, HG1), HGWeight);
-	float phase = numericalMieFit(light_dot_eye);
+	//float phase = numericalMieFit(light_dot_eye);
 
-	float scatter_amount = lerp(0.008, 1.0, smoothstep(0.96, 0.0, light_dot_eye));
+	//float scatter_amount = lerp(0.008, 1.0, smoothstep(0.96, 0.0, light_dot_eye));
 
 	for (uint i = 0; i < nSteps; ++i)
 	{

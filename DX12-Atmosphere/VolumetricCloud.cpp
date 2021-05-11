@@ -64,7 +64,9 @@ bool VolumetricCloud::Initialize()
 	m_mipmapTestBuffer = std::make_shared<ColorBuffer>();
 	m_mipmapTestBuffer->Create(L"Generate Mips Buffer", m_clientWidth, m_clientHeight, 0, m_sceneBufferFormat);
 
-	PostProcess::EnableHDR = false;
+	PostProcess::EnableHDR = true;
+	PostProcess::EnableAdaptation = false;
+	PostProcess::Exposure = 0.754571f;
 
 	Atmosphere::Precompute(4);
 
