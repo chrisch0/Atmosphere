@@ -140,9 +140,10 @@ private:
 		XMFLOAT3 groundAlbedo;
 		float exposure = 1.0f;
 		XMFLOAT3 whitePoint;
-		float sunSize = 0.999653f;
+		float sunSize = 0.999853f;
 	}m_passCB;
 
 	bool m_useTemporal;
 	bool m_computeToQuarter = false;
+	bool m_autoMoveSun = false;
 };

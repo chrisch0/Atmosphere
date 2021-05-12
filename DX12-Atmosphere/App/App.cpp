@@ -810,9 +810,9 @@ void App::CalculateFrameStats()
 		std::wstring fpsStr = std::to_wstring(fps);
 		std::wstring mspfStr = std::to_wstring(mspf);
 
-		std::wstring windowText = m_mainWndCaption +
-			L"	 fps: " + fpsStr +
-			L"	mspf: " + mspfStr;
+		std::wstring windowText = m_mainWndCaption;// +
+//			L"	 fps: " + fpsStr +
+//			L"	mspf: " + mspfStr;
 
 		SetWindowTextW(m_hMainWnd, windowText.c_str());
 

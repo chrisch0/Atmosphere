@@ -19,7 +19,7 @@
 namespace Atmosphere
 {
 	bool UseConstantSolarSpectrum = false;
-	bool UseOzone = true;
+	bool UseOzone = false;
 	bool UseCombinedTextures = false;
 	bool UseHalfPrecision = false;
 	Luminance UseLuminance = NONE;
@@ -567,7 +567,9 @@ namespace Atmosphere
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.solar_irradiance, InterpolateByRGBLambda(SolarIrradiance, lambdas, 1.0));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.rayleigh_scattering, InterpolateByRGBLambda(RayleighScattering, lambdas, kLengthUnitInMeters));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_scattering, InterpolateByRGBLambda(MieScattering, lambdas, kLengthUnitInMeters));
+		//XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_scattering, Vector3(0.1, 0.1, 0.1));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_extinction, InterpolateByRGBLambda(MieExtinction, lambdas, kLengthUnitInMeters));
+		//XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.mie_extinction, Vector3(0.11, 0.11, 0.11));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.absorption_extinction, InterpolateByRGBLambda(AbsorptionExtinction, lambdas, kLengthUnitInMeters));
 		XMStoreFloat3(&AtmospherePhysicalCB.atmosphere.ground_albedo, InterpolateByRGBLambda(GroundAlbedos, lambdas, 1.0));
 	}

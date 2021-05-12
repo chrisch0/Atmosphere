@@ -251,6 +251,21 @@ void VolumetricCloud::SwitchBasicCloudShape(int idx)
 
 void VolumetricCloud::Update(const Timer& timer)
 {
+	static float heightAngle[17] = { -0.833f, 2.38f, 13.22f, 24.45f, 35.8f, 46.9f, 57.08f, 64.89f, 67.5f, 63.28f, 54.65f, 44.15f, 32.96f, 21.62f, 10.47f, -0.19f, -0.833f };
+	static float dirAngle[17] = { 64.79f, 67.8f, 77.15f, 86.41f, 96.39f, 108.35f, 124.68f, 149.58f, 184.77f, 217.91f, 240.18f, 255.07f, 266.37f, 276.08f, 285.31f, 294.79f, 295.41 };
+	if (m_autoMoveSun)
+	{
+		int idx = std::floor(timer.TotalTime());
+		float t = timer.TotalTime() - idx;
+		idx = idx % 17;
+		float a = heightAngle[idx];
+		float b = heightAngle[(idx + 1) % 17];
+		m_sunLightRotation.SetX(a * (1 - t) + t * b);
+		a = dirAngle[idx];
+		b = dirAngle[(idx + 1) % 17];
+		m_sunLightRotation.SetY(a * (1 - t) + t * b);
+	}
+
 	m_cloudShapeManager.Update();
 	g_CameraController.Update(timer.DeltaTime());
 
@@ -317,6 +332,7 @@ void VolumetricCloud::UpdateUI()
 			ImGui::InputFloat("Scatter Coefficient", &m_scatterCoeff, 0.001f);
 
 			ImGui::Text("Sun Light");
+			ImGui::Checkbox("Auto Move", &m_autoMoveSun);
 			float rotate[3] = { m_sunLightRotation.GetX(), m_sunLightRotation.GetY(), m_sunLightRotation.GetZ() };
 			ImGui::DragFloat3("Rotation", rotate, 0.05f, -FLT_MAX, FLT_MAX, "%.2f");
 			ImGui::ColorEdit3("Light Color", m_cloudParameterCB.lightColor);
