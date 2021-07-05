@@ -129,7 +129,9 @@ void Camera::UpdateMatrixAndFrustum()
 {
 	m_previousViewProjMatrix = m_viewProjMatrix;
 
-	m_viewMatrix = Matrix4(~m_cameraToWorld);
+	//m_viewMatrix = Matrix4(~m_cameraToWorld);
+	XMMATRIX m = DirectX::XMMatrixLookToLH(GetPosition(), GetForward(), Vector3(0.0, 1.0, 0.0));
+	m_viewMatrix = Matrix4(Vector4(m.r[0]), Vector4(m.r[1]), Vector4(m.r[2]), Vector4(m.r[3]));
 	m_viewProjMatrix = m_projMatrix * m_viewMatrix;
 	m_reprojectMatrix = m_previousViewProjMatrix * Invert(GetViewProjMatrix());
 
@@ -141,7 +143,7 @@ void Camera::UpdateProjMatrix()
 {
 	if (m_isPerspective)
 	{
-		float Y = 1.0f / std::tanf(ToRadian(m_verticalFOV) * 0.5f);
+		/*float Y = 1.0f / std::tanf(ToRadian(m_verticalFOV) * 0.5f);
 		float X = Y * m_aspectRatio;
 
 		float Q1, Q2;
@@ -163,11 +165,13 @@ void Camera::UpdateProjMatrix()
 			Vector4(0.0f, Y, 0.0f, 0.0f),
 			Vector4(0.0f, 0.0f, Q1, -1.0f),
 			Vector4(0.0f, 0.0f, Q2, 0.0f)
-		));
+		));*/
+		XMMATRIX m = DirectX::XMMatrixPerspectiveFovLH(ToRadian(m_verticalFOV), 1.f / m_aspectRatio, m_nearClip, m_farClip);
+		SetProjMatrix(Matrix4(Vector4(m.r[0]), Vector4(m.r[1]), Vector4(m.r[2]), Vector4(m.r[3])));
 	}
 	else
 	{
-		SetProjMatrix(Matrix4(XMMatrixOrthographicLH(m_frustumWidth, m_frustumHeight, m_nearClip, m_farClip)));
+		SetProjMatrix(Matrix4(DirectX::XMMatrixOrthographicLH(m_frustumWidth, m_frustumHeight, m_nearClip, m_farClip)));
 	}
 }
 

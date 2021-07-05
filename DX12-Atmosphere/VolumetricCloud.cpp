@@ -274,7 +274,7 @@ void VolumetricCloud::Update(const Timer& timer)
 	auto dir = Quaternion(ToRadian(m_sunLightRotation.GetX()), ToRadian(m_sunLightRotation.GetY()), ToRadian(m_sunLightRotation.GetZ())) * Vector3(0.0f, 0.0f, 1.0f);
 	XMStoreFloat3(&m_passCB.lightDir, -dir);
 	XMStoreFloat3(&m_passCB.cameraPosition, m_camera->GetPosition());
-	Vector4 res{ (float)m_clientWidth, (float)m_clientHeight, 1.0f / m_clientWidth, 1.0f / m_clientHeight };
+	Vector4 res{ (float)m_sceneBufferWidth, (float)m_sceneBufferHeight, 1.0f / m_sceneBufferWidth, 1.0f / m_sceneBufferHeight };
 	XMStoreFloat4(&m_passCB.resolution, res);
 	m_passCB.frameIndex = m_frameIndex;
 	m_passCB.prevViewProj = m_camera->GetPrevViewProjMatrix();
@@ -539,7 +539,7 @@ void VolumetricCloud::DrawOnQuad(const Timer& timer)
 			context.SetDynamicDescriptor(2, 0, m_sceneBuffers[m_currBackBuffer].GetUAV());
 			context.SetDynamicConstantBufferView(3, sizeof(Atmosphere::AtmosphereCB), Atmosphere::GetAtmosphereCB());
 			context.SetDynamicConstantBufferView(4, sizeof(m_cloudParameterCB), &m_cloudParameterCB);
-			context.Dispatch2D(m_clientWidth, m_clientHeight);
+			context.Dispatch2D(m_sceneBufferWidth, m_sceneBufferHeight);
 			//context.InsertUAVBarrier(m_sceneBuffers[m_currBackBuffer], true);
 
 			//context.TransitionResource(*m_cloudTempBuffer, D3D12_RESOURCE_STATE_COPY_DEST);

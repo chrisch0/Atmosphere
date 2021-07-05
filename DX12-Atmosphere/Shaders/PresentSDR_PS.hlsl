@@ -8,8 +8,11 @@ struct PSInput
 	float2 uv : TEXCOORD0;
 };
 
+SamplerState LinearClampSampler : register(s0);
+
 float4 main(PSInput psInput) : SV_Target
 {
-	float3 linear_rgb = RemoveDisplayProfile(ColorTex[(int2)psInput.positionCS.xy], LDR_COLOR_FORMAT);
+	float3 linear_rgb = RemoveDisplayProfile(ColorTex.Sample(LinearClampSampler, psInput.uv), LDR_COLOR_FORMAT);
+	//float3 linear_rgb = RemoveDisplayProfile(ColorTex[(int2)psInput.positionCS.xy], LDR_COLOR_FORMAT);
 	return float4(ApplyDisplayProfile(linear_rgb, DISPLAY_PLANE_FORMAT), 1.0);
 }

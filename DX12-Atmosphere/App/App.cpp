@@ -220,7 +220,7 @@ void App::CreateSwapChain()
 			ComPtr<ID3D12Resource> displayPlaneBuffer;
 			ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(displayPlaneBuffer.GetAddressOf())));
 			m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer " + std::to_wstring(i), displayPlaneBuffer.Detach());
-			m_sceneBuffers[i].Create(L"Scene Buffers " + std::to_wstring(i), m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+			m_sceneBuffers[i].Create(L"Scene Buffers " + std::to_wstring(i), m_sceneBufferWidth, m_sceneBufferHeight, 1, m_sceneBufferFormat);
 		}
 		//m_sceneColorBuffer = std::make_shared<ColorBuffer>();
 		//m_sceneColorBuffer->Create(L"Scene Color Buffer", m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
@@ -316,8 +316,9 @@ void App::CreateAppRootSignature()
 	m_renderUIRS.InitStaticSampler(0, staticSampler);
 	m_renderUIRS.Finalize(L"RenderUIRS", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-	m_presentRS.Reset(1, 0);
+	m_presentRS.Reset(1, 1);
 	m_presentRS[0].InitAsDescriptorRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_presentRS.InitStaticSampler(0, Global::SamplerLinearClampDesc);
 	m_presentRS.Finalize(L"PresentRS", D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 }
 
@@ -471,7 +472,7 @@ void App::OnResize()
 		ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&displayPlaneBuffer)));
 		m_displayBuffer[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlaneBuffer.Detach());
 		m_sceneBuffers[i].Destroy();
-		m_sceneBuffers[i].Create(L"Scene Buffers " + std::to_wstring(i), m_clientWidth, m_clientHeight, 1, m_sceneBufferFormat);
+		m_sceneBuffers[i].Create(L"Scene Buffers " + std::to_wstring(i), m_sceneBufferWidth, m_sceneBufferHeight, 1, m_sceneBufferFormat);
 	}
 
 	//m_sceneColorBuffer->Destroy();

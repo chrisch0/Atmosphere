@@ -119,6 +119,8 @@ protected:
 	DXGI_FORMAT m_depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	int m_clientWidth = 1920;
 	int m_clientHeight = 1080;
+	int m_sceneBufferWidth = 1280;
+	int m_sceneBufferHeight = 720;
 
 	// Imgui
 	RootSignature m_renderUIRS;

@@ -11,6 +11,7 @@ struct VSOut
 {
 	float4 positionCS : SV_POSITION;
 	float4 color : COLOR;
+	float2 uv : TEXCOORD0;
 };
 
 cbuffer ObjectConstant : register(b0)
@@ -34,8 +35,11 @@ VSOut main(VSIn vert)
 	VSOut vsOut;
 	//float4x4 MVP = ViewProjMatrix * ModelMatrix;
 	float4x4 MVP = mul(ViewProjMatrix, ModelMatrix);
-	vsOut.positionCS = mul(MVP, float4(vert.position, 1.0));
+	float4 world_pos = mul(ModelMatrix, float4(vert.position, 1.0));
+	float4 view_pos = mul(ViewMatrix, world_pos);
+	//vsOut.positionCS = mul(MVP, float4(vert.position, 1.0));
+	vsOut.positionCS = mul(ProjMatrix, view_pos);
 	vsOut.color = float4(vert.color, 1.0);
-
+	vsOut.uv = vert.uv;
 	return vsOut;
 }
